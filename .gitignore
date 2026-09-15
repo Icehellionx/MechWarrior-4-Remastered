@@ -1,0 +1,69 @@
+# Secrets and machine-local configuration
+.env
+.env.*
+!.env.example
+*.pfx
+*.p12
+*.snk
+*.key
+*.pem
+
+# Agent scratch and auxiliary output
+.local/
+.agents/
+.codex/
+agent-output/
+
+# Generated build/package/test output
+**/obj/
+**/bin/
+**/target/
+**/dist/
+**/artifacts/
+**/smoke-test/
+**/test-results/
+
+# Runtime diagnostics and captures
+*.log
+*.dmp
+*.out
+*.err
+logs/
+clips/
+captures/
+
+# User-owned media, manuals, fixes, and extracted working trees
+Installation Files/
+Manuals/
+working/
+original/
+staging/
+mounted/
+extracted/
+*.iso
+*.bin
+*.cue
+*.mdf
+*.mds
+*.nrg
+*.ccd
+*.img
+*.sub
+
+# Downloaded toolchains and dependency caches
+node_modules/
+tools/downloads/
+tools/toolchains/
+tools/*.zip
+tools/*.7z
+tools/*.exe
+
+# IDE and operating-system state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini
+.DS_Store

@@ -1,0 +1,34 @@
+# Auxiliary model catalog
+
+Updated: 2026-09-15. Names come from the ignored local `.env`; no credential values are recorded here.
+
+## Featherless routes
+
+| Role | Model |
+|---|---|
+| adviser | `zai-org/GLM-5.2` |
+| adversary | `deepseek-ai/DeepSeek-V4-Pro` |
+| coder | `Qwen/Qwen3-Coder-Next` |
+| balanced | `Qwen/Qwen3.8-27B` |
+| fast | `deepseek-ai/DeepSeek-V4-Flash-0731` |
+| long-context | `MiniMaxAI/MiniMax-M3` |
+
+## Local Ollama routes
+
+| Role | Model |
+|---|---|
+| adviser | `qwen3:8b` |
+| adversary | `mistral:7b-instruct` |
+| balanced | `gemma2:9b` |
+| fast | `llama3.1:8b` |
+| coder | `qwen3-coder:30b` |
+| fast-coder | `qwen2.5-coder:7b-instruct` |
+| vision | `qwen2.5vl:7b` |
+| fast-vision | `gemma3:4b` |
+| embedding | `nomic-embed-text:latest` |
+
+## Health record
+
+Run `node tools/agent/aux-model.mjs --check` for local availability and configuration. Use `--live-remote` only for a bounded paid probe. Record date, router version, reachable provider, and installed/model availability; never log API keys or full provider responses containing private data.
+
+- 2026-09-15: router `1.0.0`; all four unit tests passed. Ollama was reachable and all nine cataloged local models were installed. Featherless credentials and every remote role were configured, but no paid live completion was sent during this check.

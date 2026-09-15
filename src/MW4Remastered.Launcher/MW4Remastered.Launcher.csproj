@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>MW4RemasteredLauncher</AssemblyName>
+    <RootNamespace>MW4Remastered.Launcher</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\MW4Remastered.Core\MW4Remastered.Core.csproj" />
+  </ItemGroup>
+</Project>
