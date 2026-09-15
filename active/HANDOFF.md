@@ -14,15 +14,17 @@ Updated: 2026-09-15.
 - Root `.env` is local-only. Its configured auxiliary model names are recorded without credentials in `active/AUXILIARY_MODELS.md`.
 - The root Git repository is published publicly at `Icehellionx/MechWarrior-4-Remastered`; local `main` tracks `origin/main`.
 - An initial .NET 10 WinForms launcher scaffold now models three games and two optional packs through a UI-free core catalog. It only recognizes game executables; pack status deliberately remains false until a payload-manifest verifier exists.
+- A media catalog and directory inspector recognize both Vengeance discs, Black Knight, both Mercenaries discs, and both Mech Paks. Unsafe paths fail closed; recognized media reports crack/DRM paths for mandatory exclusion.
+- A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
+- The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
 
 ## Best resume path
 
 1. Finish the governance/root repository baseline and verify the auxiliary router.
-2. Produce a hash-and-structure inventory of supported local media without tracking proprietary contents.
-3. Research MW4 release/patch history, modern-Windows failure modes, open-source compatibility projects, and pack-installer architecture using primary sources where possible.
-4. Record ADRs for redistribution/media policy, implementation stack, install layout, compatibility baseline, and save-preserving uninstall.
-5. Implement the smallest vertical slice: detect/validate one Vengeance media layout, stage a disposable install tree, apply a reproducible official patch/no-disc strategy, and verify rollback—before building full UI.
-6. Extend the shared contract to Black Knight, Mercenaries, and optional packs, then add launcher presentation and manuals.
+2. Research MW4 release/patch history, modern-Windows failure modes, open-source compatibility projects, and pack-installer architecture using primary sources where possible.
+3. Record ADRs for install layout, compatibility baseline, and save-preserving uninstall.
+4. Implement the next vertical slice: stage a disposable Vengeance install tree from the recognized two-disc layout, reproduce the installer mapping without executing obsolete setup/DRM code, apply a reproducible official patch/no-disc strategy, and verify rollback.
+5. Extend the installation contract to Black Knight, Mercenaries, and optional packs, then connect launcher actions and cleaned manuals.
 
 ## Known constraints and risks
 
@@ -39,5 +41,8 @@ Updated: 2026-09-15.
 - The launcher/core Release build completed with zero warnings/errors, and the synthetic core smoke test passed.
 - A local-only SHA-256 inventory recorded all 23 media/manual inputs under ignored `.local/`; no source media was changed.
 - ISO directory inspection confirmed C-Dilla/SafeCast and SafeDisc-era files on both pack discs plus directly accessible content/patch payloads. The direct-extraction hypothesis remains unqualified.
+- The real-media recognition smoke passed all seven supplied ISOs and confirmed every owned mount was detached afterward.
+- Release-tree policy tests passed their safe baseline and rejected synthetic ISO, unallowlisted executable, SafeDisc driver, and crack-directory fixtures.
+- All three manual outputs passed page-count/geometry/render checks and deterministic SHA-256 comparison. Final full contact-sheet review found no clipped or misordered pages.
 - GitHub CLI device authorization succeeded for `Icehellionx`; the public repository was created and the initial `main` branch pushed.
 - No product build, install, launch, uninstall, antivirus, or field verification has run.

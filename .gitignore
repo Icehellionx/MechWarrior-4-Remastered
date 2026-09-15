@@ -13,6 +13,8 @@
 .agents/
 .codex/
 agent-output/
+tmp/
+output/
 
 # Generated build/package/test output
 **/obj/
@@ -33,8 +35,8 @@ clips/
 captures/
 
 # User-owned media, manuals, fixes, and extracted working trees
-Installation Files/
-Manuals/
+/Installation Files/
+/Manuals/
 working/
 original/
 staging/
@@ -52,6 +54,8 @@ extracted/
 
 # Downloaded toolchains and dependency caches
 node_modules/
+__pycache__/
+*.pyc
 tools/downloads/
 tools/toolchains/
 tools/*.zip

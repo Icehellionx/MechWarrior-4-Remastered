@@ -10,6 +10,8 @@ The Inner Sphere image also contains a `Razor1911` directory. That directory is 
 
 Black Knight contains a conventional game payload (`MW4X`, `RESOURCE`, movies), `SECDRV.SYS`, and an official Patch 2 payload.
 
+The supplied Mercenaries Disc 2 is UDF media that `bsdtar` did not enumerate but Windows mounted successfully. It contains the expected movie/map/mission payload plus a third-party `Crack/` directory and `SECDRV.SYS`; both are detected and excluded by policy. All seven images match distinct structural descriptors through read-only Windows mounts.
+
 ## External evidence to verify further
 
 - Microsoft archived support article 325999 describes pack visibility as dependent on install order, game presence, and registry/install state.

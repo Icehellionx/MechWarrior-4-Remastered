@@ -6,10 +6,10 @@ This plan begins intentionally uncompleted. Checkmarks require retained evidence
 
 Outcome: supported inputs and publishable outputs are explicit and defensible.
 
-- [ ] Hash and structurally inventory each local ISO/archive/manual without tracking proprietary data.
+- [x] Hash and structurally inventory each local ISO/archive/manual without tracking proprietary data.
 - [ ] Distinguish original retail, official patches, Microsoft-released Mercenaries freeware material, community releases, and third-party cracks by source and license.
-- [ ] Define the release payload allowlist and forbidden-file scanner.
-- [ ] Record a media/redistribution ADR.
+- [x] Define the release payload allowlist and forbidden-file scanner.
+- [x] Record a media/redistribution ADR.
 
 ## 2. Reproducible installation core
 
@@ -26,7 +26,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 
 Outcome: one MW4-styled launcher makes installed capabilities obvious and starts each title reliably.
 
-- [ ] Choose the application stack and record an ADR.
+- [x] Choose the application stack and record an ADR.
 - [ ] Create launcher visual direction from legally usable MW4-era references without copying unlicensed web art.
 - [ ] Show Vengeance, Black Knight, and Mercenaries actions only when installed.
 - [ ] Show Inner Sphere and Clan pack status with clear installed/missing states.
@@ -37,11 +37,11 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 
 Outcome: readable manuals are generated reproducibly from user-local scans and packaged only when redistribution rights permit.
 
-- [ ] Inspect page geometry and render every raw manual.
-- [ ] Split Black Knight's combined cover, move the back cover to the end, and verify page order.
-- [ ] Crop Vengeance pages to content bounds without clipping art, text, folios, or bleed.
-- [ ] Confirm whether Mercenaries needs cleanup.
-- [ ] Add page-count, dimensions, text-presence, and visual render checks.
+- [x] Inspect page geometry and render every raw manual.
+- [x] Split Black Knight's combined cover, move the back cover to the end, and verify page order.
+- [x] Crop Vengeance pages to content bounds without clipping art, text, folios, or bleed.
+- [x] Confirm Mercenaries needs no geometry cleanup.
+- [x] Add page-count, dimensions, content-presence, deterministic-output, and visual render checks.
 
 ## 5. Compatibility qualification
 
@@ -66,11 +66,11 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: establish a trustworthy MW4 project baseline.
-Owning boundary: governance, media catalog, repository hygiene.
-Smallest verifiable slice: initialize Git; add ignores, agent router, model catalog, input inventory tooling, and research-backed first ADRs.
-Focused evidence: docs contain no MW3 product claims; secrets/media remain untracked; router tests pass.
-Smoke/regression evidence: not applicable until an installation core exists.
-Rollback or disable path: documentation/source-only commit; no user media is mutated.
+User-facing goal: produce the first safe, runnable Vengeance installation from recognized user media.
+Owning boundary: media access, extraction plan, official patch transform, install transaction.
+Smallest verifiable slice: stage the two validated Vengeance discs into a disposable tree, reproduce installer file mapping without running SafeDisc/setup code, and verify rollback.
+Focused evidence: exact source/output manifests, path containment, excluded-file assertions, and official-patch provenance.
+Smoke/regression evidence: disposable Vengeance install tree plus adjacent recognition checks for Black Knight, Mercenaries, and both packs.
+Rollback or disable path: staging-only transaction with no registry or permanent install mutation.
 Hardware coverage gap: all runtime behavior remains unqualified.
 ```

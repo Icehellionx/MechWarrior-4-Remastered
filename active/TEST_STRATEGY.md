@@ -18,6 +18,12 @@
 node --test tools/agent/aux-model.test.mjs
 node tools/agent/aux-model.mjs --check
 git status --short --ignored
+dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csproj --configuration Release
+& tests/ReleaseTreePolicy.Tests.ps1
+# Elevated, local-media-only gate:
+& tests/MediaRecognitionSmoke.ps1 -Images $knownMediaImages
+# Local manuals stay ignored:
+python tools/manuals/clean_manuals.py Manuals output/pdf
 ```
 
 Product build and smoke commands will be added only when the owning implementation exists.
