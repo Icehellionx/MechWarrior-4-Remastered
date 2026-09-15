@@ -17,6 +17,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added synthetic status smoke coverage and refused to infer pack installation from an unverified marker.
 - Hashed 23 local media/manual inputs into ignored local evidence and inspected pack/Black Knight ISO layouts without mutation.
 - Confirmed local pack discs carry C-Dilla/SafeCast-era components, SafeDisc-era `SECDRV.SYS`, content resources, and official patch payloads.
+- Created the public `Icehellionx/MechWarrior-4-Remastered` GitHub repository and pushed `main` after device authorization.
 
 ## Scaffold origin
 

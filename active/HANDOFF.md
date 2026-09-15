@@ -12,7 +12,7 @@ Updated: 2026-09-15.
 - The user's freeware statement is not treated as sufficient redistribution authorization. Until reliable primary evidence says otherwise, releases require user-supplied media and exclude ISOs, serials, extracted game trees, and third-party cracks.
 - Inner Sphere and Clan installers are reported to fail on 64-bit Windows. Cause and repair are unverified; investigate installer technology and payload layout before adopting the user's tentative “16-bit encryption” explanation.
 - Root `.env` is local-only. Its configured auxiliary model names are recorded without credentials in `active/AUXILIARY_MODELS.md`.
-- GitHub publication is requested, but GitHub CLI authentication is currently invalid. Local Git setup can proceed; remote creation waits for re-authentication.
+- The root Git repository is published publicly at `Icehellionx/MechWarrior-4-Remastered`; local `main` tracks `origin/main`.
 - An initial .NET 10 WinForms launcher scaffold now models three games and two optional packs through a UI-free core catalog. It only recognizes game executables; pack status deliberately remains false until a payload-manifest verifier exists.
 
 ## Best resume path
@@ -39,5 +39,5 @@ Updated: 2026-09-15.
 - The launcher/core Release build completed with zero warnings/errors, and the synthetic core smoke test passed.
 - A local-only SHA-256 inventory recorded all 23 media/manual inputs under ignored `.local/`; no source media was changed.
 - ISO directory inspection confirmed C-Dilla/SafeCast and SafeDisc-era files on both pack discs plus directly accessible content/patch payloads. The direct-extraction hypothesis remains unqualified.
-- GitHub CLI present but authentication invalid for `Icehellionx`.
+- GitHub CLI device authorization succeeded for `Icehellionx`; the public repository was created and the initial `main` branch pushed.
 - No product build, install, launch, uninstall, antivirus, or field verification has run.

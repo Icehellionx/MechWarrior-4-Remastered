@@ -4,7 +4,7 @@
 
 - Public release: none.
 - Product source/build: not yet created.
-- GitHub remote: requested, not created because the configured GitHub CLI credential is invalid.
+- GitHub remote: `https://github.com/Icehellionx/MechWarrior-4-Remastered`; `main` is the initial development branch.
 - Media support: local candidate inputs inventoried by filename/size only; no fingerprint is qualified.
 - Compatibility: unqualified.
 - Antivirus, hardware, install, launch, repair, and uninstall gates: not run.
