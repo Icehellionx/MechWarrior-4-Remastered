@@ -4,7 +4,7 @@ Updated: 2026-09-15.
 
 ## Current state
 
-- This is a newly initialized MechWarrior 4 Remastered workspace derived only in governance shape from the MechWarrior 3 Remastered project. It now has a narrow launcher scaffold, media recognition, manual pipeline, release-tree policy, and rollback-safe staging cores for all three games; no public installer or qualified runtime baseline exists yet.
+- This is a newly initialized MechWarrior 4 Remastered workspace derived only in governance shape from the MechWarrior 3 Remastered project. It now has a narrow launcher, a read-only installer intake shell, media recognition, manual pipeline, release-tree policy, and rollback-safe staging cores for all three games; no public installer package or qualified runtime baseline exists yet.
 - Local inputs include two-disc Vengeance media, Black Knight media, two-disc Mercenaries media, Inner Sphere and Clan Mech Pak media, archival ZIP variants, patch/fix archives, and three raw PDF manuals. They are evidence/user inputs and are intentionally ignored.
 - The intended product is one MW4-themed installer and launcher for Vengeance, Black Knight, and Mercenaries. Optional Inner Sphere and Clan packs are selected/detected at install time and surfaced as status in the launcher.
 - Raw manuals now have a reproducible cleanup and verification pipeline; generated PDFs remain ignored until redistribution rights are established.
@@ -19,6 +19,8 @@ Updated: 2026-09-15.
 - An ownership-aware ISO media session now validates regular `.iso` inputs, refuses pre-attached images, mounts explicitly read-only through a bounded Windows PowerShell adapter, validates the returned root, and dismounts only its owned image. ADR 0004 records the replaceable backend choice.
 - Archival ZIP input now has an ISO-only extractor: it validates every entry, rejects unsafe/link/duplicate paths, enforces count and expanded-size limits, reports but never writes non-ISO files, verifies its exact extracted inventory, and commits atomically. ADR 0005 records why already-extracted trees and generic archive unpacking are excluded.
 - `MediaSourceInspector` now composes directory inspection, owned ISO sessions, and ISO-only ZIP extraction behind one read-only call suitable for installer UI. The media probe is only a thin reporter over that service.
+- `MediaSelectionSet` atomically converts recognized inspections into readiness for the three games and two optional packs. Its latest valid source wins per layout, failed mixed-media intake leaves prior state unchanged, and exclusion counts remain visible.
+- The first MW4-styled WinForms installer shell now accepts multiple ISO/ZIP files or mounted folders, inspects them off the UI thread, displays five readiness cards and exact source evidence, and reports excluded content. Installation is visibly locked because selected media cannot yet be safely reopened for the full transaction and the permanent patch/no-disc path is not qualified.
 - A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
 - The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
 - The Vengeance install plan now stages 231 allowlisted files from both discs plus one exact-hash user-supplied version-2.0 executable. It restores patch-relevant 8.3 names, excludes setup/SafeDisc content, clears read-only media attributes, commits atomically, and writes a repair/uninstall ownership manifest.
@@ -36,7 +38,7 @@ Updated: 2026-09-15.
 2. Compare official-patch outputs and version resources with the supplied exact-hash 2.0/3.0 executables without publishing those binaries.
 3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
 4. Record ADRs for the permanent patch/no-disc method, compatibility baseline, and remaining registry/save-location ownership.
-5. Build the installer UI over `MediaSourceInspector` and `GameInstallationCoordinator`, including free-space checks, progress, cancellation, and reopening selected sources for the install lifetime.
+5. Extend the installer intake shell with a transaction-owned source-reopen plan, free-space checks, cancellation, and `GameInstallationCoordinator` progress before enabling installation.
 
 ## Known constraints and risks
 
@@ -51,6 +53,7 @@ Updated: 2026-09-15.
 - Governance intake completed; local inputs enumerated without opening or publishing content.
 - Auxiliary router syntax and four unit tests passed. Ollama was reachable with all nine configured local model names installed; Featherless roles are configured but were not live-billed.
 - The launcher/core Release build completed with zero warnings/errors, and the synthetic core smoke test passed.
+- The installer/core Release build completed with zero warnings/errors. Synthetic selection tests cover incomplete/complete two-disc readiness, multi-ISO ZIPs, optional packs, exclusion accounting, latest-source replacement, and atomic rejection of mixed unknown media.
 - Launcher process-boundary tests confirm that an unmanifested executable cannot be launched and that a verified game starts with its own directory as the working directory. The available automation surface could not capture native WinForms windows, so visual inspection remains an explicit UI coverage gap.
 - A local-only SHA-256 inventory recorded all 23 media/manual inputs under ignored `.local/`; no source media was changed.
 - ISO directory inspection confirmed C-Dilla/SafeCast and SafeDisc-era files on both pack discs plus directly accessible content/patch payloads. The direct-extraction hypothesis remains unqualified.

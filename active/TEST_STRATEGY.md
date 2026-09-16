@@ -19,6 +19,8 @@ node --test tools/agent/aux-model.test.mjs
 node tools/agent/aux-model.mjs --check
 git status --short --ignored
 dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csproj --configuration Release
+dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release
+dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
 & tests/ReleaseTreePolicy.Tests.ps1
 # Elevated, local-media-only gate:
 & tests/MediaRecognitionSmoke.ps1 -Images $knownMediaImages
@@ -26,7 +28,7 @@ dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csp
 python tools/manuals/clean_manuals.py Manuals output/pdf
 ```
 
-Product build and smoke commands will be added only when the owning implementation exists.
+Native WinForms visual and interaction smoke remains a manual/automation coverage gap; compilation does not qualify visual layout or the eventual install transaction.
 
 ## Required contracts
 

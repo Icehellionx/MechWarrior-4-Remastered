@@ -77,6 +77,13 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Proved the path against the real Black Knight archival ZIP: only `MW4BK.iso` was extracted, recognition succeeded with SafeDisc exclusions, and no probe scratch directory remained.
 - Added `MediaSourceInspector` as the UI-facing composition boundary for directories, ISOs, and ISO-containing ZIPs; refactored the media probe to a thin reporter and re-ran the real ZIP smoke with identical recognition and cleanup results.
 
+## Installer media intake shell — 2026-09-15
+
+- Added an atomic media-selection model that maps seven layouts to complete/incomplete game and optional-pack capability state, tracks current source evidence, and reports excluded content.
+- Added a MW4-styled WinForms installer shell with multi-file ISO/ZIP and mounted-folder intake, background inspection, five readiness cards, a validated-media ledger, and explicit prohibited-content reporting.
+- Kept installation mutation visibly locked until selected sources can be reopened with transaction-owned lifetimes and the permanent patch/no-disc method is qualified.
+- Built the installer and launcher in Release with zero warnings/errors and passed the full synthetic core regression suite; native WinForms visual inspection remains unautomated.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.
