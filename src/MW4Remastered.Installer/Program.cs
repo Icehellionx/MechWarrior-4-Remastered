@@ -8,6 +8,11 @@ internal static class Program
     private static void Main()
     {
         ApplicationConfiguration.Initialize();
-        Application.Run(new InstallerForm(new MediaSourceInspector(), new MediaSelectionSet()));
+        var mediaSessions = new MediaSourceSessionFactory();
+        var mediaInspection = new MediaInspectionService();
+        Application.Run(new InstallerForm(
+            new MediaSourceInspector(mediaInspection, mediaSessions),
+            new MediaSelectionSet(),
+            new MediaSelectionSessionFactory(mediaSessions, mediaInspection)));
     }
 }

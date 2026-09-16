@@ -36,6 +36,7 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Media matching rejects unknown or partially matching revisions safely.
 - Binary transforms require exact input and output hashes and fail without mutation on mismatch.
 - Extraction prevents traversal, links/reparse escape, device paths, and writes outside staging.
+- Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
 - Install commits atomically where practical and removes partial state after failure.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
 - Launcher status is derived from verified files/configuration, not registry keys alone.

@@ -367,6 +367,8 @@ IsoMediaSessionSmoke.Run(failures);
 IsoArchiveExtractorSmoke.Run(failures);
 MediaSourceInspectorSmoke.Run(failures);
 MediaSelectionSetSmoke.Run(failures);
+MediaSourceSessionSmoke.Run(failures);
+MediaSelectionSessionSmoke.Run(failures);
 
 if (failures.Count > 0)
 {

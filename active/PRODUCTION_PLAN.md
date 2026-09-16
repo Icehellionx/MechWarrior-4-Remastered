@@ -22,6 +22,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [ ] Install optional packs through a tested extraction/configuration path.
 - [x] Persist an ownership manifest sufficient for repair and safe file uninstall.
 - [x] Add a read-only installer intake shell with atomic multi-source readiness for all games and packs; keep mutation locked pending patch and source-lifetime qualification.
+- [x] Reopen and re-recognize selected directory/ISO/ZIP sources under one disposable transaction lifetime with success and failure cleanup.
 
 ## 3. Launcher and user experience
 

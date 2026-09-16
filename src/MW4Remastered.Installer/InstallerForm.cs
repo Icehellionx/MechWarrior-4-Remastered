@@ -17,6 +17,7 @@ internal sealed class InstallerForm : Form
 
     private readonly MediaSourceInspector inspector;
     private readonly MediaSelectionSet selection;
+    private readonly MediaSelectionSessionFactory selectionSessions;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListBox evidenceList = new();
     private readonly Label exclusionStatus = new();
@@ -24,12 +25,17 @@ internal sealed class InstallerForm : Form
     private readonly ProgressBar progress = new();
     private readonly Button addFilesButton = new();
     private readonly Button addFolderButton = new();
-    private readonly Button reviewButton = new();
+    private readonly Button revalidateButton = new();
+    private readonly Button installButton = new();
 
-    public InstallerForm(MediaSourceInspector inspector, MediaSelectionSet selection)
+    public InstallerForm(
+        MediaSourceInspector inspector,
+        MediaSelectionSet selection,
+        MediaSelectionSessionFactory selectionSessions)
     {
         this.inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
+        this.selectionSessions = selectionSessions ?? throw new ArgumentNullException(nameof(selectionSessions));
 
         Text = "MechWarrior 4 Remastered Setup";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -185,10 +191,11 @@ internal sealed class InstallerForm : Form
         {
             AutoSize = true,
             Dock = DockStyle.Bottom,
-            ColumnCount = 2,
+            ColumnCount = 3,
             Margin = new Padding(0, 18, 0, 0),
         };
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.Controls.Add(new Label
         {
@@ -198,15 +205,20 @@ internal sealed class InstallerForm : Form
             Text = "Selection is read-only. Installation stays locked until the patch and source-lifetime pipeline is qualified.",
         }, 0, 0);
 
-        reviewButton.AutoSize = true;
-        reviewButton.Enabled = false;
-        reviewButton.FlatStyle = FlatStyle.Flat;
-        reviewButton.BackColor = Amber;
-        reviewButton.ForeColor = Color.Black;
-        reviewButton.FlatAppearance.BorderSize = 0;
-        reviewButton.Padding = new Padding(16, 7, 16, 7);
-        reviewButton.Text = "INSTALLATION LOCKED";
-        footer.Controls.Add(reviewButton, 1, 0);
+        ConfigureSourceButton(revalidateButton, "REVALIDATE MEDIA");
+        revalidateButton.Enabled = false;
+        revalidateButton.Click += async (_, _) => await RevalidateSelectionAsync();
+        footer.Controls.Add(revalidateButton, 1, 0);
+
+        installButton.AutoSize = true;
+        installButton.Enabled = false;
+        installButton.FlatStyle = FlatStyle.Flat;
+        installButton.BackColor = Amber;
+        installButton.ForeColor = Color.Black;
+        installButton.FlatAppearance.BorderSize = 0;
+        installButton.Padding = new Padding(16, 7, 16, 7);
+        installButton.Text = "INSTALLATION LOCKED";
+        footer.Controls.Add(installButton, 2, 0);
         return footer;
     }
 
@@ -263,6 +275,30 @@ internal sealed class InstallerForm : Form
         }
     }
 
+    private async Task RevalidateSelectionAsync()
+    {
+        SetBusy(true);
+        operationStatus.Text = "Reopening and revalidating selected media…";
+        try
+        {
+            var count = await Task.Run(() =>
+            {
+                using var openSelection = selectionSessions.Open(selection.Current);
+                return openSelection.Layouts.Count;
+            });
+            operationStatus.Text = $"Revalidated {count} selected media layout(s); all owned resources were released.";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception or TimeoutException)
+        {
+            operationStatus.Text = "Media revalidation failed.";
+            MessageBox.Show(this, error.Message, "Media changed or unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            SetBusy(false);
+        }
+    }
+
     private void RefreshSnapshot(MediaSelectionSnapshot snapshot)
     {
         foreach (var capability in snapshot.Capabilities) cards[capability.ProductId].Update(capability);
@@ -281,12 +317,14 @@ internal sealed class InstallerForm : Form
             ? "No prohibited or unrelated archive content encountered."
             : $"{snapshot.ExcludedContentCount} prohibited or unrelated item(s) identified and excluded; none were imported.";
         exclusionStatus.ForeColor = snapshot.ExcludedContentCount == 0 ? Muted : Warning;
+        revalidateButton.Enabled = snapshot.Layouts.Count > 0 && !UseWaitCursor;
     }
 
     private void SetBusy(bool busy)
     {
         addFilesButton.Enabled = !busy;
         addFolderButton.Enabled = !busy;
+        revalidateButton.Enabled = !busy && selection.Current.Layouts.Count > 0;
         progress.Visible = busy;
         UseWaitCursor = busy;
     }

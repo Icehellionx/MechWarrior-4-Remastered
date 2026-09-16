@@ -28,13 +28,14 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `IsoArchiveExtractor` validates complete ZIP inventories but materializes only bounded ISO entries; non-ISO serial/crack/manual files are reported and never extracted.
 - `MediaSourceInspector` is the UI-facing read-only application service that normalizes directory, ISO, and ISO-containing ZIP recognition while owning all temporary extraction and mount lifetimes.
 - `MediaSelectionSet` owns atomic source acceptance, latest-source evidence per recognized layout, three-game disc completeness, optional-pack presence, and excluded-content counts. It holds evidence only; it never mounts, extracts, or installs.
+- `MediaSourceSessionFactory` provides transaction-length directory/ISO/ZIP roots and owns every mount and ZIP scratch directory until disposal. `MediaSelectionSessionFactory` reopens a complete selection, re-recognizes every expected layout, and fails closed if media changed after intake.
 - `VengeanceInstallPlanBuilder` owns the current full-install allowlist, 8.3 name restoration, and exact compatibility-executable hash gate.
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.
 - `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.
 - `GameInstallationCoordinator` is the UI-independent application service for all three games. It reports common stages, delegates title policy to plan builders, owns Mercenaries cabinet scratch lifetime, commits through the shared transaction, and requires exact-tree verification before success.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
-- `MW4Remastered.Installer` is the initial WinForms intake shell. It requests inspection through the application service and renders selection state; its install action remains locked until reopenable media sessions and the permanent patch/no-disc contract exist.
+- `MW4Remastered.Installer` is the initial WinForms intake shell. It requests inspection through the application service, renders selection state, and can transactionally reopen/revalidate the current selection; its install action remains locked until the permanent patch/no-disc contract and install planning UX exist.
 
 ## Dependency direction
 

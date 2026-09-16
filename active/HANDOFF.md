@@ -20,7 +20,8 @@ Updated: 2026-09-15.
 - Archival ZIP input now has an ISO-only extractor: it validates every entry, rejects unsafe/link/duplicate paths, enforces count and expanded-size limits, reports but never writes non-ISO files, verifies its exact extracted inventory, and commits atomically. ADR 0005 records why already-extracted trees and generic archive unpacking are excluded.
 - `MediaSourceInspector` now composes directory inspection, owned ISO sessions, and ISO-only ZIP extraction behind one read-only call suitable for installer UI. The media probe is only a thin reporter over that service.
 - `MediaSelectionSet` atomically converts recognized inspections into readiness for the three games and two optional packs. Its latest valid source wins per layout, failed mixed-media intake leaves prior state unchanged, and exclusion counts remain visible.
-- The first MW4-styled WinForms installer shell now accepts multiple ISO/ZIP files or mounted folders, inspects them off the UI thread, displays five readiness cards and exact source evidence, and reports excluded content. Installation is visibly locked because selected media cannot yet be safely reopened for the full transaction and the permanent patch/no-disc path is not qualified.
+- The first MW4-styled WinForms installer shell now accepts multiple ISO/ZIP files or mounted folders, inspects them off the UI thread, displays five readiness cards and exact source evidence, reports excluded content, and can reopen/revalidate all selected media. Installation remains visibly locked because the permanent patch/no-disc path and install planning UX are not qualified.
+- `MediaSourceSessionFactory` keeps directory/ISO/ZIP roots usable for an explicit lifetime and releases all owned mounts/scratch in reverse order. `MediaSelectionSessionFactory` reopens only current evidence, re-recognizes every expected layout, and closes earlier sources if a later source is missing or changed.
 - A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
 - The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
 - The Vengeance install plan now stages 231 allowlisted files from both discs plus one exact-hash user-supplied version-2.0 executable. It restores patch-relevant 8.3 names, excludes setup/SafeDisc content, clears read-only media attributes, commits atomically, and writes a repair/uninstall ownership manifest.
@@ -38,7 +39,7 @@ Updated: 2026-09-15.
 2. Compare official-patch outputs and version resources with the supplied exact-hash 2.0/3.0 executables without publishing those binaries.
 3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
 4. Record ADRs for the permanent patch/no-disc method, compatibility baseline, and remaining registry/save-location ownership.
-5. Extend the installer intake shell with a transaction-owned source-reopen plan, free-space checks, cancellation, and `GameInstallationCoordinator` progress before enabling installation.
+5. Extend the installer intake shell with destination/free-space planning, cancellation, compatibility-input selection, and `GameInstallationCoordinator` progress before enabling installation.
 
 ## Known constraints and risks
 
@@ -54,6 +55,8 @@ Updated: 2026-09-15.
 - Auxiliary router syntax and four unit tests passed. Ollama was reachable with all nine configured local model names installed; Featherless roles are configured but were not live-billed.
 - The launcher/core Release build completed with zero warnings/errors, and the synthetic core smoke test passed.
 - The installer/core Release build completed with zero warnings/errors. Synthetic selection tests cover incomplete/complete two-disc readiness, multi-ISO ZIPs, optional packs, exclusion accounting, latest-source replacement, and atomic rejection of mixed unknown media.
+- Synthetic source-session tests prove ISO/ZIP resources live until disposal, normal and partial-failure cleanup, selection-wide reopen, changed-media rejection, and cleanup when a later source disappears.
+- The refactored real Black Knight archival-ZIP smoke recognized the expected layout and two prohibited SafeDisc paths, returned exit 0, left no new media-session scratch, and confirmed the standalone local image was detached.
 - Launcher process-boundary tests confirm that an unmanifested executable cannot be launched and that a verified game starts with its own directory as the working directory. The available automation surface could not capture native WinForms windows, so visual inspection remains an explicit UI coverage gap.
 - A local-only SHA-256 inventory recorded all 23 media/manual inputs under ignored `.local/`; no source media was changed.
 - ISO directory inspection confirmed C-Dilla/SafeCast and SafeDisc-era files on both pack discs plus directly accessible content/patch payloads. The direct-extraction hypothesis remains unqualified.

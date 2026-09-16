@@ -84,6 +84,13 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Kept installation mutation visibly locked until selected sources can be reopened with transaction-owned lifetimes and the permanent patch/no-disc method is qualified.
 - Built the installer and launcher in Release with zero warnings/errors and passed the full synthetic core regression suite; native WinForms visual inspection remains unautomated.
 
+## Transaction-length selected media — 2026-09-15
+
+- Refactored inspection onto one reusable media-session boundary that keeps read-only ISO mounts and ISO-only ZIP scratch alive until explicit disposal.
+- Added selection-wide reopen/revalidation that matches archive entry plus structural layout, rejects changed media before installation, and unwinds already-opened sources if later input fails.
+- Wired installer-side revalidation without enabling file installation.
+- Proved lifetime and cleanup synthetically, then recognized the real Black Knight archival ZIP with no residual scratch or attached image.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.
