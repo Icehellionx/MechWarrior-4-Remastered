@@ -139,6 +139,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added exact-inventory rejection for missing, modified, unexpected, or reparse bundle content and regression coverage proving extra files fail closed.
 - Added atomic bundle assembly from reproducible CI evidence, reproduced all four locked hashes from run `35048453580`, and passed a current Defender scan of the assembled bundle.
 
+## Installer-driven Black Knight installation — 2026-09-16
+
+- Wired only the qualified Black Knight path into the installer: complete media, exact compatibility bundle, contained unused destination, and sufficient space are all required before the action enables.
+- Reopened only Black Knight source evidence for the operation lifetime, surfaced coordinator progress, added chunk-cancellable staging/cabinet process control, and preserved the atomic commit plus mandatory post-commit verification boundary.
+- Added coordinator/transaction cancellation regressions, started the rebuilt installer responsively with the exact bundle present, and passed a current Defender scan of that combined output tree.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

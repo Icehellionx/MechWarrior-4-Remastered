@@ -14,8 +14,9 @@ public sealed class CabinetPayloadExtractor
         this.archiveToolPath = archiveToolPath;
     }
 
-    public IReadOnlyList<string> ExtractGamePayload(string cabinetPath, string destinationRoot)
+    public IReadOnlyList<string> ExtractGamePayload(string cabinetPath, string destinationRoot, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var cabinet = Path.GetFullPath(cabinetPath);
         if (!File.Exists(cabinet)) throw new FileNotFoundException("Mercenaries cabinet does not exist.", cabinet);
         if ((File.GetAttributes(cabinet) & FileAttributes.ReparsePoint) != 0)
@@ -31,14 +32,15 @@ public sealed class CabinetPayloadExtractor
         var parent = Directory.GetParent(destination)?.FullName ?? throw new InvalidDataException("Cabinet extraction destination must have a parent directory.");
         Directory.CreateDirectory(parent);
 
-        var archiveEntries = ListEntries(cabinet);
+        var archiveEntries = ListEntries(cabinet, cancellationToken);
         var expected = ValidateGameEntries(archiveEntries);
         var staging = Path.Combine(parent, $".{Path.GetFileName(destination)}.cab-staging-{Guid.NewGuid():N}");
         Directory.CreateDirectory(staging);
 
         try
         {
-            RunArchiveTool(new[] { "-xf", cabinet, "-C", staging });
+            RunArchiveTool(new[] { "-xf", cabinet, "-C", staging }, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             var extractedGameRoot = Path.Combine(staging, "GAME");
             if (!Directory.Exists(extractedGameRoot)) throw new InvalidDataException("Cabinet did not produce the expected GAME payload root.");
 
@@ -59,9 +61,9 @@ public sealed class CabinetPayloadExtractor
         }
     }
 
-    private IReadOnlyList<string> ListEntries(string cabinet)
+    private IReadOnlyList<string> ListEntries(string cabinet, CancellationToken cancellationToken)
     {
-        var result = RunArchiveTool(new[] { "-tf", cabinet });
+        var result = RunArchiveTool(new[] { "-tf", cabinet }, cancellationToken);
         return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
@@ -88,7 +90,7 @@ public sealed class CabinetPayloadExtractor
         return accepted;
     }
 
-    private string RunArchiveTool(IEnumerable<string> arguments)
+    private string RunArchiveTool(IEnumerable<string> arguments, CancellationToken cancellationToken)
     {
         var startInfo = new ProcessStartInfo
         {
@@ -103,11 +105,24 @@ public sealed class CabinetPayloadExtractor
         using var process = Process.Start(startInfo) ?? throw new IOException($"Failed to start archive tool: {archiveToolPath}");
         var outputTask = process.StandardOutput.ReadToEndAsync();
         var errorTask = process.StandardError.ReadToEndAsync();
-        if (!process.WaitForExit(ArchiveToolTimeout))
+        var deadline = DateTime.UtcNow + ArchiveToolTimeout;
+        try
         {
-            process.Kill(entireProcessTree: true);
-            process.WaitForExit();
-            throw new IOException($"Archive tool exceeded the {ArchiveToolTimeout.TotalSeconds:0}-second timeout.");
+            while (!process.WaitForExit(250))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (DateTime.UtcNow >= deadline)
+                    throw new IOException($"Archive tool exceeded the {ArchiveToolTimeout.TotalSeconds:0}-second timeout.");
+            }
+        }
+        catch
+        {
+            if (!process.HasExited)
+            {
+                process.Kill(entireProcessTree: true);
+                process.WaitForExit();
+            }
+            throw;
         }
         var output = outputTask.GetAwaiter().GetResult();
         var error = errorTask.GetAwaiter().GetResult();

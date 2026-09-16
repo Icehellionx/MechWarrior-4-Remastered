@@ -152,6 +152,23 @@ try
     Check(failed && !Directory.Exists(failedDestination), "failed transaction rolls back before commit");
     Check(!Directory.EnumerateDirectories(Path.Combine(transactionRoot, "installed"), ".failed.staging-*").Any(), "failed transaction removes its staging directory");
 
+    using var cancelledSource = new CancellationTokenSource();
+    cancelledSource.Cancel();
+    var cancelledDestination = Path.Combine(transactionRoot, "installed", "cancelled");
+    var transactionCancellationObserved = false;
+    try
+    {
+        new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+        {
+            new InstallFile(disc1, "MW4.EXE", "MW4.EXE"),
+        }), cancelledDestination, cancelledSource.Token);
+    }
+    catch (OperationCanceledException)
+    {
+        transactionCancellationObserved = true;
+    }
+    Check(transactionCancellationObserved && !Directory.Exists(cancelledDestination), "cancelled transaction leaves no destination");
+
     var traversalRejected = false;
     try
     {

@@ -91,9 +91,11 @@ public sealed class BlackKnightInstallPlanBuilder
         }
     }
 
-    private static QualifiedCompatibilityPayload CreatePackagedPayload()
+    public static QualifiedCompatibilityPayload CreatePackagedPayload(string? bundleRoot = null)
     {
-        var root = Path.Combine(AppContext.BaseDirectory, "Compatibility", "BlackKnight");
+        var root = string.IsNullOrWhiteSpace(bundleRoot)
+            ? Path.Combine(AppContext.BaseDirectory, "Compatibility", "BlackKnight")
+            : Path.GetFullPath(bundleRoot);
         return new QualifiedCompatibilityPayload(
             root,
             new[]

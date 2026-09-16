@@ -11,10 +11,11 @@ public sealed class StagedInstallTransaction
         PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
-    public InstallManifest Execute(InstallPlan plan, string destinationPath)
+    public InstallManifest Execute(InstallPlan plan, string destinationPath, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(plan);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var destination = Path.GetFullPath(destinationPath);
         if (Directory.Exists(destination) || File.Exists(destination))
@@ -37,6 +38,7 @@ public sealed class StagedInstallTransaction
 
             foreach (var operation in plan.Files)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var sourceRoot = Path.GetFullPath(operation.SourceRoot);
                 RejectReparsePoint(sourceRoot, "source root");
                 var source = ResolveContainedPath(sourceRoot, operation.SourceRelativePath);
@@ -51,7 +53,7 @@ public sealed class StagedInstallTransaction
 
                 var stagedFile = ResolveContainedPath(staging, normalizedDestination);
                 Directory.CreateDirectory(Path.GetDirectoryName(stagedFile)!);
-                File.Copy(source, stagedFile, overwrite: false);
+                CopyFile(source, stagedFile, cancellationToken);
                 File.SetAttributes(stagedFile, FileAttributes.Normal);
 
                 var info = new FileInfo(stagedFile);
@@ -63,11 +65,13 @@ public sealed class StagedInstallTransaction
             }
 
             installedFiles.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Path, right.Path));
+            cancellationToken.ThrowIfCancellationRequested();
             var manifest = new InstallManifest(1, plan.ProductId, installedFiles);
             var manifestPath = ResolveContainedPath(staging, InstallManifest.RelativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
             File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, ManifestJson) + Environment.NewLine);
 
+            cancellationToken.ThrowIfCancellationRequested();
             Directory.Move(staging, destination);
             committed = true;
             return manifest;
@@ -76,6 +80,20 @@ public sealed class StagedInstallTransaction
         {
             if (!committed && Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
         }
+    }
+
+    private static void CopyFile(string source, string destination, CancellationToken cancellationToken)
+    {
+        using var input = new FileStream(source, FileMode.Open, FileAccess.Read, FileShare.Read, 1024 * 1024, FileOptions.SequentialScan);
+        using var output = new FileStream(destination, FileMode.CreateNew, FileAccess.Write, FileShare.None, 1024 * 1024, FileOptions.SequentialScan);
+        var buffer = new byte[1024 * 1024];
+        int bytesRead;
+        while ((bytesRead = input.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            output.Write(buffer, 0, bytesRead);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     internal static string NormalizeRelativePath(string relativePath)

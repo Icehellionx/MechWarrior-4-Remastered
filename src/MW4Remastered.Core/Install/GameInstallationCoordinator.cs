@@ -93,10 +93,12 @@ public sealed class GameInstallationCoordinator
     public GameInstallationResult Install(
         GameInstallRequest request,
         string destinationPath,
-        IProgress<GameInstallationProgress>? progress = null)
+        IProgress<GameInstallationProgress>? progress = null,
+        CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+        cancellationToken.ThrowIfCancellationRequested();
         var destination = Path.GetFullPath(destinationPath);
         Report(GameInstallationStage.Validating, "Validating selected media and destination.");
 
@@ -110,9 +112,10 @@ public sealed class GameInstallationCoordinator
                     ?? throw new InvalidDataException("Install destination must have a parent directory.");
                 cabinetPayload = Path.Combine(parent, $".mercenaries-cabinet-{Guid.NewGuid():N}");
                 var cabinet = Path.Combine(Path.GetFullPath(mercenaries.DiscOneRoot), "MSGAME.CAB");
-                cabinetExtractor.ExtractGamePayload(cabinet, cabinetPayload);
+                cabinetExtractor.ExtractGamePayload(cabinet, cabinetPayload, cancellationToken);
             }
 
+            cancellationToken.ThrowIfCancellationRequested();
             Report(GameInstallationStage.Planning, "Building the exact game payload plan.");
             var plan = plans.Build(request, cabinetPayload);
             if (!string.Equals(plan.ProductId, request.ProductId, StringComparison.OrdinalIgnoreCase))
@@ -121,7 +124,7 @@ public sealed class GameInstallationCoordinator
             }
 
             Report(GameInstallationStage.Committing, "Staging and atomically committing owned files.");
-            var manifest = transaction.Execute(plan, destination);
+            var manifest = transaction.Execute(plan, destination, cancellationToken);
             Report(GameInstallationStage.Verifying, "Verifying every committed owned file.");
             var verification = verifier.Verify(destination, InstallVerificationScope.ExactTree);
             if (!verification.IsValid)

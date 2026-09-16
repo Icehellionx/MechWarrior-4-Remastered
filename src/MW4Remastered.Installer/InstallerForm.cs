@@ -20,6 +20,8 @@ internal sealed class InstallerForm : Form
     private readonly MediaSelectionSet selection;
     private readonly MediaSelectionSessionFactory selectionSessions;
     private readonly InstallDestinationPlanner destinationPlanner;
+    private readonly GameInstallationCoordinator? blackKnightInstaller;
+    private readonly string compatibilityStatus;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListBox evidenceList = new();
     private readonly Label exclusionStatus = new();
@@ -34,17 +36,22 @@ internal sealed class InstallerForm : Form
     private readonly Label destinationStatus = new();
     private readonly Button destinationButton = new();
     private CancellationTokenSource? operationCancellation;
+    private InstallDestinationPlan? currentDestinationPlan;
 
     public InstallerForm(
         MediaSourceInspector inspector,
         MediaSelectionSet selection,
         MediaSelectionSessionFactory selectionSessions,
-        InstallDestinationPlanner destinationPlanner)
+        InstallDestinationPlanner destinationPlanner,
+        GameInstallationCoordinator? blackKnightInstaller,
+        string compatibilityStatus)
     {
         this.inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
         this.selectionSessions = selectionSessions ?? throw new ArgumentNullException(nameof(selectionSessions));
         this.destinationPlanner = destinationPlanner ?? throw new ArgumentNullException(nameof(destinationPlanner));
+        this.blackKnightInstaller = blackKnightInstaller;
+        this.compatibilityStatus = compatibilityStatus ?? throw new ArgumentNullException(nameof(compatibilityStatus));
 
         Text = "MechWarrior 4 Remastered Setup";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -57,6 +64,7 @@ internal sealed class InstallerForm : Form
 
         Controls.Add(CreateRootLayout());
         RefreshSnapshot(selection.Current);
+        if (blackKnightInstaller is null) operationStatus.Text = compatibilityStatus;
     }
 
     private Control CreateRootLayout()
@@ -271,7 +279,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             Anchor = AnchorStyles.Left,
             ForeColor = Muted,
-            Text = "Selection is read-only. Installation stays locked until the patch and source-lifetime pipeline is qualified.",
+            Text = "Black Knight installs from validated media; Vengeance and Mercenaries remain locked pending qualified transforms.",
         }, 0, 0);
 
         ConfigureSourceButton(revalidateButton, "REVALIDATE MEDIA");
@@ -287,8 +295,63 @@ internal sealed class InstallerForm : Form
         installButton.FlatAppearance.BorderSize = 0;
         installButton.Padding = new Padding(16, 7, 16, 7);
         installButton.Text = "INSTALLATION LOCKED";
+        installButton.Click += async (_, _) => await InstallBlackKnightAsync();
         footer.Controls.Add(installButton, 2, 0);
         return footer;
+    }
+
+    private async Task InstallBlackKnightAsync()
+    {
+        if (blackKnightInstaller is null || currentDestinationPlan is null) return;
+        var snapshot = selection.Current;
+        var blackKnightMedia = snapshot.Layouts
+            .Where(item => item.Layout.Id.Equals("black-knight-disc-1", StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        var blackKnightDestination = currentDestinationPlan.Products
+            .SingleOrDefault(item => item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
+        if (blackKnightMedia.Length != 1 || blackKnightDestination is null) return;
+
+        var installSelection = CreateBlackKnightSelection(snapshot);
+
+        SetBusy(true);
+        var cancellationToken = operationCancellation!.Token;
+        var progressReporter = new Progress<GameInstallationProgress>(update =>
+        {
+            operationStatus.Text = $"{update.Stage}: {update.Message}";
+        });
+        try
+        {
+            var refreshedPlan = destinationPlanner.Plan(installSelection, destinationText.Text);
+            var destination = refreshedPlan.Products.Single(item => item.ProductId == "black-knight").DestinationPath;
+            if (!refreshedPlan.HasEnoughSpace) throw new IOException("The selected destination no longer has enough free space.");
+
+            var result = await Task.Run(() =>
+            {
+                using var openSelection = selectionSessions.Open(installSelection, cancellationToken);
+                return blackKnightInstaller.Install(
+                    new BlackKnightInstallRequest(openSelection.GetRoot("black-knight-disc-1")),
+                    destination,
+                    progressReporter,
+                    cancellationToken);
+            }, cancellationToken);
+            operationStatus.Text = $"Installed and verified {result.Manifest.Files.Count} Black Knight files.";
+            MessageBox.Show(this, $"Black Knight was installed and verified at:{Environment.NewLine}{result.DestinationPath}",
+                "Installation complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (OperationCanceledException)
+        {
+            operationStatus.Text = "Installation cancelled; staged files and owned media resources were released.";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or Win32Exception or TimeoutException)
+        {
+            operationStatus.Text = "Black Knight installation failed safely.";
+            MessageBox.Show(this, error.Message, "Installation failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            SetBusy(false);
+            RefreshDestinationPlan();
+        }
     }
 
     private async Task SelectFilesAsync()
@@ -410,13 +473,16 @@ internal sealed class InstallerForm : Form
 
     private void RefreshDestinationPlan()
     {
+        currentDestinationPlan = null;
         try
         {
             var plan = destinationPlanner.Plan(selection.Current, destinationText.Text);
+            currentDestinationPlan = plan;
             if (!plan.HasSelectedGames)
             {
                 destinationStatus.ForeColor = Muted;
                 destinationStatus.Text = "Select complete game media to calculate destination space.";
+                UpdateInstallAvailability();
                 return;
             }
 
@@ -428,6 +494,7 @@ internal sealed class InstallerForm : Form
             destinationStatus.ForeColor = Warning;
             destinationStatus.Text = error.Message;
         }
+        UpdateInstallAvailability();
     }
 
     private void SetBusy(bool busy)
@@ -450,6 +517,43 @@ internal sealed class InstallerForm : Form
             operationCancellation?.Dispose();
             operationCancellation = null;
         }
+        UpdateInstallAvailability();
+    }
+
+    private void UpdateInstallAvailability()
+    {
+        var snapshot = selection.Current;
+        var blackKnightReady = snapshot.Capabilities.Any(item =>
+            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase) && item.IsComplete);
+        InstallDestinationPlan? blackKnightPlan = null;
+        if (blackKnightReady && currentDestinationPlan is not null)
+        {
+            try
+            {
+                blackKnightPlan = destinationPlanner.Plan(CreateBlackKnightSelection(snapshot), currentDestinationPlan.RootPath);
+            }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+            {
+                blackKnightPlan = null;
+            }
+        }
+        var destination = blackKnightPlan?.Products.SingleOrDefault();
+        var available = blackKnightInstaller is not null && blackKnightPlan?.HasEnoughSpace == true &&
+            destination is not null && !Directory.Exists(destination.DestinationPath) && !File.Exists(destination.DestinationPath) && !UseWaitCursor;
+        installButton.Enabled = available;
+        installButton.Text = available ? "INSTALL BLACK KNIGHT" : "INSTALLATION LOCKED";
+        installButton.AccessibleDescription = blackKnightInstaller is null ? compatibilityStatus : null;
+    }
+
+    private static MediaSelectionSnapshot CreateBlackKnightSelection(MediaSelectionSnapshot snapshot)
+    {
+        var layouts = snapshot.Layouts.Where(item =>
+            item.Layout.Id.Equals("black-knight-disc-1", StringComparison.OrdinalIgnoreCase)).ToArray();
+        return new MediaSelectionSnapshot(
+            layouts,
+            snapshot.Capabilities.Where(item => item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase)).ToArray(),
+            layouts.Select(item => item.SourcePath).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
+            layouts.Sum(item => item.ExcludedContentCount));
     }
 
     private void CancelOperation()

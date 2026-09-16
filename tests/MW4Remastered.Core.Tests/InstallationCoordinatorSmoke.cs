@@ -31,6 +31,22 @@ internal static class InstallationCoordinatorSmoke
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".mercenaries-cabinet-*").Any(), "coordinator removes Mercenaries cabinet scratch after success", failures);
             Check(progress.Events.Count(item => item.Stage == GameInstallationStage.Completed) == 3, "coordinator reports completion for all three games", failures);
 
+            using var cancelledSource = new CancellationTokenSource();
+            cancelledSource.Cancel();
+            var cancelledDestination = Path.Combine(root, "cancelled", "black-knight");
+            var cancellationObserved = false;
+            try
+            {
+                coordinator.Install(new BlackKnightInstallRequest(inputs.BlackKnightDisc), cancelledDestination,
+                    cancellationToken: cancelledSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                cancellationObserved = true;
+            }
+            Check(cancellationObserved && !Directory.Exists(cancelledDestination),
+                "coordinator cancellation leaves no Black Knight destination", failures);
+
             var failedDestination = Path.Combine(root, "failed", "mercenaries");
             var failed = false;
             try

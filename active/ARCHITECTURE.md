@@ -42,7 +42,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `OwnedInstallOverlayTransaction` adds non-colliding files to an already verified matching game tree, atomically replaces its ownership manifest, rolls payload back on manifest failure, preserves unowned user data, and leaves recovery state when rollback itself fails. It does not decide whether a pack is runtime-visible.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
 - `MW4Remastered.CompatLauncher` is a 32-bit, `asInvoker`, fail-closed launch helper constrained to the three adjacent MW4 executable names and the adjacent compatibility DLL. Black Knight launch selects it only when the ownership manifest verifies the helper and original game files; unowned dropped helpers are ignored.
-- `MW4Remastered.Installer` is the initial WinForms intake shell. It requests inspection through the application service, renders selection state, can transactionally reopen/revalidate the current selection, and previews a contained destination/free-space plan. Its install action remains locked until the permanent patch/no-disc contracts and execution UX are qualified.
+- `MW4Remastered.Installer` requests inspection through the application service, renders selection state, transactionally reopens/revalidates selected media, and previews a contained destination/free-space plan. It enables only the qualified Black Knight install path when its exact internal bundle and media are ready; Vengeance and Mercenaries remain locked pending media-only compatibility transforms.
 
 ## Dependency direction
 
@@ -58,6 +58,7 @@ Build and tests -> declared source/assets -> package manifest -> smoke-installed
 - Original media, serials, cracks, and extracted proprietary game files are never committed or published.
 - Every accepted input is identified by content/structure, not filename alone.
 - Every mutation occurs in staging or under an exact validated install root and has cleanup/rollback ownership.
+- Cancellation is honored before atomic install commit; once a completed tree is renamed into place, final verification runs to completion so cancellation cannot strand an unverified committed result.
 - Shared game behavior is parameterized; edition-specific differences live in data or named contracts.
 - No-disc support is reproducible, narrowly documented, hash-gated, and never sourced from an unverified opaque executable at release time.
 - Normal game launch never elevates. Privileged install/repair/uninstall work cannot make the launcher or game inherit administrator integrity.
