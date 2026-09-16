@@ -170,6 +170,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Captured both real WinForms windows for visual QA, fixed unreadable disabled-state text and dead initial controls, and added a user-flow source contract to hosted application CI.
 - Built the final package twice byte-identically at 72,289,562 bytes, scanned SHA-256 `1b7455ed7180f638a6e7c24b8d118a8ed4954f693a6bb7720658f8c544aa1994` clean with the current Defender gate, and preserved the existing Black Knight tree during the installed-shell update.
 - Re-scanned the corrected installed shell plus preserved Black Knight tree; Defender reported no threat and no new detection/remediation event.
+- Hosted Windows application-contract run `35061879507` passed all steps for redesign commit `11d0310` in 58 seconds.
 
 ## Scaffold origin
 
