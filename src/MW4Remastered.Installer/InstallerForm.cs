@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using MW4Remastered.Core;
 using MW4Remastered.Core.Install;
+using MW4Remastered.Core.Launch;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Installer;
@@ -22,6 +23,7 @@ internal sealed class InstallerForm : Form
     private readonly InstallDestinationPlanner destinationPlanner;
     private readonly GameInstallationCoordinator? blackKnightInstaller;
     private readonly string compatibilityStatus;
+    private readonly InstalledLauncherOrchestrator installedLauncher;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListBox evidenceList = new();
     private readonly Label exclusionStatus = new();
@@ -44,7 +46,8 @@ internal sealed class InstallerForm : Form
         MediaSelectionSessionFactory selectionSessions,
         InstallDestinationPlanner destinationPlanner,
         GameInstallationCoordinator? blackKnightInstaller,
-        string compatibilityStatus)
+        string compatibilityStatus,
+        InstalledLauncherOrchestrator installedLauncher)
     {
         this.inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
@@ -52,6 +55,7 @@ internal sealed class InstallerForm : Form
         this.destinationPlanner = destinationPlanner ?? throw new ArgumentNullException(nameof(destinationPlanner));
         this.blackKnightInstaller = blackKnightInstaller;
         this.compatibilityStatus = compatibilityStatus ?? throw new ArgumentNullException(nameof(compatibilityStatus));
+        this.installedLauncher = installedLauncher ?? throw new ArgumentNullException(nameof(installedLauncher));
 
         Text = "MechWarrior 4 Remastered Setup";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -158,7 +162,7 @@ internal sealed class InstallerForm : Form
         {
             AutoSize = true,
             ForeColor = Muted,
-            Text = "MEDIA INTAKE  •  SELECT ORIGINAL DISCS OR ISO-ONLY ARCHIVES",
+            Text = "STEP 1 OF 2  •  ADD ORIGINAL ISOs OR ZIP FILES CONTAINING THEM",
             Margin = new Padding(3, 2, 0, 0),
         });
         return panel;
@@ -198,12 +202,13 @@ internal sealed class InstallerForm : Form
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
-        ConfigureSourceButton(addFilesButton, "ADD ISO / ZIP");
+        ConfigureSourceButton(addFilesButton, "1. CHOOSE ISO / ZIP FILES");
         ConfigureSourceButton(addFolderButton, "ADD MOUNTED FOLDER");
         addFilesButton.Click += async (_, _) => await SelectFilesAsync();
         addFolderButton.Click += async (_, _) => await SelectFolderAsync();
         ConfigureSourceButton(cancelButton, "CANCEL");
         cancelButton.Enabled = false;
+        cancelButton.Visible = false;
         cancelButton.Click += (_, _) => CancelOperation();
 
         operationStatus.AutoSize = true;
@@ -279,11 +284,12 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             Anchor = AnchorStyles.Left,
             ForeColor = Muted,
-            Text = "Black Knight installs from validated media; Vengeance and Mercenaries remain locked pending qualified transforms.",
+            Text = "Add your media above, then use the large install button. Valid but unfinished titles are identified clearly.",
         }, 0, 0);
 
         ConfigureSourceButton(revalidateButton, "REVALIDATE MEDIA");
         revalidateButton.Enabled = false;
+        revalidateButton.Visible = false;
         revalidateButton.Click += async (_, _) => await RevalidateSelectionAsync();
         footer.Controls.Add(revalidateButton, 1, 0);
 
@@ -294,7 +300,7 @@ internal sealed class InstallerForm : Form
         installButton.ForeColor = Color.Black;
         installButton.FlatAppearance.BorderSize = 0;
         installButton.Padding = new Padding(16, 7, 16, 7);
-        installButton.Text = "INSTALLATION LOCKED";
+        installButton.Text = "ADD MEDIA TO BEGIN";
         installButton.Click += async (_, _) => await InstallBlackKnightAsync();
         footer.Controls.Add(installButton, 2, 0);
         return footer;
@@ -337,6 +343,11 @@ internal sealed class InstallerForm : Form
             operationStatus.Text = $"Installed and verified {result.Manifest.Files.Count} Black Knight files.";
             MessageBox.Show(this, $"Black Knight was installed and verified at:{Environment.NewLine}{result.DestinationPath}",
                 "Installation complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (installedLauncher.IsAvailable)
+            {
+                installedLauncher.Start();
+                Close();
+            }
         }
         catch (OperationCanceledException)
         {
@@ -413,7 +424,7 @@ internal sealed class InstallerForm : Form
         }
 
         operationStatus.Text = cancelled ? "Media inspection cancelled; owned temporary resources were released."
-            : errors.Count == 0 ? "Media inspection complete." : $"Completed with {errors.Count} rejected source(s).";
+            : errors.Count == 0 ? GetNextStepText() : $"Completed with {errors.Count} rejected source(s). {GetNextStepText()}";
         if (errors.Count > 0)
         {
             MessageBox.Show(this, string.Join(Environment.NewLine + Environment.NewLine, errors), "Media not accepted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -468,6 +479,7 @@ internal sealed class InstallerForm : Form
             : $"{snapshot.ExcludedContentCount} prohibited or unrelated item(s) identified and excluded; none were imported.";
         exclusionStatus.ForeColor = snapshot.ExcludedContentCount == 0 ? Muted : Warning;
         revalidateButton.Enabled = snapshot.Layouts.Count > 0 && !UseWaitCursor;
+        revalidateButton.Visible = snapshot.Layouts.Count > 0;
         RefreshDestinationPlan();
     }
 
@@ -507,9 +519,11 @@ internal sealed class InstallerForm : Form
         addFilesButton.Enabled = !busy;
         addFolderButton.Enabled = !busy;
         cancelButton.Enabled = busy;
+        cancelButton.Visible = busy;
         destinationText.Enabled = !busy;
         destinationButton.Enabled = !busy;
         revalidateButton.Enabled = !busy && selection.Current.Layouts.Count > 0;
+        revalidateButton.Visible = selection.Current.Layouts.Count > 0;
         progress.Visible = busy;
         UseWaitCursor = busy;
         if (!busy)
@@ -541,8 +555,24 @@ internal sealed class InstallerForm : Form
         var available = blackKnightInstaller is not null && blackKnightPlan?.HasEnoughSpace == true &&
             destination is not null && !Directory.Exists(destination.DestinationPath) && !File.Exists(destination.DestinationPath) && !UseWaitCursor;
         installButton.Enabled = available;
-        installButton.Text = available ? "INSTALL BLACK KNIGHT" : "INSTALLATION LOCKED";
+        installButton.Text = available ? "2. INSTALL BLACK KNIGHT NOW"
+            : UseWaitCursor ? "WORKING…"
+            : !blackKnightReady ? (snapshot.Layouts.Count == 0 ? "ADD MEDIA TO BEGIN" : "ADD BLACK KNIGHT MEDIA TO INSTALL")
+            : blackKnightInstaller is null ? "BLACK KNIGHT INSTALLER UNAVAILABLE"
+            : blackKnightPlan?.HasEnoughSpace != true ? "CHOOSE A VALID INSTALL LOCATION"
+            : destination is not null && (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath)) ? "BLACK KNIGHT ALREADY INSTALLED"
+            : "CHECK INSTALL REQUIREMENTS";
         installButton.AccessibleDescription = blackKnightInstaller is null ? compatibilityStatus : null;
+    }
+
+    private string GetNextStepText()
+    {
+        var blackKnight = selection.Current.Capabilities.Single(item =>
+            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
+        if (blackKnight.IsComplete && installButton.Enabled) return "Media ready. Click 2. INSTALL BLACK KNIGHT NOW.";
+        if (blackKnight.IsComplete) return "Black Knight media is valid; review the install-location message below.";
+        if (selection.Current.Layouts.Count > 0) return "Media added. Add Black Knight media to enable the currently qualified install path.";
+        return "Choose one or more ISO or ZIP files to begin.";
     }
 
     private static MediaSelectionSnapshot CreateBlackKnightSelection(MediaSelectionSnapshot snapshot)
@@ -612,10 +642,23 @@ internal sealed class InstallerForm : Form
         public void Update(MediaCapabilityStatus capability)
         {
             status.ForeColor = capability.IsComplete ? Ready : Muted;
-            status.Text = capability.IsComplete ? "●  MEDIA READY" : "○  MEDIA NEEDED";
-            detail.Text = capability.IsComplete
-                ? capability.Kind == ProductKind.Game ? "All required discs validated" : "Optional content detected"
-                : $"{capability.PresentLayoutIds.Count} / {capability.RequiredLayoutIds.Count} required source(s)";
+            if (!capability.IsComplete)
+            {
+                status.Text = "○  MEDIA NEEDED";
+                detail.Text = $"{capability.PresentLayoutIds.Count} / {capability.RequiredLayoutIds.Count} required source(s)";
+                return;
+            }
+
+            if (capability.Kind == ProductKind.OptionalPack)
+            {
+                status.Text = "✓  PACK MEDIA ADDED";
+                detail.Text = "Detected; pack installation support is still in progress";
+                return;
+            }
+
+            var installable = capability.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase);
+            status.Text = installable ? "✓  READY TO INSTALL" : "✓  MEDIA ADDED";
+            detail.Text = installable ? "Click the large install button below" : "Installation support is still in progress";
         }
     }
 }

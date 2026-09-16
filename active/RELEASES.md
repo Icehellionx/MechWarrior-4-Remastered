@@ -7,7 +7,7 @@
 - GitHub remote: `https://github.com/Icehellionx/MechWarrior-4-Remastered`; `main` is the initial development branch.
 - Media support: all seven supplied ISO layouts are structurally recognized; only Black Knight has a qualified media-only install/launch path.
 - Compatibility: Black Knight's source-built loader/helper path is qualified on this device; Vengeance, Mercenaries, and pack entitlement remain unqualified.
-- Packaging: pinned Inno Setup 7.1.0 builds a per-user, non-elevating setup with standard uninstall. Two clean builds produced the same 72,276,429-byte executable and SHA-256 `83a396a6cc497440f171a9fffb68ba2788dad5843c93989b0fa462dfbbafed52`. A disposable install/start/uninstall smoke removed package-owned shell files and preserved an unowned synthetic save.
+- Packaging: pinned Inno Setup 7.1.0 builds a per-user, non-elevating setup with standard uninstall and an in-setup media stage. Two clean final-flow builds produced the same 72,289,562-byte executable and SHA-256 `1b7455ed7180f638a6e7c24b8d118a8ed4954f693a6bb7720658f8c544aa1994`. A disposable install/start/uninstall smoke removed package-owned shell files and preserved an unowned synthetic save.
 - Antivirus: the reproducible setup, staged/extracted shell payload, disposable installed shell, source-built Black Knight tree, and fresh application/helper builds passed Defender engine `1.1.26080.3` / intelligence `1.459.223.0` with no matching detection or remediation event. A historical ignored SafeDiscLoader 1 evaluation was detected and quarantined, so that opaque path is permanently excluded. Signing/SmartScreen reputation, repair UI, wider hardware, and remaining-title gates stay open.
 
 ## Release checklist

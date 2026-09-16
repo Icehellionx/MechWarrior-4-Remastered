@@ -9,7 +9,7 @@ The project needs a conventional Windows setup and whole-application uninstaller
 
 Inno Setup 7.1.0 supports per-user installation, an `asInvoker` setup, standard Add/Remove Programs registration, and deterministic file timestamps. Its license permits this non-commercial project use and redistribution subject to the recorded terms. The exact local compiler is pinned in `third_party/InnoSetup.lock.json`.
 
-Two clean package builds from the same declared inputs produced byte-identical 72,276,429-byte setup executables with SHA-256 `83a396a6cc497440f171a9fffb68ba2788dad5843c93989b0fa462dfbbafed52`. A silent disposable install completed without elevation. Both installed applications started responsively. Standard uninstall removed every package-owned shell file while preserving an unowned synthetic `black-knight/Saves/pilot.sav`. The setup package and installed tree passed the current Defender gate.
+Two clean final-flow package builds from the same declared inputs produced byte-identical 72,289,562-byte setup executables with SHA-256 `1b7455ed7180f638a6e7c24b8d118a8ed4954f693a6bb7720658f8c544aa1994`. A silent disposable install completed without elevation. Both installed applications started responsively. Standard uninstall removed every package-owned shell file while preserving an unowned synthetic `black-knight/Saves/pilot.sav`. The setup package and installed tree passed the current Defender gate.
 
 ## Decision
 

@@ -115,3 +115,33 @@ public sealed class ApplicationUninstallOrchestrator
 
     private string GetUninstallerPath() => Path.Combine(applicationRoot, UninstallerFileName);
 }
+
+public sealed class InstalledLauncherOrchestrator
+{
+    private const string LauncherFileName = "MW4RemasteredLauncher.exe";
+    private readonly string applicationRoot;
+    private readonly IProcessStarter processStarter;
+
+    public InstalledLauncherOrchestrator(string applicationRoot, IProcessStarter processStarter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(applicationRoot);
+        this.applicationRoot = Path.GetFullPath(applicationRoot);
+        this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
+    }
+
+    public bool IsAvailable => File.Exists(GetLauncherPath());
+
+    public void Start()
+    {
+        var launcher = GetLauncherPath();
+        if (!File.Exists(launcher)) throw new FileNotFoundException("The installed launcher is not present.", launcher);
+        processStarter.Start(new ProcessStartInfo
+        {
+            FileName = launcher,
+            WorkingDirectory = applicationRoot,
+            UseShellExecute = false,
+        });
+    }
+
+    private string GetLauncherPath() => Path.Combine(applicationRoot, LauncherFileName);
+}

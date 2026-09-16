@@ -116,6 +116,17 @@ try
           !processStarter.LastStart.UseShellExecute,
         "application uninstall action launches only the adjacent standard uninstaller without shell indirection");
 
+    var installedLauncher = new InstalledLauncherOrchestrator(applicationRoot, processStarter);
+    Check(!installedLauncher.IsAvailable, "post-install launcher action remains unavailable without the adjacent packaged launcher");
+    var installedLauncherPath = Path.Combine(applicationRoot, "MW4RemasteredLauncher.exe");
+    File.WriteAllText(installedLauncherPath, "synthetic launcher");
+    Check(installedLauncher.IsAvailable, "post-install launcher action recognizes the adjacent packaged launcher");
+    installedLauncher.Start();
+    Check(processStarter.LastStart?.FileName == installedLauncherPath &&
+          processStarter.LastStart.WorkingDirectory == applicationRoot &&
+          !processStarter.LastStart.UseShellExecute,
+        "post-install action launches only the adjacent packaged launcher without shell indirection");
+
     var compatibilityLauncher = Path.Combine(destination, "MW4RemasteredCompatLauncher.exe");
     File.WriteAllText(compatibilityLauncher, "synthetic helper");
     var statusWithUnownedHelper = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().Single(item => item.Product.Id == "vengeance");

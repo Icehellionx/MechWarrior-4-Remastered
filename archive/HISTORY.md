@@ -155,11 +155,21 @@ Completed implementation, verification, durable decisions, and disproven investi
 
 - Added a pinned Inno Setup 7.1.0 package that installs the self-contained launcher/installer and exact Black Knight compatibility distribution per user without elevation.
 - Kept standard package uninstall ownership separate from manifest-aware game removal; no broad uninstall-delete rule can remove media-derived game files or unowned saves/configuration.
-- Produced byte-identical 72,276,429-byte setup executables across two clean builds, emitted the SHA-256 sidecar, and passed release-tree plus privilege-boundary contracts.
+- Produced byte-identical setup executables across clean paired builds, emitted the SHA-256 sidecar, and passed release-tree plus privilege-boundary contracts.
 - Completed a disposable package install/start/uninstall smoke: both apps were responsive, all package-owned shell files were removed, and a synthetic Black Knight save remained.
 - Scanned the final setup and representative installed trees with current Defender intelligence; no threat or matching remediation event was reported. Signing/SmartScreen reputation remains a separate release gap.
 - Added hosted Windows application CI for synthetic core behavior, both application builds, non-elevation manifests, release-tree policy, packaging ownership, and pinned compatibility-source contracts; it deliberately publishes no binary artifact.
 - The first hosted application-contract run, `35055297275`, passed every step for commit `9888e9a` in 50 seconds.
+
+## Simplified setup and launcher flow — 2026-09-16
+
+- Moved media intake from an optional post-install checkbox into the interactive setup sequence and made setup wait for that stage before reporting completion.
+- Replaced the launcher card dashboard with the MW3-derived hierarchy requested by the user: three games, three manuals, compact pack indicators, one status line, and one lower-corner uninstall action.
+- Replaced the unexplained `INSTALLATION LOCKED` state with numbered media/install actions and explicit reasons for unavailable titles, destinations, or compatibility support.
+- Made installed-tree verification asynchronous so the native launcher window appears immediately; the packaged installed-state smoke showed it in 228 ms and kept it responsive while Black Knight was verified.
+- Captured both real WinForms windows for visual QA, fixed unreadable disabled-state text and dead initial controls, and added a user-flow source contract to hosted application CI.
+- Built the final package twice byte-identically at 72,289,562 bytes, scanned SHA-256 `1b7455ed7180f638a6e7c24b8d118a8ed4954f693a6bb7720658f8c544aa1994` clean with the current Defender gate, and preserved the existing Black Knight tree during the installed-shell update.
+- Re-scanned the corrected installed shell plus preserved Black Knight tree; Defender reported no threat and no new detection/remediation event.
 
 ## Scaffold origin
 

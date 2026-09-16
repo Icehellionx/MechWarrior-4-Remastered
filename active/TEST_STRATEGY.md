@@ -22,6 +22,7 @@ dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csp
 dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release
 dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
 & tests/PackagingContract.Tests.ps1
+& tests/UserFlowContract.Tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/ApplicationPrivilegeBoundary.Tests.ps1
 & tests/ReleaseTreePolicy.Tests.ps1
 & tools/security/scan-with-defender.ps1 -Path <assembled-release-tree>
@@ -31,7 +32,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/ApplicationPrivilegeBo
 python tools/manuals/clean_manuals.py Manuals output/pdf
 ```
 
-Native WinForms visual and interaction smoke remains a manual/automation coverage gap; compilation does not qualify visual layout or the eventual install transaction.
+Native WinForms rendering is captured with the actual window renderer to check hierarchy, clipping, and disabled states. Automated clicking through the full interactive package/media flow remains a coverage gap; compilation or a static capture alone does not qualify interaction behavior.
 
 `.github/workflows/application-ci.yml` runs the synthetic core suite, both application builds, privilege checks, release-tree policy, packaging contract, and compatibility-source contract on Windows. It uploads no binaries; packaging still requires separately qualified compatibility evidence and a current local Defender scan.
 

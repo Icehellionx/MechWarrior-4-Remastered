@@ -62,6 +62,7 @@ jobs:
           ./tests/ApplicationPrivilegeBoundary.Tests.ps1
           ./tests/ReleaseTreePolicy.Tests.ps1
           ./tests/PackagingContract.Tests.ps1
+          ./tests/UserFlowContract.Tests.ps1
           ./tests/CompatibilitySourceBuild.Tests.ps1
 
       # No binaries are uploaded here. Release packaging consumes separately

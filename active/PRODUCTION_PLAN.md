@@ -33,7 +33,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 Outcome: one MW4-styled launcher makes installed capabilities obvious and starts each title reliably.
 
 - [x] Choose the application stack and record an ADR.
-- [ ] Create launcher visual direction from legally usable MW4-era references without copying unlicensed web art.
+- [x] Create a compact MW4 visual direction using the user-approved icon and the proven MW3 launcher hierarchy without adding unlicensed web art.
 - [x] Show Vengeance, Black Knight, and Mercenaries launch actions only for manifest-verified installations; distinguish repair-required trees.
 - [ ] Show Inner Sphere and Clan pack status with clear installed/missing states.
 - [ ] Complete settings, diagnostics, repair, and uninstall actions. Manual opening is wired for installed cleaned outputs.

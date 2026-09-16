@@ -1,4 +1,5 @@
 using MW4Remastered.Core.Install;
+using MW4Remastered.Core.Launch;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Installer;
@@ -11,6 +12,7 @@ internal static class Program
         ApplicationConfiguration.Initialize();
         var mediaSessions = new MediaSourceSessionFactory();
         var mediaInspection = new MediaInspectionService();
+        var processStarter = new SystemProcessStarter();
         var compatibilityRoot = Path.Combine(AppContext.BaseDirectory, "Compatibility", "BlackKnight");
         GameInstallationCoordinator? blackKnightInstaller = null;
         string compatibilityStatus;
@@ -36,6 +38,7 @@ internal static class Program
             new MediaSelectionSessionFactory(mediaSessions, mediaInspection),
             new InstallDestinationPlanner(),
             blackKnightInstaller,
-            compatibilityStatus));
+            compatibilityStatus,
+            new InstalledLauncherOrchestrator(AppContext.BaseDirectory, processStarter)));
     }
 }

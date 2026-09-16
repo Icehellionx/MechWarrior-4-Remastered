@@ -49,7 +49,7 @@ Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLa
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\MW4RemasteredInstaller.exe"; Description: "Select original MechWarrior 4 media now"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\MW4RemasteredInstaller.exe"; StatusMsg: "Choose original media and install games..."; Flags: skipifsilent
 
 [UninstallDelete]
 ; Intentionally empty. Inno removes only files it installed. Media-derived game trees,
