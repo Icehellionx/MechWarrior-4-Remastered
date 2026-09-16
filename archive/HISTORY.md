@@ -181,6 +181,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Completed a fresh real seven-ISO worker install for all three games plus both packs. Vengeance, Black Knight, and Mercenaries were responsive with empty logs; Black Knight passed three consecutive single-process launches.
 - Built internal setup `0.5.7` at 166,365,015 bytes, SHA-256 `493c08007885c34cc8035ed96627b44a73ba971c8b563a7cf8af509922f3a787`. Defender engine `1.1.26080.3`, intelligence `1.459.239.0`, reported no detection/remediation event for the exact setup, staged payload, or installed tree.
 - Deferred only the compiled-package seven-media smoke because an unrelated active VS Code/Inno updater held Inno's setup gate; the unrelated process was not terminated.
+- Passed hosted application contracts run `35158374157` and patched-source build run `35158191892`; recorded the newer hosted-toolset DLL separately instead of treating different compiler bytes as the runtime-qualified release payload.
 
 ## Scaffold origin
 

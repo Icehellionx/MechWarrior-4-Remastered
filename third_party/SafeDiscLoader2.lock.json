@@ -12,7 +12,9 @@
     "versionDllSize": 79872
   },
   "qualifiedSourceBuild": {
-    "workflowRuns": [],
+    "workflowRuns": [
+      "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35158191892"
+    ],
     "upstreamSourceCommit": "f27286a363aa675a0422141cb96fc8619cf8b9d8",
     "qualification": "two clean local precommit builds on 2026-09-16; hosted CI rerun pending",
     "msbuildVersion": "17.12.6",
@@ -24,6 +26,15 @@
     "reproducibility": "all packaged files are byte-identical across two clean local builds from the pinned upstream commit plus the recorded local patch",
     "defenderResult": "pending final packaged-payload scan",
     "blackKnightSmoke": "normally loaded app-local DLL; responsive window titled MechWarrior Black Knight; zero-length game error log; no mounted media and no launch helper"
+  },
+  "hostedSourceBuildEvidence": {
+    "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35158191892",
+    "msbuildVersion": "17.14.51.32402",
+    "versionDllSha256": "1e91f8049594724183a551806b93da03f8521596d0f14d3e08a903d39dceb1a6",
+    "versionDllSize": 92160,
+    "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
+    "runtimeQualified": false,
+    "notes": "Hosted compilation and provenance checks passed. Different compiler bytes are recorded but are not substituted for the locally runtime- and Defender-qualified payload."
   },
   "includedProjects": [
     "version-proxy.vcxproj"
