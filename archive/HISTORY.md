@@ -121,6 +121,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Expanded the release-tree denylist to reject known injectors, unwrappers, patch engines, dump tools, and opaque compatibility binaries even if explicitly executable-allowlisted.
 - Added a Defender scan gate that records engine/intelligence versions and checks new detection/remediation events as well as scan exit status, without exclusions or disabled remediation.
 
+## Installer destination planning — 2026-09-16
+
+- Added a read-only destination planner that includes only media-complete games, maps them to contained title directories, and combines conservative per-title budgets with a 512 MiB reserve.
+- Added storage-capacity injection and focused tests for complete/incomplete selection, sufficient/insufficient space, containment, and rejection of relative or filesystem-root destinations.
+- Added installer destination selection and live required/available capacity status while keeping file installation locked behind the remaining compatibility gates.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

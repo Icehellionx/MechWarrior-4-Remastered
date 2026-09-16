@@ -406,6 +406,7 @@ finally
 }
 
 InstallationCoordinatorSmoke.Run(failures);
+InstallDestinationPlannerSmoke.Run(failures);
 IsoMediaSessionSmoke.Run(failures);
 IsoArchiveExtractorSmoke.Run(failures);
 MediaSourceInspectorSmoke.Run(failures);

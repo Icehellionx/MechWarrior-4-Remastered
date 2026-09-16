@@ -1,3 +1,4 @@
+using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Installer;
@@ -13,6 +14,7 @@ internal static class Program
         Application.Run(new InstallerForm(
             new MediaSourceInspector(mediaInspection, mediaSessions),
             new MediaSelectionSet(),
-            new MediaSelectionSessionFactory(mediaSessions, mediaInspection)));
+            new MediaSelectionSessionFactory(mediaSessions, mediaInspection),
+            new InstallDestinationPlanner()));
     }
 }

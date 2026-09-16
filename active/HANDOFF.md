@@ -21,6 +21,7 @@ Updated: 2026-09-16.
 - `MediaSourceInspector` now composes directory inspection, owned ISO sessions, and ISO-only ZIP extraction behind one read-only call suitable for installer UI. The media probe is only a thin reporter over that service.
 - `MediaSelectionSet` atomically converts recognized inspections into readiness for the three games and two optional packs. Its latest valid source wins per layout, failed mixed-media intake leaves prior state unchanged, and exclusion counts remain visible.
 - The first MW4-styled WinForms installer shell now accepts multiple ISO/ZIP files or mounted folders, inspects them off the UI thread, displays five readiness cards and exact source evidence, reports excluded content, and can reopen/revalidate all selected media. Installation remains visibly locked because the permanent patch/no-disc path and install planning UX are not qualified.
+- The installer now previews a default per-user destination, allows folder selection, and reports conservative required/free space for complete game-media selections. Planning is UI-independent, rejects relative/filesystem-root/existing-file/reparse destinations, includes a 512 MiB reserve, and performs no writes; execution remains locked behind title compatibility qualification.
 - `MediaSourceSessionFactory` keeps directory/ISO/ZIP roots usable for an explicit lifetime and releases all owned mounts/scratch in reverse order. `MediaSelectionSessionFactory` reopens only current evidence, re-recognizes every expected layout, and closes earlier sources if a later source is missing or changed.
 - A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
 - The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
@@ -47,7 +48,7 @@ Updated: 2026-09-16.
 1. Independently implement or identify suitably licensed source for the SafeDisc 1 ICD transform needed by Vengeance and Mercenaries; hash-gate inputs and compare results with local evidence without publishing opaque binaries.
 2. Qualify the official Vengeance 2.0/3.0 and Mercenaries patch transforms against the media-derived executables/data.
 3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
-4. Extend the installer intake shell with destination/free-space planning, cancellation, internal compatibility payload validation, and `GameInstallationCoordinator` progress before enabling installation.
+4. Extend the installer intake shell with cancellation, internal compatibility payload validation, and `GameInstallationCoordinator` progress before enabling installation.
 5. Exercise the qualified Black Knight path through menu, configuration, save, renderer, audio, and input tests; retain hardware coverage as an explicit release gap.
 
 ## Known constraints and risks
@@ -64,6 +65,7 @@ Updated: 2026-09-16.
 - Auxiliary router syntax and four unit tests passed. Ollama was reachable with all nine configured local model names installed; Featherless roles are configured but were not live-billed.
 - The launcher/core Release build completed with zero warnings/errors, and the synthetic core smoke test passed.
 - The installer/core Release build completed with zero warnings/errors. Synthetic selection tests cover incomplete/complete two-disc readiness, multi-ISO ZIPs, optional packs, exclusion accounting, latest-source replacement, and atomic rejection of mixed unknown media.
+- Synthetic destination-planning tests cover complete-game inclusion, contained title folders, safety reserve, sufficient/insufficient capacity, and rejection of relative, filesystem-root, or existing-file destinations. The rebuilt installer initialized and remained responsive in a bounded process smoke; native visual inspection remains unavailable.
 - Synthetic source-session tests prove ISO/ZIP resources live until disposal, normal and partial-failure cleanup, selection-wide reopen, changed-media rejection, and cleanup when a later source disappears.
 - The refactored real Black Knight archival-ZIP smoke recognized the expected layout and two prohibited SafeDisc paths, returned exit 0, left no new media-session scratch, and confirmed the standalone local image was detached.
 - Launcher process-boundary tests confirm that an unmanifested executable cannot be launched and that a verified game starts with its own directory as the working directory. The available automation surface could not capture native WinForms windows, so visual inspection remains an explicit UI coverage gap.

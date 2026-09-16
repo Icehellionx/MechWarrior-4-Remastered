@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using MW4Remastered.Core;
+using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Installer;
@@ -18,6 +19,7 @@ internal sealed class InstallerForm : Form
     private readonly MediaSourceInspector inspector;
     private readonly MediaSelectionSet selection;
     private readonly MediaSelectionSessionFactory selectionSessions;
+    private readonly InstallDestinationPlanner destinationPlanner;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListBox evidenceList = new();
     private readonly Label exclusionStatus = new();
@@ -27,15 +29,20 @@ internal sealed class InstallerForm : Form
     private readonly Button addFolderButton = new();
     private readonly Button revalidateButton = new();
     private readonly Button installButton = new();
+    private readonly TextBox destinationText = new();
+    private readonly Label destinationStatus = new();
+    private readonly Button destinationButton = new();
 
     public InstallerForm(
         MediaSourceInspector inspector,
         MediaSelectionSet selection,
-        MediaSelectionSessionFactory selectionSessions)
+        MediaSelectionSessionFactory selectionSessions,
+        InstallDestinationPlanner destinationPlanner)
     {
         this.inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
         this.selectionSessions = selectionSessions ?? throw new ArgumentNullException(nameof(selectionSessions));
+        this.destinationPlanner = destinationPlanner ?? throw new ArgumentNullException(nameof(destinationPlanner));
 
         Text = "MechWarrior 4 Remastered Setup";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -57,8 +64,9 @@ internal sealed class InstallerForm : Form
             Dock = DockStyle.Fill,
             Padding = new Padding(34, 26, 34, 28),
             ColumnCount = 1,
-            RowCount = 5,
+            RowCount = 6,
         };
+        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
@@ -67,9 +75,63 @@ internal sealed class InstallerForm : Form
         root.Controls.Add(CreateHeader(), 0, 0);
         root.Controls.Add(CreateCapabilityGrid(), 0, 1);
         root.Controls.Add(CreateSourceToolbar(), 0, 2);
-        root.Controls.Add(CreateEvidencePanel(), 0, 3);
-        root.Controls.Add(CreateFooter(), 0, 4);
+        root.Controls.Add(CreateDestinationPanel(), 0, 3);
+        root.Controls.Add(CreateEvidencePanel(), 0, 4);
+        root.Controls.Add(CreateFooter(), 0, 5);
         return root;
+    }
+
+    private Control CreateDestinationPanel()
+    {
+        var panel = new TableLayoutPanel
+        {
+            AutoSize = true,
+            Dock = DockStyle.Top,
+            ColumnCount = 3,
+            Margin = new Padding(0, 0, 0, 12),
+        };
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+
+        panel.Controls.Add(new Label
+        {
+            AutoSize = true,
+            Anchor = AnchorStyles.Left,
+            ForeColor = Muted,
+            Text = "INSTALL TO",
+            Margin = new Padding(0, 8, 12, 0),
+        }, 0, 0);
+
+        destinationText.Dock = DockStyle.Fill;
+        destinationText.BackColor = Panel;
+        destinationText.ForeColor = TextColor;
+        destinationText.BorderStyle = BorderStyle.FixedSingle;
+        destinationText.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "MechWarrior 4 Remastered");
+        destinationText.TextChanged += (_, _) => RefreshDestinationPlan();
+        panel.Controls.Add(destinationText, 1, 0);
+
+        ConfigureSourceButton(destinationButton, "BROWSE");
+        destinationButton.Click += (_, _) => SelectDestination();
+        panel.Controls.Add(destinationButton, 2, 0);
+
+        destinationStatus.AutoSize = true;
+        destinationStatus.ForeColor = Muted;
+        destinationStatus.Margin = new Padding(0, 5, 0, 0);
+        panel.SetColumnSpan(destinationStatus, 3);
+        panel.Controls.Add(destinationStatus, 0, 1);
+        return panel;
+    }
+
+    private void SelectDestination()
+    {
+        using var dialog = new FolderBrowserDialog
+        {
+            Description = "Choose the MechWarrior 4 Remastered install folder",
+            SelectedPath = destinationText.Text,
+            ShowNewFolderButton = true,
+        };
+        if (dialog.ShowDialog(this) == DialogResult.OK) destinationText.Text = dialog.SelectedPath;
     }
 
     private static Control CreateHeader()
@@ -318,15 +380,48 @@ internal sealed class InstallerForm : Form
             : $"{snapshot.ExcludedContentCount} prohibited or unrelated item(s) identified and excluded; none were imported.";
         exclusionStatus.ForeColor = snapshot.ExcludedContentCount == 0 ? Muted : Warning;
         revalidateButton.Enabled = snapshot.Layouts.Count > 0 && !UseWaitCursor;
+        RefreshDestinationPlan();
+    }
+
+    private void RefreshDestinationPlan()
+    {
+        try
+        {
+            var plan = destinationPlanner.Plan(selection.Current, destinationText.Text);
+            if (!plan.HasSelectedGames)
+            {
+                destinationStatus.ForeColor = Muted;
+                destinationStatus.Text = "Select complete game media to calculate destination space.";
+                return;
+            }
+
+            destinationStatus.ForeColor = plan.HasEnoughSpace ? Ready : Warning;
+            destinationStatus.Text = $"{plan.Products.Count} game(s) planned  •  {FormatBytes(plan.RequiredBytes)} required  •  {FormatBytes(plan.AvailableBytes)} available";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or DirectoryNotFoundException)
+        {
+            destinationStatus.ForeColor = Warning;
+            destinationStatus.Text = error.Message;
+        }
     }
 
     private void SetBusy(bool busy)
     {
         addFilesButton.Enabled = !busy;
         addFolderButton.Enabled = !busy;
+        destinationText.Enabled = !busy;
+        destinationButton.Enabled = !busy;
         revalidateButton.Enabled = !busy && selection.Current.Layouts.Count > 0;
         progress.Visible = busy;
         UseWaitCursor = busy;
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        const double gibibyte = 1024d * 1024d * 1024d;
+        return bytes >= gibibyte
+            ? $"{bytes / gibibyte:0.0} GiB"
+            : $"{bytes / (1024d * 1024d):0} MiB";
     }
 
     private static void ConfigureSourceButton(Button button, string text)
