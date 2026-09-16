@@ -191,6 +191,36 @@ finally
     if (Directory.Exists(planRoot)) Directory.Delete(planRoot, true);
 }
 
+var blackKnightPlanRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-bk-plan-test-" + Guid.NewGuid().ToString("N"));
+try
+{
+    var disc = Path.Combine(blackKnightPlanRoot, "disc");
+    CreateLayoutFixture("black-knight-disc-1", disc);
+    WriteFixture(disc, "AUTOCO_1.EXE", "autoconfig");
+    WriteFixture(disc, "SCRIPT_1.DLL", "scripts");
+    WriteFixture(disc, "FONTS/MECH.FNT", "font");
+    WriteFixture(disc, "MW4X/LANGUAGE.DLL", "language");
+    WriteFixture(disc, "MW4X/DRVMGT.DLL", "disc management");
+    WriteFixture(disc, "MW4X/DSETUP.DLL", "directx setup");
+    WriteFixture(disc, "MW4X/SECDRV.SYS", "safedisc driver");
+    WriteFixture(disc, "SETUP.EXE", "legacy setup");
+    var replacement = Path.Combine(blackKnightPlanRoot, "replacement", "MW4X.exe");
+    WriteFixture(Path.GetDirectoryName(replacement)!, Path.GetFileName(replacement), "synthetic Black Knight executable");
+    var replacementHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(replacement))).ToLowerInvariant();
+
+    var builder = new BlackKnightInstallPlanBuilder(replacementHash, new MediaInspectionService(), new DirectoryMediaInventory());
+    var plan = builder.Build(disc, replacement);
+    var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    Check(plan.ProductId == "black-knight" && destinations.Contains("MW4X.exe"), "Black Knight plan supplies the qualified compatibility executable");
+    Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Black Knight plan expands installed root names");
+    Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("LANGUAGE.DLL"), "Black Knight plan copies game data and flattens runtime files");
+    Check(!destinations.Contains("DRVMGT.DLL") && !destinations.Contains("DSETUP.DLL") && !destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes setup and SafeDisc components");
+}
+finally
+{
+    if (Directory.Exists(blackKnightPlanRoot)) Directory.Delete(blackKnightPlanRoot, true);
+}
+
 var uninstallRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-uninstall-test-" + Guid.NewGuid().ToString("N"));
 try
 {

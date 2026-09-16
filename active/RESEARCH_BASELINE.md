@@ -10,11 +10,13 @@ Static inspection narrows that diagnosis: the pack setup engines and protected c
 
 The Inner Sphere image also contains a `Razor1911` directory. That directory is third-party crack material and is excluded from any automatic or release input. Its presence means the image cannot be treated as pristine retail media solely by filename.
 
-Black Knight contains a conventional game payload (`MW4X`, `RESOURCE`, movies), `SECDRV.SYS`, and an official Patch 2 payload.
+Black Knight contains a conventional game payload (`MW4X`, `RESOURCE`, movies), `SECDRV.SYS`, and an official Vengeance Patch 2 payload. Its disc `MW4X.EXE` and supplied local replacement both report version `45.05.10.0701` and have the same length but different hashes. The replacement is accepted only by exact SHA-256 (`2a5b7f2f…`) and is not a project asset.
 
 Vengeance Disc 1 contains a SafeDisc loader (`MW4.exe`, SHA-256 `b129d968…`) and the real version `01.06.11.0220` game image in `MW4.ICD`. The supplied replacement executable is version `01.20.07.2403`, matching the official 2.0 patch generation, and is accepted only by exact SHA-256 (`4f5a2add…`). It remains user-supplied local input, not a redistributable project asset. The version 2.0 RTP data names the installer mappings `AUTOCO~1.EXE` → `AutoConfig.exe`, `SCRIPT~1.DLL` → `ScriptStrings.dll`, and `MISSIO~1.DLL` → `MissionLang.dll`.
 
 The two recognized Vengeance discs plus that exact replacement produced a 231-file, 1.04 GB disposable full-install tree without running legacy setup or SafeDisc. Its ownership manifest verifies every length and SHA-256; setup/DRM files are absent and optical-media read-only flags are cleared. Runtime behavior is still unqualified.
+
+The recognized Black Knight disc plus its exact-hash replacement produced a 138-file, 563,490,697-byte payload tree without running setup or loading disc protection. The plan excludes `SECDRV.SYS`, `DRVMGT.DLL`, `DSETUP.DLL`, and setup executables; every owned hash verifies and runtime behavior remains unqualified.
 
 The supplied Mercenaries Disc 2 is UDF media that `bsdtar` did not enumerate but Windows mounted successfully. It contains the expected movie/map/mission payload plus a third-party `Crack/` directory and `SECDRV.SYS`; both are detected and excluded by policy. All seven images match distinct structural descriptors through read-only Windows mounts.
 
