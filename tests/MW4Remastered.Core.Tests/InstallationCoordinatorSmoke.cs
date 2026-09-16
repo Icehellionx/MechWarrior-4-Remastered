@@ -15,9 +15,11 @@ internal static class InstallationCoordinatorSmoke
             var coordinator = CreateCoordinator(inputs);
 
             var vengeance = coordinator.Install(
-                new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo, inputs.VengeanceExecutable),
+                new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo),
                 Path.Combine(root, "installed", "vengeance"), progress);
             Check(vengeance.Manifest.ProductId == "vengeance" && vengeance.Manifest.Files.Count > 0, "coordinator installs and verifies Vengeance", failures);
+            Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".vengeance-transform-*").Any(),
+                "coordinator removes Vengeance transform scratch after success", failures);
 
             var blackKnight = coordinator.Install(
                 new BlackKnightInstallRequest(inputs.BlackKnightDisc),
@@ -46,6 +48,24 @@ internal static class InstallationCoordinatorSmoke
             }
             Check(cancellationObserved && !Directory.Exists(cancelledDestination),
                 "coordinator cancellation leaves no Black Knight destination", failures);
+
+            var escapedDestination = Path.Combine(root, "failed", "vengeance-escape");
+            var escaped = false;
+            try
+            {
+                new GameInstallationCoordinator(
+                    new ThrowingPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
+                    new EscapingVengeanceTransform(inputs.VengeanceExecutable))
+                    .Install(new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo), escapedDestination);
+            }
+            catch (InvalidDataException)
+            {
+                escaped = true;
+            }
+            Check(escaped && !Directory.Exists(escapedDestination),
+                "coordinator rejects a Vengeance transform result outside owned scratch", failures);
+            Check(!Directory.EnumerateDirectories(Path.Combine(root, "failed"), ".vengeance-transform-*").Any(),
+                "coordinator removes Vengeance transform scratch after rejection", failures);
 
             var failedDestination = Path.Combine(root, "failed", "mercenaries");
             var failed = false;
@@ -76,7 +96,8 @@ internal static class InstallationCoordinatorSmoke
             new VengeanceInstallPlanBuilder(Hash(inputs.VengeanceExecutable), inspection, inventory),
             new BlackKnightInstallPlanBuilder(CreateBlackKnightCompatibility(inputs.BlackKnightCompatibilityRoot), inspection, inventory),
             new MercenariesInstallPlanBuilder(Hash(inputs.MercenariesExecutable), inspection, inventory));
-        return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier());
+        return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
+            new FixtureVengeanceTransform(inputs.VengeanceExecutable));
     }
 
     private static FixtureInputs PrepareInputs(string root)
@@ -156,7 +177,28 @@ internal static class InstallationCoordinatorSmoke
 
     private sealed class ThrowingPlanFactory : IGameInstallPlanFactory
     {
-        public InstallPlan Build(GameInstallRequest request, string? mercenariesCabinetPayloadRoot = null) =>
+        public InstallPlan Build(GameInstallRequest request, PreparedInstallInputs? preparedInputs = null) =>
             throw new InvalidDataException("Synthetic planning failure.");
+    }
+
+    private sealed class FixtureVengeanceTransform(string fixtureExecutable) : IVengeanceExecutableTransform
+    {
+        public PreparedVengeanceExecutable Transform(string discOneRoot, string scratchDirectory, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(scratchDirectory);
+            var output = Path.Combine(scratchDirectory, "MW4.exe");
+            File.Copy(fixtureExecutable, output);
+            return new PreparedVengeanceExecutable(output, "synthetic-test-transform");
+        }
+    }
+
+    private sealed class EscapingVengeanceTransform(string fixtureExecutable) : IVengeanceExecutableTransform
+    {
+        public PreparedVengeanceExecutable Transform(string discOneRoot, string scratchDirectory, CancellationToken cancellationToken = default)
+        {
+            Directory.CreateDirectory(scratchDirectory);
+            return new PreparedVengeanceExecutable(fixtureExecutable, "synthetic-escape-transform");
+        }
     }
 }

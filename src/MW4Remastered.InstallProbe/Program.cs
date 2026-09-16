@@ -60,10 +60,10 @@ if (args.Length == 5 && string.Equals(args[0], "--mercenaries", StringComparison
     }
 }
 
-if (args.Length != 4)
+if (args.Length != 4 || !string.Equals(args[0], "--vengeance", StringComparison.OrdinalIgnoreCase))
 {
     Console.Error.WriteLine("Usage:");
-    Console.Error.WriteLine("  MW4Remastered.InstallProbe <vengeance-disc-1-root> <vengeance-disc-2-root> <compatibility-executable> <new-destination>");
+    Console.Error.WriteLine("  MW4Remastered.InstallProbe --vengeance <disc-1-root> <disc-2-root> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --black-knight <disc-root> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --mercenaries <disc-1-root> <disc-2-root> <compatibility-executable> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --extract-mercenaries-cabinet <MSGAME.CAB> <new-destination>");
@@ -74,7 +74,7 @@ if (args.Length != 4)
 
 try
 {
-    return Install(new VengeanceInstallRequest(args[0], args[1], args[2]), args[3], "Vengeance");
+    return Install(new VengeanceInstallRequest(args[1], args[2]), args[3], "Vengeance");
 }
 catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
 {
