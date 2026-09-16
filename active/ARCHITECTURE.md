@@ -32,6 +32,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - Media intake and revalidation carry cooperative cancellation through source sessions, ISO mounting, and chunked ZIP extraction. Cancellation after mount still dismounts the owned image, and archive/session cleanup retains its existing failure semantics.
 - `VengeanceInstallPlanBuilder` owns the current full-install allowlist, 8.3 name restoration, and exact compatibility-executable hash gate.
 - `BlackKnightInstallPlanBuilder` owns the media-derived Black Knight payload plus an exact-hash internal compatibility bundle. It stages the untouched disc executable, required runtime files, project helper, source-built loader, and GPL notice; no replacement executable is accepted.
+- Black Knight bundle validation treats the helper, loader, GPL notice, and exact corresponding-source archive as one four-file inventory. The source archive is validated and retained for distribution obligations but is not copied into the game directory.
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.
 - `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.

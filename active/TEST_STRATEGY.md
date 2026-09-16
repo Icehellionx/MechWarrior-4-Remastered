@@ -37,6 +37,7 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Input fixtures use synthetic trees or hashes/metadata; tests never copy proprietary game payloads into source.
 - Media matching rejects unknown or partially matching revisions safely.
 - Binary transforms require exact input and output hashes and fail without mutation on mismatch.
+- Internal compatibility bundles require exact inventory and hashes for installed binaries/notices plus any distribution-only corresponding source; extra files fail even when installed destinations are otherwise allowlisted.
 - Extraction prevents traversal, links/reparse escape, device paths, and writes outside staging.
 - Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
 - Cancellation is cooperative at bounded copy/mount/inspection boundaries and must release owned mounts and scratch before completion is reported.

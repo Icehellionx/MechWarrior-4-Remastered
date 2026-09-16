@@ -3,12 +3,14 @@ $root = Split-Path -Parent $PSScriptRoot
 $lockPath = Join-Path $root 'third_party/SafeDiscLoader2.lock.json'
 $scriptPath = Join-Path $root 'tools/compatibility/build-safedisc-loader2.ps1'
 $helperScriptPath = Join-Path $root 'tools/compatibility/publish-launch-helper.ps1'
+$bundleScriptPath = Join-Path $root 'tools/compatibility/assemble-black-knight-bundle.ps1'
 $workflowPath = Join-Path $root '.github/workflows/compatibility-build.yml'
 $blackKnightBuilderPath = Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightInstallPlanBuilder.cs'
 
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $script = Get-Content -LiteralPath $scriptPath -Raw
 $helperScript = Get-Content -LiteralPath $helperScriptPath -Raw
+$bundleScript = Get-Content -LiteralPath $bundleScriptPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $blackKnightBuilder = Get-Content -LiteralPath $blackKnightBuilderPath -Raw
 
@@ -40,5 +42,11 @@ Assert-True ($lock.qualifiedSourceBuild.launchHelperSha256 -match '^[0-9a-f]{64}
 Assert-True ($lock.qualifiedSourceBuild.correspondingSourceArchiveSha256 -match '^[0-9a-f]{64}$') 'The corresponding GPL source archive hash must be recorded.'
 Assert-True ($blackKnightBuilder -match [regex]::Escape($lock.qualifiedSourceBuild.versionDllSha256)) 'Black Knight installation must require the qualified loader hash.'
 Assert-True ($blackKnightBuilder -match [regex]::Escape($lock.qualifiedSourceBuild.launchHelperSha256)) 'Black Knight installation must require the qualified helper hash.'
+Assert-True ($blackKnightBuilder -match [regex]::Escape($lock.licenseSha256)) 'Black Knight installation must require the qualified license hash.'
+Assert-True ($blackKnightBuilder -match [regex]::Escape($lock.qualifiedSourceBuild.correspondingSourceArchiveSha256)) 'Black Knight installation must require the corresponding-source archive hash.'
+Assert-True ($bundleScript -match [regex]::Escape($lock.qualifiedSourceBuild.versionDllSha256)) 'Bundle assembly must require the qualified loader hash.'
+Assert-True ($bundleScript -match [regex]::Escape($lock.qualifiedSourceBuild.launchHelperSha256)) 'Bundle assembly must require the qualified helper hash.'
+Assert-True ($bundleScript -match [regex]::Escape($lock.licenseSha256)) 'Bundle assembly must require the qualified license hash.'
+Assert-True ($bundleScript -match [regex]::Escape($lock.qualifiedSourceBuild.correspondingSourceArchiveSha256)) 'Bundle assembly must require the corresponding-source archive hash.'
 
 Write-Host 'Compatibility source-build contract tests passed.'

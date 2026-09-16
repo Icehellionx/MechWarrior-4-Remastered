@@ -133,6 +133,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Preserved cleanup ownership on cancellation: a just-mounted image is dismounted, partial ZIP staging is removed, and the UI reports completion only after cleanup unwinds.
 - Added focused regressions for cancellation before archive mutation and cancellation arriving during ISO mount.
 
+## Exact Black Knight compatibility bundle — 2026-09-16
+
+- Extended compatibility validation to cover the GPL corresponding-source archive alongside the project helper, source-built loader, and license while keeping the source archive out of the game directory.
+- Added exact-inventory rejection for missing, modified, unexpected, or reparse bundle content and regression coverage proving extra files fail closed.
+- Added atomic bundle assembly from reproducible CI evidence, reproduced all four locked hashes from run `35048453580`, and passed a current Defender scan of the assembled bundle.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

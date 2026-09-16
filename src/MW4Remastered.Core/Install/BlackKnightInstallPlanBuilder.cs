@@ -7,6 +7,8 @@ public sealed class BlackKnightInstallPlanBuilder
     public const string QualifiedLoaderSha256 = "f26710840b1b6b0537c05b3e97c63171708c129b76a77ec3191d5652ee024959";
     public const string QualifiedLaunchHelperSha256 = "b80b440bf349438527e28547bf40276defc309c64b972400acf625a974eaab8d";
     public const string QualifiedLoaderLicenseSha256 = "81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8";
+    public const string QualifiedSourceArchiveName = "SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip";
+    public const string QualifiedSourceArchiveSha256 = "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17";
 
     private static readonly IReadOnlyDictionary<string, string> RootFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -92,12 +94,19 @@ public sealed class BlackKnightInstallPlanBuilder
     private static QualifiedCompatibilityPayload CreatePackagedPayload()
     {
         var root = Path.Combine(AppContext.BaseDirectory, "Compatibility", "BlackKnight");
-        return new QualifiedCompatibilityPayload(root, new[]
-        {
-            new QualifiedCompatibilityFile("MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe", QualifiedLaunchHelperSha256),
-            new QualifiedCompatibilityFile("version.dll", "version.dll", QualifiedLoaderSha256),
-            new QualifiedCompatibilityFile("SafeDiscLoader2-LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt", QualifiedLoaderLicenseSha256),
-        });
+        return new QualifiedCompatibilityPayload(
+            root,
+            new[]
+            {
+                new QualifiedCompatibilityFile("MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe", QualifiedLaunchHelperSha256),
+                new QualifiedCompatibilityFile("version.dll", "version.dll", QualifiedLoaderSha256),
+                new QualifiedCompatibilityFile("SafeDiscLoader2-LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt", QualifiedLoaderLicenseSha256),
+            },
+            new[]
+            {
+                new QualifiedCompatibilitySupportFile(QualifiedSourceArchiveName, QualifiedSourceArchiveSha256),
+            },
+            requireExactInventory: true);
     }
 
     private static string MapDiscPath(string path)

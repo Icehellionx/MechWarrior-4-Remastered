@@ -238,21 +238,56 @@ try
     WriteFixture(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "synthetic helper");
     WriteFixture(compatibilityRoot, "version.dll", "synthetic loader");
     WriteFixture(compatibilityRoot, "LICENSE.txt", "synthetic license");
-    var compatibility = new QualifiedCompatibilityPayload(compatibilityRoot, new[]
-    {
-        QualifiedFile(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
-        QualifiedFile(compatibilityRoot, "version.dll", "version.dll"),
-        QualifiedFile(compatibilityRoot, "LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
-    });
+    WriteFixture(compatibilityRoot, "source.zip", "synthetic corresponding source");
+    var compatibility = new QualifiedCompatibilityPayload(
+        compatibilityRoot,
+        new[]
+        {
+            QualifiedFile(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
+            QualifiedFile(compatibilityRoot, "version.dll", "version.dll"),
+            QualifiedFile(compatibilityRoot, "LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
+        },
+        new[]
+        {
+            QualifiedSupportFile(compatibilityRoot, "source.zip"),
+        },
+        requireExactInventory: true);
     var builder = new BlackKnightInstallPlanBuilder(compatibility, new MediaInspectionService(), new DirectoryMediaInventory());
     var plan = builder.Build(disc);
     var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
     Check(plan.ProductId == "black-knight" && destinations.Contains("MW4X.exe"), "Black Knight plan installs the untouched executable from media");
     Check(plan.Files.Single(file => file.DestinationRelativePath.Equals("MW4X.exe", StringComparison.OrdinalIgnoreCase)).SourceRelativePath.Equals("MW4X/MW4X.EXE", StringComparison.OrdinalIgnoreCase), "Black Knight executable comes from recognized media, not a user-supplied replacement");
     Check(destinations.Contains("MW4RemasteredCompatLauncher.exe") && destinations.Contains("version.dll") && destinations.Contains("Licenses/SafeDiscLoader2-GPL-3.0.txt"), "Black Knight plan owns the exact internal compatibility bundle");
+    Check(!destinations.Contains("source.zip"), "Black Knight plan validates but does not install the corresponding-source archive");
     Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Black Knight plan expands installed root names");
     Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("LANGUAGE.DLL") && destinations.Contains("DRVMGT.DLL"), "Black Knight plan copies game data and flattens required runtime files");
     Check(!destinations.Contains("DSETUP.DLL") && !destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes setup and the obsolete SafeDisc driver");
+
+    WriteFixture(compatibilityRoot, "unexpected.bin", "must not enter the bundle");
+    var compatibilityExtraRejected = false;
+    try
+    {
+        builder.Build(disc);
+    }
+    catch (InvalidDataException)
+    {
+        compatibilityExtraRejected = true;
+    }
+    Check(compatibilityExtraRejected, "Black Knight planning rejects unexpected compatibility-bundle files");
+    File.Delete(Path.Combine(compatibilityRoot, "unexpected.bin"));
+
+    Directory.CreateDirectory(Path.Combine(compatibilityRoot, "unexpected-directory"));
+    var compatibilityDirectoryRejected = false;
+    try
+    {
+        builder.Build(disc);
+    }
+    catch (InvalidDataException)
+    {
+        compatibilityDirectoryRejected = true;
+    }
+    Check(compatibilityDirectoryRejected, "Black Knight planning rejects unexpected compatibility-bundle directories");
+    Directory.Delete(Path.Combine(compatibilityRoot, "unexpected-directory"));
 
     File.AppendAllText(Path.Combine(compatibilityRoot, "version.dll"), "tampered");
     var compatibilityTamperRejected = false;
@@ -450,6 +485,13 @@ QualifiedCompatibilityFile QualifiedFile(string rootPath, string sourceRelativeP
     var path = Path.Combine(rootPath, sourceRelativePath.Replace('/', Path.DirectorySeparatorChar));
     var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
     return new QualifiedCompatibilityFile(sourceRelativePath, destinationRelativePath, hash);
+}
+
+QualifiedCompatibilitySupportFile QualifiedSupportFile(string rootPath, string sourceRelativePath)
+{
+    var path = Path.Combine(rootPath, sourceRelativePath.Replace('/', Path.DirectorySeparatorChar));
+    var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+    return new QualifiedCompatibilitySupportFile(sourceRelativePath, hash);
 }
 
 sealed class RecordingProcessStarter : IProcessStarter

@@ -25,6 +25,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Reopen and re-recognize selected directory/ISO/ZIP sources under one disposable transaction lifetime with success and failure cleanup.
 - [x] Add read-only destination planning with contained per-game folders, conservative space budgets, current-volume capacity, and unsafe-root rejection.
 - [x] Add cooperative cancellation for installer media inspection/revalidation with owned mount and ZIP scratch cleanup.
+- [x] Validate and assemble the exact internal Black Knight helper/loader/license/corresponding-source bundle from reproducible CI evidence.
 
 ## 3. Launcher and user experience
 
