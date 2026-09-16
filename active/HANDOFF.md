@@ -17,6 +17,7 @@ Updated: 2026-09-15.
 - The launcher now embeds the user-provided original Vengeance icon treatment with only the exact silver/gray `R` glyph from the installed MW3 Remastered launcher composited at native 32×32 scale. The nearest-neighbor preview master and Windows icon live in `assets/branding/`; the underlying game-art redistribution status remains a release gate.
 - A media catalog and directory inspector recognize both Vengeance discs, Black Knight, both Mercenaries discs, and both Mech Paks. Unsafe paths fail closed; recognized media reports crack/DRM paths for mandatory exclusion.
 - An ownership-aware ISO media session now validates regular `.iso` inputs, refuses pre-attached images, mounts explicitly read-only through a bounded Windows PowerShell adapter, validates the returned root, and dismounts only its owned image. ADR 0004 records the replaceable backend choice.
+- Archival ZIP input now has an ISO-only extractor: it validates every entry, rejects unsafe/link/duplicate paths, enforces count and expanded-size limits, reports but never writes non-ISO files, verifies its exact extracted inventory, and commits atomically. ADR 0005 records why already-extracted trees and generic archive unpacking are excluded.
 - A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
 - The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
 - The Vengeance install plan now stages 231 allowlisted files from both discs plus one exact-hash user-supplied version-2.0 executable. It restores patch-relevant 8.3 names, excludes setup/SafeDisc content, clears read-only media attributes, commits atomically, and writes a repair/uninstall ownership manifest.
@@ -34,7 +35,7 @@ Updated: 2026-09-15.
 2. Compare official-patch outputs and version resources with the supplied exact-hash 2.0/3.0 executables without publishing those binaries.
 3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
 4. Record ADRs for the permanent patch/no-disc method, compatibility baseline, and remaining registry/save-location ownership.
-5. Add contained recognition/extraction for archival ZIP media, then compose ISO/ZIP sessions with the coordinator behind an installer UI.
+5. Compose ISO/ZIP media sessions with the game-install coordinator behind an installer UI, including free-space checks, progress, and cancellation.
 
 ## Known constraints and risks
 
@@ -54,6 +55,7 @@ Updated: 2026-09-15.
 - ISO directory inspection confirmed C-Dilla/SafeCast and SafeDisc-era files on both pack discs plus directly accessible content/patch payloads. The direct-extraction hypothesis remains unqualified.
 - The real-media recognition smoke passed all seven supplied ISOs and confirmed every owned mount was detached afterward.
 - The new C# owned-ISO boundary independently mounted and recognized the Black Knight image, reported both prohibited SafeDisc paths, and left the image detached. Synthetic lifetime tests cover pre-attached refusal and failed-root cleanup.
+- The composed ZIP media probe extracted only `MW4BK.iso` from the real Black Knight archive, recognized the expected layout, and left no new scratch directory. Synthetic tests prove non-ISO exclusion and traversal rejection.
 - Synthetic transaction tests cover containment, duplicate destinations, writable normalization, rollback, ownership manifests, tamper detection, and unexpected-file detection.
 - Real Vengeance staging committed 231 files from two read-only mounted discs and the exact version-2.0 replacement input. Manifest verification passed, no staged files remained read-only, and both owned images were detached.
 - Real Black Knight staging committed 138 payload files from its read-only mounted disc and exact-hash local replacement input. Manifest verification passed, no staged file remained read-only, no forbidden setup/DRM file entered the tree, and the image was detached.
