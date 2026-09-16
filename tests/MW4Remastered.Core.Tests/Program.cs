@@ -185,6 +185,55 @@ finally
     if (Directory.Exists(planRoot)) Directory.Delete(planRoot, true);
 }
 
+var uninstallRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-uninstall-test-" + Guid.NewGuid().ToString("N"));
+try
+{
+    var source = Path.Combine(uninstallRoot, "source");
+    Directory.CreateDirectory(source);
+    WriteFixture(source, "MW4.exe", "owned executable");
+    WriteFixture(source, "Resource/core.mw4", "owned archive");
+
+    var preservedInstall = Path.Combine(uninstallRoot, "preserved-install");
+    new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+    {
+        new InstallFile(source, "MW4.exe", "MW4.exe"),
+        new InstallFile(source, "Resource/core.mw4", "Resource/core.mw4"),
+    }), preservedInstall);
+    WriteFixture(preservedInstall, "Saves/pilot.sav", "user save");
+    var removed = new OwnedInstallUninstaller().Remove(preservedInstall);
+    Check(removed.Status == InstallRemovalStatus.Removed, "uninstaller removes a verified owned install");
+    Check(!File.Exists(Path.Combine(preservedInstall, "MW4.exe")), "uninstaller removes owned files");
+    Check(File.Exists(Path.Combine(preservedInstall, "Saves", "pilot.sav")), "uninstaller preserves unowned saves");
+    Check(!File.Exists(Path.Combine(preservedInstall, InstallManifest.RelativePath.Replace('/', Path.DirectorySeparatorChar))), "uninstaller removes its ownership manifest");
+
+    var modifiedInstall = Path.Combine(uninstallRoot, "modified-install");
+    new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+    {
+        new InstallFile(source, "MW4.exe", "MW4.exe"),
+        new InstallFile(source, "Resource/core.mw4", "Resource/core.mw4"),
+    }), modifiedInstall);
+    File.AppendAllText(Path.Combine(modifiedInstall, "MW4.exe"), "modified");
+    var blockedRemoval = new OwnedInstallUninstaller().Remove(modifiedInstall);
+    Check(blockedRemoval.Status == InstallRemovalStatus.Blocked, "uninstaller blocks on modified owned content");
+    Check(File.Exists(Path.Combine(modifiedInstall, "MW4.exe")) && File.Exists(Path.Combine(modifiedInstall, "Resource", "core.mw4")), "blocked uninstall performs no partial deletion");
+
+    var malformedInstall = Path.Combine(uninstallRoot, "malformed-install");
+    new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+    {
+        new InstallFile(source, "MW4.exe", "MW4.exe"),
+    }), malformedInstall);
+    File.WriteAllText(Path.Combine(malformedInstall, InstallManifest.RelativePath.Replace('/', Path.DirectorySeparatorChar)), "{ invalid json");
+    var malformedRemoval = new OwnedInstallUninstaller().Remove(malformedInstall);
+    Check(malformedRemoval.Status == InstallRemovalStatus.Blocked && File.Exists(Path.Combine(malformedInstall, "MW4.exe")), "malformed manifest blocks before deletion");
+
+    var volumeRoot = Path.GetPathRoot(Path.GetFullPath(uninstallRoot))!;
+    Check(new OwnedInstallUninstaller().Remove(volumeRoot).Status == InstallRemovalStatus.Blocked, "uninstaller refuses a filesystem root before inventory");
+}
+finally
+{
+    if (Directory.Exists(uninstallRoot)) Directory.Delete(uninstallRoot, true);
+}
+
 if (failures.Count > 0)
 {
     Console.Error.WriteLine(string.Join(Environment.NewLine, failures));

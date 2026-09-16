@@ -40,12 +40,8 @@ public sealed class StagedInstallTransaction
                 var sourceRoot = Path.GetFullPath(operation.SourceRoot);
                 RejectReparsePoint(sourceRoot, "source root");
                 var source = ResolveContainedPath(sourceRoot, operation.SourceRelativePath);
-                RejectPathChain(sourceRoot, source);
                 if (!File.Exists(source)) throw new FileNotFoundException("Install source file does not exist.", source);
-                if ((File.GetAttributes(source) & FileAttributes.ReparsePoint) != 0)
-                {
-                    throw new InvalidDataException($"Install transaction does not copy reparse-point files: {source}");
-                }
+                RejectContainedFilePath(sourceRoot, source);
 
                 var normalizedDestination = NormalizeRelativePath(operation.DestinationRelativePath);
                 if (!claimedDestinations.Add(normalizedDestination))
@@ -96,7 +92,7 @@ public sealed class StagedInstallTransaction
         return string.Join(Path.DirectorySeparatorChar, segments);
     }
 
-    private static string ResolveContainedPath(string root, string relativePath)
+    internal static string ResolveContainedPath(string root, string relativePath)
     {
         var normalized = NormalizeRelativePath(relativePath);
         var fullRoot = Path.GetFullPath(root);
@@ -115,11 +111,20 @@ public sealed class StagedInstallTransaction
         var rootPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));
         while (current is not null)
         {
-            RejectReparsePoint(current.FullName, "source path");
+            RejectReparsePoint(current.FullName, "contained path");
             if (string.Equals(Path.TrimEndingDirectorySeparator(current.FullName), rootPath, StringComparison.OrdinalIgnoreCase)) return;
             current = current.Parent;
         }
         throw new InvalidDataException($"Source path is not contained by its declared root: {file}");
+    }
+
+    internal static void RejectContainedFilePath(string root, string file)
+    {
+        RejectPathChain(root, file);
+        if ((File.GetAttributes(file) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new InvalidDataException($"Operation does not follow reparse-point files: {file}");
+        }
     }
 
     private static void RejectReparsePoint(string path, string role)

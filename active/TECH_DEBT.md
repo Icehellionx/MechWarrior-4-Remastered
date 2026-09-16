@@ -25,6 +25,7 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 7. Uninstall is destructive and must be designed from a precise ownership/save inventory before implementation.
 8. The evaluated MIT RTPatch parser does not understand the supplied patch variants and its CLI lacks record-path containment. It is evaluation evidence only, not an accepted dependency.
 9. The current Vengeance 8.3 restoration map is sufficient for staging and Patch 2 naming, but every inferred name must be compared with a legacy-setup reference tree before release qualification.
+10. The install-root manifest is path-contained and hash-validating but not cryptographically anchored outside the user-writable tree. Before release, bind it to a protected external install record or constrain removal against an independently trusted product manifest.
 
 ## Debt-negative rules
 

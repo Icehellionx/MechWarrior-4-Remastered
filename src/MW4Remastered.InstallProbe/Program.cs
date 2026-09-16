@@ -8,11 +8,23 @@ if (args.Length == 2 && string.Equals(args[0], "--verify", StringComparison.Ordi
     return verification.IsValid ? 0 : 1;
 }
 
+if (args.Length == 2 && string.Equals(args[0], "--uninstall", StringComparison.OrdinalIgnoreCase))
+{
+    var removal = new OwnedInstallUninstaller().Remove(args[1]);
+    foreach (var path in removal.PreservedPaths) Console.WriteLine($"Preserved: {path}");
+    foreach (var issue in removal.Issues) Console.Error.WriteLine($"Removal: {issue}");
+    Console.WriteLine(removal.Status == InstallRemovalStatus.Removed
+        ? $"Removed {removal.RemovedFiles.Count} owned files."
+        : "Owned-file removal was blocked before mutation.");
+    return removal.Status == InstallRemovalStatus.Removed ? 0 : 1;
+}
+
 if (args.Length != 4)
 {
     Console.Error.WriteLine("Usage:");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe <vengeance-disc-1-root> <vengeance-disc-2-root> <compatibility-executable> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --verify <install-root>");
+    Console.Error.WriteLine("  MW4Remastered.InstallProbe --uninstall <install-root>");
     return 2;
 }
 

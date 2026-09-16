@@ -27,6 +27,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `VengeanceInstallPlanBuilder` owns the current full-install allowlist, 8.3 name restoration, and exact compatibility-executable hash gate.
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.
+- `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
 
 ## Dependency direction

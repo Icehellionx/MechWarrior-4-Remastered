@@ -34,6 +34,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Staged and verified a real 231-file, 1.04 GB local Vengeance baseline without running legacy setup, SafeDisc, or writing registry/system state.
 - Narrowed the Mech Pak 64-bit diagnosis to a 32-bit C-Dilla/SafeCast stack that explicitly references a 16-bit helper.
 - Evaluated an MIT RTPatch parser and rejected its current revision for product use because it does not parse the supplied patch variants and lacks output-path containment.
+- Added an ownership-only uninstaller with modified-file preflight, move-phase rollback, unowned save/config preservation, and a successful real-tree smoke on a disposable Vengeance copy.
 
 ## Scaffold origin
 

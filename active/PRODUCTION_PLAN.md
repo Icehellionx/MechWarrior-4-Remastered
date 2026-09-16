@@ -20,7 +20,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [ ] Extend the shared contract to Black Knight and Mercenaries.
 - [ ] Diagnose Inner Sphere and Clan pack failures on 64-bit Windows from installer/payload evidence.
 - [ ] Install optional packs through a tested extraction/configuration path.
-- [ ] Persist an ownership manifest sufficient for repair and safe uninstall.
+- [x] Persist an ownership manifest sufficient for repair and safe file uninstall.
 
 ## 3. Launcher and user experience
 
