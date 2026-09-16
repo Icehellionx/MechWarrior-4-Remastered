@@ -165,6 +165,14 @@ internal sealed class InstallerForm : Form
             Text = "STEP 1 OF 2  •  ADD ORIGINAL ISOs OR ZIP FILES CONTAINING THEM",
             Margin = new Padding(3, 2, 0, 0),
         });
+        panel.Controls.Add(new Label
+        {
+            AutoSize = true,
+            ForeColor = Warning,
+            Font = new Font("Segoe UI Semibold", 9F),
+            Text = "CURRENT BUILD INSTALLS BLACK KNIGHT ONLY  •  OTHER MEDIA IS CHECKED BUT NOT INSTALLED",
+            Margin = new Padding(3, 5, 0, 0),
+        });
         return panel;
     }
 
@@ -284,7 +292,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             Anchor = AnchorStyles.Left,
             ForeColor = Muted,
-            Text = "Add your media above, then use the large install button. Valid but unfinished titles are identified clearly.",
+            Text = "Black Knight installs now. Vengeance, Mercenaries, and Mech Paks are detection-only in this build.",
         }, 0, 0);
 
         ConfigureSourceButton(revalidateButton, "REVALIDATE MEDIA");
@@ -301,9 +309,32 @@ internal sealed class InstallerForm : Form
         installButton.FlatAppearance.BorderSize = 0;
         installButton.Padding = new Padding(16, 7, 16, 7);
         installButton.Text = "ADD MEDIA TO BEGIN";
-        installButton.Click += async (_, _) => await InstallBlackKnightAsync();
+        installButton.Click += async (_, _) => await RunPrimaryActionAsync();
         footer.Controls.Add(installButton, 2, 0);
         return footer;
+    }
+
+    private async Task RunPrimaryActionAsync()
+    {
+        var destination = GetBlackKnightDestination();
+        var alreadyInstalled = destination is not null &&
+            (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath));
+        if (!alreadyInstalled)
+        {
+            await InstallBlackKnightAsync();
+            return;
+        }
+
+        try
+        {
+            installedLauncher.Start();
+            Close();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception)
+        {
+            operationStatus.Text = "The launcher could not be opened.";
+            MessageBox.Show(this, error.Message, "Launcher unavailable", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private async Task InstallBlackKnightAsync()
@@ -537,38 +568,61 @@ internal sealed class InstallerForm : Form
     private void UpdateInstallAvailability()
     {
         var snapshot = selection.Current;
-        var blackKnightReady = snapshot.Capabilities.Any(item =>
-            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase) && item.IsComplete);
-        InstallDestinationPlan? blackKnightPlan = null;
-        if (blackKnightReady && currentDestinationPlan is not null)
-        {
-            try
-            {
-                blackKnightPlan = destinationPlanner.Plan(CreateBlackKnightSelection(snapshot), currentDestinationPlan.RootPath);
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
-            {
-                blackKnightPlan = null;
-            }
-        }
-        var destination = blackKnightPlan?.Products.SingleOrDefault();
-        var available = blackKnightInstaller is not null && blackKnightPlan?.HasEnoughSpace == true &&
-            destination is not null && !Directory.Exists(destination.DestinationPath) && !File.Exists(destination.DestinationPath) && !UseWaitCursor;
-        installButton.Enabled = available;
-        installButton.Text = available ? "2. INSTALL BLACK KNIGHT NOW"
+        var blackKnight = snapshot.Capabilities.Single(item =>
+            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
+        var destination = GetBlackKnightDestination();
+        var alreadyInstalled = destination is not null &&
+            (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath));
+        var installAvailable = blackKnightInstaller is not null && currentDestinationPlan?.HasEnoughSpace == true &&
+            destination is not null && !alreadyInstalled && !UseWaitCursor;
+        var launcherAvailable = alreadyInstalled && installedLauncher.IsAvailable && !UseWaitCursor;
+
+        cards[blackKnight.ProductId].Update(blackKnight);
+        if (alreadyInstalled) cards[blackKnight.ProductId].ShowInstalled();
+
+        installButton.Enabled = installAvailable || launcherAvailable;
+        installButton.Text = installAvailable ? "2. INSTALL BLACK KNIGHT NOW"
+            : launcherAvailable ? "2. DONE — OPEN LAUNCHER"
             : UseWaitCursor ? "WORKING…"
-            : !blackKnightReady ? (snapshot.Layouts.Count == 0 ? "ADD MEDIA TO BEGIN" : "ADD BLACK KNIGHT MEDIA TO INSTALL")
+            : !blackKnight.IsComplete ? (snapshot.Layouts.Count == 0 ? "ADD MEDIA TO BEGIN" : "ADD BLACK KNIGHT MEDIA TO INSTALL")
             : blackKnightInstaller is null ? "BLACK KNIGHT INSTALLER UNAVAILABLE"
-            : blackKnightPlan?.HasEnoughSpace != true ? "CHOOSE A VALID INSTALL LOCATION"
-            : destination is not null && (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath)) ? "BLACK KNIGHT ALREADY INSTALLED"
+            : alreadyInstalled ? "INSTALLED — LAUNCHER UNAVAILABLE"
+            : currentDestinationPlan?.HasEnoughSpace != true ? "CHOOSE A VALID INSTALL LOCATION"
             : "CHECK INSTALL REQUIREMENTS";
         installButton.AccessibleDescription = blackKnightInstaller is null ? compatibilityStatus : null;
+    }
+
+    private InstallDestinationProduct? GetBlackKnightDestination()
+    {
+        if (currentDestinationPlan is null) return null;
+        var snapshot = selection.Current;
+        var blackKnightReady = snapshot.Capabilities.Any(item =>
+            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase) && item.IsComplete);
+        if (!blackKnightReady) return null;
+
+        try
+        {
+            return destinationPlanner
+                .Plan(CreateBlackKnightSelection(snapshot), currentDestinationPlan.RootPath)
+                .Products.SingleOrDefault();
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            return null;
+        }
     }
 
     private string GetNextStepText()
     {
         var blackKnight = selection.Current.Capabilities.Single(item =>
             item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
+        var destination = GetBlackKnightDestination();
+        if (destination is not null && (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath)))
+        {
+            return installedLauncher.IsAvailable
+                ? "Black Knight is already installed. Click 2. DONE — OPEN LAUNCHER. Other detected titles are not installed by this development build."
+                : "Black Knight is already installed, but the launcher is missing. Repair the application shell before continuing.";
+        }
         if (blackKnight.IsComplete && installButton.Enabled) return "Media ready. Click 2. INSTALL BLACK KNIGHT NOW.";
         if (blackKnight.IsComplete) return "Black Knight media is valid; review the install-location message below.";
         if (selection.Current.Layouts.Count > 0) return "Media added. Add Black Knight media to enable the currently qualified install path.";
@@ -659,6 +713,13 @@ internal sealed class InstallerForm : Form
             var installable = capability.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase);
             status.Text = installable ? "✓  READY TO INSTALL" : "✓  MEDIA ADDED";
             detail.Text = installable ? "Click the large install button below" : "Installation support is still in progress";
+        }
+
+        public void ShowInstalled()
+        {
+            status.ForeColor = Ready;
+            status.Text = "✓  INSTALLED";
+            detail.Text = "Setup is complete; open the launcher below";
         }
     }
 }

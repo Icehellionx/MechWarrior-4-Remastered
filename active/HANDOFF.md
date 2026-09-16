@@ -48,7 +48,7 @@ Updated: 2026-09-16.
 - ADR 0006 fixes the privilege contract: normal game launch never elevates; the upstream `VersionInjector.exe` and legacy unwrappers are explicitly forbidden from release trees even if someone adds them to an executable allowlist. ADR 0007 fixes the reproducible media-derived Black Knight payload contract.
 - ADR 0009 fixes the per-user package boundary. A pinned Inno Setup 7.1.0 compiler produces a deterministic setup with no broad uninstall-delete behavior; signing and SmartScreen reputation remain separate release gates.
 - Application CI now rechecks the core smoke suite, installer/launcher builds, privilege manifests, release-tree policy, packaging contract, and compatibility-source contract on a hosted Windows runner without uploading binaries. Defender/package qualification remains a separate local release gate.
-- Interactive package setup now runs media intake as a required setup stage instead of offering it after installation. The installer labels media choice and installation as steps 1 and 2, distinguishes valid-but-not-yet-supported titles from Black Knight's install-ready state, and opens the simple launcher after a successful install.
+- Interactive package setup now runs media intake as a required setup stage instead of offering it after installation. The installer labels media choice and installation as steps 1 and 2, states before selection that this development build installs only Black Knight, distinguishes detection-only titles/packs from Black Knight's install-ready state, and opens the simple launcher after a successful install. If the selected destination already contains Black Knight, the former disabled dead end is now an enabled `DONE — OPEN LAUNCHER` handoff.
 
 ## Best resume path
 
@@ -108,4 +108,5 @@ Updated: 2026-09-16.
 - The corrected installed per-user shell plus preserved Black Knight tree passed the same current Defender gate with no threat or new detection/remediation event.
 - Hosted Windows application-contract run `35055297275` passed all source smoke, build, privilege, release-tree, packaging, and compatibility-source checks for commit `9888e9a`; the workflow uploaded no binaries.
 - Hosted Windows application-contract run `35061879507` passed the redesigned flow, including the new user-flow contract, for commit `11d0310`; the workflow uploaded no binaries.
+- The clarified-scope package rebuilt successfully at 72,297,599 bytes with SHA-256 `a2b00bacf81b4ea1533ef8bb24170e48f04b5650942eb436bfdd05830a1e307d`. It passed release-tree policy and a current Defender scan (engine `1.1.26080.3`, intelligence `1.459.223.0`) with no detection or remediation event, then updated the intended per-user application shell without elevation.
 - No permanent product install, interactive packaged-installer UI, signing/SmartScreen qualification, or field/hardware verification has run. Black Knight process launch is qualified on this device only; repair remains unimplemented.
