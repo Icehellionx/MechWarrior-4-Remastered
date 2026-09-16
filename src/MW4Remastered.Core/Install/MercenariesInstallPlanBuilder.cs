@@ -13,7 +13,7 @@ public sealed class MercenariesInstallPlanBuilder
             ["00000409.016"] = "00000409.016",
             ["00000409.256"] = "00000409.256",
             ["ARTPCLNT.DLL"] = "ArtpClnt.dll",
-            ["AUTOCO_1.EXE"] = "AutoConfig.exe",
+            ["AUTOCO_1.EXE"] = "AutoConfig_MERCS.exe",
             ["BLADE.DLL"] = "Blade.dll",
             ["DSETUP.DLL"] = "DSetup.dll",
             ["EBUEULA.DLL"] = "EBUEula.dll",
@@ -24,13 +24,13 @@ public sealed class MercenariesInstallPlanBuilder
             ["MCP.DLL"] = "MCP.dll",
             ["MECH4MER.ICO"] = "Mech4Merc.ico",
             ["MFC42.DLL"] = "MFC42.dll",
-            ["MISSIO_1.DLL"] = "MissionLang.dll",
+            ["MISSIO_1.DLL"] = "MissionLang_MERCS.dll",
             ["MOTD.TXT"] = "MOTD.txt",
             ["MSVCIRT.DLL"] = "MSVCIRT.dll",
             ["MSVCRT.DLL"] = "MSVCRT.dll",
             ["MW4STATS.DLL"] = "MW4Stats.dll",
             ["NFMEDI_1.EXE"] = "NFMEditor.exe",
-            ["SCRIPT_1.DLL"] = "ScriptStrings.dll",
+            ["SCRIPT_1.DLL"] = "ScriptStrings_MERCS.dll",
             ["SERVER_1.TXT"] = "ServerCycle.txt",
             ["VIDEOC_1.TXT"] = "VideoCard.txt",
             ["WARRANTY.RTF"] = "Warranty.rtf",
@@ -86,7 +86,7 @@ public sealed class MercenariesInstallPlanBuilder
             else if (path.StartsWith("FONTS/", StringComparison.OrdinalIgnoreCase) ||
                      path.StartsWith("RESOURCE/", StringComparison.OrdinalIgnoreCase))
             {
-                files.Add(new InstallFile(discOneRoot, path, path));
+                files.Add(new InstallFile(discOneRoot, path, MapMediaPath(path)));
             }
         }
 
@@ -97,7 +97,7 @@ public sealed class MercenariesInstallPlanBuilder
             if (path.StartsWith("CONTENT/", StringComparison.OrdinalIgnoreCase) ||
                 path.StartsWith("RESOURCE/", StringComparison.OrdinalIgnoreCase))
             {
-                files.Add(new InstallFile(discTwoRoot, path, MapDiscTwoPath(path)));
+                files.Add(new InstallFile(discTwoRoot, path, MapMediaPath(path)));
             }
         }
 
@@ -133,8 +133,12 @@ public sealed class MercenariesInstallPlanBuilder
         return executable;
     }
 
-    private static string MapDiscTwoPath(string path)
+    private static string MapMediaPath(string path)
     {
+        if (string.Equals(path, "CONTENT/MERCSS_1/FILES/NEXTMO_1.WAV", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Content/MercsShellScripts/Files/nextmove_music.wav";
+        }
         if (path.StartsWith("CONTENT/MERCSS_1/", StringComparison.OrdinalIgnoreCase))
         {
             return "Content/MercsShellScripts/" + path["CONTENT/MERCSS_1/".Length..];
@@ -142,6 +146,10 @@ public sealed class MercenariesInstallPlanBuilder
         if (string.Equals(path, "CONTENT/GAMETY_1.H", StringComparison.OrdinalIgnoreCase))
         {
             return "Content/GameTypes.h";
+        }
+        if (string.Equals(path, "RESOURCE/VARIAN_1/VARIAN_1.TXT", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Resource/VariantsMercs/VariantsMercs.txt";
         }
         return path;
     }

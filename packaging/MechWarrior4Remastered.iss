@@ -34,7 +34,7 @@ ArchitecturesAllowed=x64compatible
 VersionInfoVersion={#AppVersion}
 
 [Files]
-Source: "{#PayloadRoot}\MW4RemasteredInstaller.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\MW4RemasteredInstallWorker.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredRtpPatchHost.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
@@ -43,7 +43,6 @@ Source: "{#PayloadRoot}\Compatibility\BlackKnight\*"; DestDir: "{app}\Compatibil
 
 [Icons]
 Name: "{group}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLauncher.exe"; WorkingDir: "{app}"
-Name: "{group}\Install games from original media"; Filename: "{app}\MW4RemasteredInstaller.exe"; WorkingDir: "{app}"
 Name: "{group}\Uninstall MechWarrior 4 Remastered"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLauncher.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
@@ -51,11 +50,16 @@ Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLa
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\MW4RemasteredInstaller.exe"; Parameters: "{code:GetMediaParameters}"; StatusMsg: "Validating selected original media..."; Flags: skipifsilent
+Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 Remastered"; WorkingDir: "{app}"; Flags: postinstall nowait skipifsilent
+
+[InstallDelete]
+; Remove the obsolete second-installer shortcut created by builds before 0.5.0.
+Type: files; Name: "{group}\Install games from original media.lnk"
 
 [UninstallDelete]
-; Intentionally empty. Inno removes only files it installed. Media-derived game trees,
-; saves, and configuration are managed by the launcher's ownership-safe per-game action.
+; Exact upgrade cleanup only. Media-derived game trees, saves, and configuration are
+; managed by the launcher's ownership-safe per-game action.
+Type: files; Name: "{group}\Install games from original media.lnk"
 
 [Code]
 var
@@ -105,10 +109,34 @@ begin
   RemoveMediaButton.Enabled := MediaList.ItemIndex >= 0;
 end;
 
+procedure AddCommandLineMedia(Value: String);
+var
+  Separator: Integer;
+  Item: String;
+begin
+  while Value <> '' do
+  begin
+    Separator := Pos('|', Value);
+    if Separator = 0 then
+    begin
+      Item := Value;
+      Value := '';
+    end
+    else
+    begin
+      Item := Copy(Value, 1, Separator - 1);
+      Delete(Value, 1, Separator);
+    end;
+    if (Item <> '') and (MediaFiles.IndexOf(Item) < 0) then
+      MediaFiles.Add(Item);
+  end;
+end;
+
 procedure InitializeWizard;
 begin
   MediaFiles := TStringList.Create;
   MediaFiles.CaseSensitive := False;
+  AddCommandLineMedia(ExpandConstant('{param:MEDIAFILES|}'));
   MediaPage := CreateCustomPage(wpWelcome, 'Choose original game media',
     'Add every MechWarrior 4 ISO or ISO-containing ZIP you want Setup to validate.');
 
@@ -129,6 +157,7 @@ begin
   RemoveMediaButton.Caption := 'Remove selected';
   RemoveMediaButton.Enabled := False;
   RemoveMediaButton.OnClick := @RemoveMediaButtonClick;
+  RefreshMediaList;
 end;
 
 procedure DeinitializeSetup;
@@ -150,7 +179,25 @@ function GetMediaParameters(Param: String): String;
 var
   Index: Integer;
 begin
-  Result := '';
+  Result := '--install-worker --destination "' + ExpandConstant('{app}') +
+    '" --log "' + ExpandConstant('{tmp}\MW4RemasteredInstallWorker.log') + '"';
   for Index := 0 to MediaFiles.Count - 1 do
     Result := Result + ' --media "' + MediaFiles[Index] + '"';
+end;
+
+procedure CurStepChanged(CurStep: TSetupStep);
+var
+  ResultCode: Integer;
+  WorkerLog: String;
+begin
+  if CurStep <> ssPostInstall then
+    exit;
+
+  WorkerLog := ExpandConstant('{tmp}\MW4RemasteredInstallWorker.log');
+  WizardForm.StatusLabel.Caption := 'Installing and verifying selected MechWarrior 4 games...';
+  if not Exec(ExpandConstant('{app}\MW4RemasteredInstallWorker.exe'), GetMediaParameters(''),
+    ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
+    RaiseException('Setup could not start its contained game-installation worker.');
+  if ResultCode <> 0 then
+    RaiseException('Selected game installation failed safely. Details are available during this setup run at: ' + WorkerLog);
 end;

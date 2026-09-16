@@ -29,6 +29,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Encode the original product topology: Vengeance base, Black Knight dependent expansion, independent Mercenaries, and Vengeance-dependent Mech Paks.
 - [x] Apply that topology to destination planning and remove the obsolete hidden Black Knight-only installer execution path.
 - [x] Collect a neutral multi-file ISO/ZIP set in the package wizard before Install and hand it directly to intake validation without a second picker.
+- [x] Remove the second visible WinForms installer; the package wizard now owns the entire visible flow and invokes only a synchronous hidden install worker.
 - [x] Remove the caller-supplied Vengeance replacement executable from installation requests; confine the qualified retail media-derived transform to coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Remove the caller-supplied Mercenaries replacement executable; derive its disc-free executable from exact original-media inputs inside coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Prove official Vengeance Patch 3 applies directly to retail media, apply it through a constrained source-owned host, retain only exact qualified outputs, and remove the obsolete C-Dilla and ARTP imports/call sites from the generated executable.
@@ -83,7 +84,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: qualify setup 0.4.2's media-first installation, corrected three-game runtime payloads, MW3-style game/manual launcher grid, and unified uninstall while proving the installed Mech Pak content is visible in game.
+User-facing goal: qualify setup 0.5.2's single media-first wizard, corrected three-game runtime payloads, MW3-style game/manual launcher grid, and unified uninstall while proving the installed Mech Pak content is visible in game.
 Owning boundary: package wizard handoff, installer progress/completion state, launcher capability status, and Vengeance content visibility.
 Smallest verifiable slice: exercise the packaged UI from ISO/ZIP selection through install and launcher handoff, then capture evidence that Inner Sphere and Clan chassis/variants are selectable.
 Focused evidence: selected-media summary, enabled install action, completed game/pack status, exact installed manifest, and visible in-game content.

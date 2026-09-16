@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType>
     <TargetFramework>net10.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
-    <AssemblyName>MW4RemasteredInstaller</AssemblyName>
+    <AssemblyName>MW4RemasteredInstallWorker</AssemblyName>
     <RootNamespace>MW4Remastered.Installer</RootNamespace>
     <ApplicationIcon>..\..\assets\branding\MW4-Remastered.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>

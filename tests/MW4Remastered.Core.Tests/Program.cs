@@ -234,6 +234,14 @@ try
     var processStarter = new RecordingProcessStarter();
     new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
+    var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
+    var mercenaryExecutable = Path.Combine(mercenaryRoot, "MW4Mercs.exe");
+    File.WriteAllText(mercenaryExecutable, "synthetic executable");
+    var mercenaryProduct = ProductCatalog.All.Single(item => item.Id == "mercenaries");
+    new LaunchOrchestrator(processStarter).Launch(new ProductStatus(
+        mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic"));
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "/gosnojoystick" }) == true,
+        "Mercenaries launch bypasses the crashing legacy joystick enumeration on current Windows");
 
     var applicationRoot = Path.Combine(transactionRoot, "application-shell");
     Directory.CreateDirectory(applicationRoot);
@@ -561,6 +569,9 @@ try
     WriteFixture(disc1, "AUTOCO_1.EXE", "autoconfig");
     WriteFixture(disc1, "DSETUP.DLL", "directx runtime query");
     WriteFixture(disc1, "GUNTIC_1.DLL", "gun ticket");
+    WriteFixture(disc1, "MISSIO_1.DLL", "mission language");
+    WriteFixture(disc1, "SCRIPT_1.DLL", "script strings");
+    WriteFixture(disc1, "RESOURCE/VARIAN_1/VARIAN_1.TXT", "variants");
     WriteFixture(disc1, "CDAC14BA.DLL", "c-dilla");
     WriteFixture(disc1, "MW4MERCS.ICD", "safedisc game image");
     WriteFixture(disc2, "CONTENT/MERCSS_1/FILES/NEXTMO_1.WAV", "audio");
@@ -576,9 +587,12 @@ try
     var plan = builder.Build(disc1, disc2, cabinet, replacement);
     var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
     Check(plan.ProductId == "mercenaries" && destinations.Contains("MW4Mercs.exe"), "Mercenaries plan supplies the qualified compatibility executable");
-    Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("GunTicket.dll"), "Mercenaries plan expands installed root names");
+    Check(destinations.Contains("AutoConfig_MERCS.exe") && destinations.Contains("MissionLang_MERCS.dll") &&
+        destinations.Contains("ScriptStrings_MERCS.dll") && destinations.Contains("GunTicket.dll"),
+        "Mercenaries plan restores setup-table root names");
     Check(destinations.Contains("DSetup.dll"), "Mercenaries plan retains the DirectX version-query runtime imported by the game executable");
-    Check(destinations.Contains("Content/MercsShellScripts/FILES/NEXTMO_1.WAV"), "Mercenaries plan restores the MercsShellScripts directory name");
+    Check(destinations.Contains("Content/MercsShellScripts/Files/nextmove_music.wav"), "Mercenaries plan restores the installed shell-audio path");
+    Check(destinations.Contains("Resource/VariantsMercs/VariantsMercs.txt"), "Mercenaries plan restores the installed variants path");
     Check(destinations.Contains("RESOURCE/CORE.MW4") && !destinations.Contains("MW4MERCS.ICD") && !destinations.Contains("CDAC14BA.DLL"), "Mercenaries plan combines cabinet data while excluding disc protection");
 }
 finally

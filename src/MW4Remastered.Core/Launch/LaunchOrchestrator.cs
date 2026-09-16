@@ -55,6 +55,12 @@ public sealed class LaunchOrchestrator
             startInfo.FileName = compatibilityLauncher;
             startInfo.ArgumentList.Add(Path.GetFileName(executable));
         }
+        else if (status.Product.Id.Equals("mercenaries", StringComparison.OrdinalIgnoreCase))
+        {
+            // Retail DirectInput enumeration crashes before the menu on current
+            // Windows when no compatible legacy joystick stack is available.
+            startInfo.ArgumentList.Add("/gosnojoystick");
+        }
         processStarter.Start(startInfo);
     }
 }

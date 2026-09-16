@@ -38,8 +38,8 @@ try {
     $installerFiles = @(Get-ChildItem -LiteralPath $publishInstaller -File)
     $launcherFiles = @(Get-ChildItem -LiteralPath $publishLauncher -File)
     $patchHostFiles = @(Get-ChildItem -LiteralPath $publishPatchHost -File)
-    if ($installerFiles.Count -ne 1 -or $installerFiles[0].Name -ne 'MW4RemasteredInstaller.exe') {
-        throw 'Installer publish must produce exactly one self-contained executable.'
+    if ($installerFiles.Count -ne 1 -or $installerFiles[0].Name -ne 'MW4RemasteredInstallWorker.exe') {
+        throw 'Install worker publish must produce exactly one self-contained executable.'
     }
     if ($launcherFiles.Count -ne 1 -or $launcherFiles[0].Name -ne 'MW4RemasteredLauncher.exe') {
         throw 'Launcher publish must produce exactly one self-contained executable.'
@@ -74,7 +74,7 @@ try {
         -OutputDirectory (Join-Path $payload 'Compatibility/BlackKnight')
 
     & (Join-Path $projectRoot 'tools/assert-release-tree.ps1') -Root $payload -AllowedExecutablePaths @(
-        'MW4RemasteredInstaller.exe',
+        'MW4RemasteredInstallWorker.exe',
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
         'Compatibility/BlackKnight/MW4RemasteredCompatLauncher.exe',

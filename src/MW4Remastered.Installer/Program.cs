@@ -1,38 +1,22 @@
-using MW4Remastered.Core.Install;
-using MW4Remastered.Core.Launch;
-using MW4Remastered.Core.Media;
-
 namespace MW4Remastered.Installer;
 
 internal static class Program
 {
     [STAThread]
-    private static void Main(string[] args)
+    private static int Main(string[] args)
     {
-        ApplicationConfiguration.Initialize();
-        var initialMediaPaths = ParseMediaPaths(args);
-        var mediaSessions = new MediaSourceSessionFactory();
-        var mediaInspection = new MediaInspectionService();
-        var processStarter = new SystemProcessStarter();
-        Application.Run(new InstallerForm(
-            new MediaSourceInspector(mediaInspection, mediaSessions),
-            new MediaSelectionSet(),
-            new MediaSelectionSessionFactory(mediaSessions, mediaInspection),
-            new InstallDestinationPlanner(),
-            new GameInstallationCoordinator(),
-            new InstalledLauncherOrchestrator(AppContext.BaseDirectory, processStarter),
-            initialMediaPaths));
-    }
-
-    private static IReadOnlyList<string> ParseMediaPaths(IReadOnlyList<string> args)
-    {
-        var paths = new List<string>();
-        for (var index = 0; index < args.Count - 1; index++)
+        InstallWorkerArguments? worker = null;
+        try
         {
-            if (!args[index].Equals("--media", StringComparison.OrdinalIgnoreCase)) continue;
-            var path = args[++index];
-            if (!string.IsNullOrWhiteSpace(path)) paths.Add(path);
+            worker = InstallWorkerArguments.Parse(args);
+            return new InstallWorker().Run(worker);
         }
-        return paths;
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or
+                                           InvalidDataException or InvalidOperationException or TimeoutException or
+                                           System.ComponentModel.Win32Exception)
+        {
+            InstallWorker.TryAppendLog(worker?.LogPath, $"FAILED: {error}");
+            return 1;
+        }
     }
 }
