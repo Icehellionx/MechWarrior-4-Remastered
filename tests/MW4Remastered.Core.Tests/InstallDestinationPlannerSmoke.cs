@@ -22,6 +22,17 @@ internal static class InstallDestinationPlannerSmoke
         Check(plan.HasEnoughSpace && plan.RequiredBytes > plan.Products.Sum(item => item.BudgetBytes),
             "destination planner includes safety reserve and reports adequate capacity", failures);
 
+        var expansionOnly = new MediaSelectionSet();
+        AddLayout(expansionOnly, "black-knight-disc-1");
+        var blockedExpansion = new InstallDestinationPlanner(new FixedCapacityReader(long.MaxValue))
+            .Plan(expansionOnly.Current, destination);
+        Check(!blockedExpansion.Products.Any(item => item.ProductId == "black-knight"),
+            "destination planner blocks Black Knight media without its Vengeance base", failures);
+        var expansionForInstalledBase = new InstallDestinationPlanner(new FixedCapacityReader(long.MaxValue))
+            .Plan(expansionOnly.Current, destination, new[] { "vengeance" });
+        Check(expansionForInstalledBase.Products.Single().ProductId == "black-knight",
+            "destination planner accepts Black Knight media when Vengeance is already installed", failures);
+
         var constrained = new InstallDestinationPlanner(new FixedCapacityReader(1)).Plan(selection.Current, destination);
         Check(!constrained.HasEnoughSpace, "destination planner reports insufficient capacity", failures);
 

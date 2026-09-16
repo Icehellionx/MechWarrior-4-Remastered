@@ -21,8 +21,6 @@ internal sealed class InstallerForm : Form
     private readonly MediaSelectionSet selection;
     private readonly MediaSelectionSessionFactory selectionSessions;
     private readonly InstallDestinationPlanner destinationPlanner;
-    private readonly GameInstallationCoordinator? blackKnightInstaller;
-    private readonly string compatibilityStatus;
     private readonly InstalledLauncherOrchestrator installedLauncher;
     private readonly IReadOnlyList<string> initialMediaPaths;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
@@ -46,8 +44,6 @@ internal sealed class InstallerForm : Form
         MediaSelectionSet selection,
         MediaSelectionSessionFactory selectionSessions,
         InstallDestinationPlanner destinationPlanner,
-        GameInstallationCoordinator? blackKnightInstaller,
-        string compatibilityStatus,
         InstalledLauncherOrchestrator installedLauncher,
         IReadOnlyList<string> initialMediaPaths)
     {
@@ -55,8 +51,6 @@ internal sealed class InstallerForm : Form
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
         this.selectionSessions = selectionSessions ?? throw new ArgumentNullException(nameof(selectionSessions));
         this.destinationPlanner = destinationPlanner ?? throw new ArgumentNullException(nameof(destinationPlanner));
-        this.blackKnightInstaller = blackKnightInstaller;
-        this.compatibilityStatus = compatibilityStatus ?? throw new ArgumentNullException(nameof(compatibilityStatus));
         this.installedLauncher = installedLauncher ?? throw new ArgumentNullException(nameof(installedLauncher));
         this.initialMediaPaths = initialMediaPaths ?? throw new ArgumentNullException(nameof(initialMediaPaths));
 
@@ -71,7 +65,6 @@ internal sealed class InstallerForm : Form
 
         Controls.Add(CreateRootLayout());
         RefreshSnapshot(selection.Current);
-        if (blackKnightInstaller is null) operationStatus.Text = compatibilityStatus;
         Shown += async (_, _) => await InspectInitialMediaAsync();
     }
 
@@ -325,10 +318,7 @@ internal sealed class InstallerForm : Form
 
     private void OpenInstalledLauncher()
     {
-        var destination = GetBlackKnightDestination();
-        var alreadyInstalled = destination is not null &&
-            (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath));
-        if (!alreadyInstalled) return;
+        if (!HasExistingPlannedInstall()) return;
 
         try
         {
@@ -339,65 +329,6 @@ internal sealed class InstallerForm : Form
         {
             operationStatus.Text = "The launcher could not be opened.";
             MessageBox.Show(this, error.Message, "Launcher unavailable", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-    }
-
-    private async Task InstallBlackKnightAsync()
-    {
-        if (blackKnightInstaller is null || currentDestinationPlan is null) return;
-        var snapshot = selection.Current;
-        var blackKnightMedia = snapshot.Layouts
-            .Where(item => item.Layout.Id.Equals("black-knight-disc-1", StringComparison.OrdinalIgnoreCase))
-            .ToArray();
-        var blackKnightDestination = currentDestinationPlan.Products
-            .SingleOrDefault(item => item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
-        if (blackKnightMedia.Length != 1 || blackKnightDestination is null) return;
-
-        var installSelection = CreateBlackKnightSelection(snapshot);
-
-        SetBusy(true);
-        var cancellationToken = operationCancellation!.Token;
-        var progressReporter = new Progress<GameInstallationProgress>(update =>
-        {
-            operationStatus.Text = $"{update.Stage}: {update.Message}";
-        });
-        try
-        {
-            var refreshedPlan = destinationPlanner.Plan(installSelection, destinationText.Text);
-            var destination = refreshedPlan.Products.Single(item => item.ProductId == "black-knight").DestinationPath;
-            if (!refreshedPlan.HasEnoughSpace) throw new IOException("The selected destination no longer has enough free space.");
-
-            var result = await Task.Run(() =>
-            {
-                using var openSelection = selectionSessions.Open(installSelection, cancellationToken);
-                return blackKnightInstaller.Install(
-                    new BlackKnightInstallRequest(openSelection.GetRoot("black-knight-disc-1")),
-                    destination,
-                    progressReporter,
-                    cancellationToken);
-            }, cancellationToken);
-            operationStatus.Text = $"Installed and verified {result.Manifest.Files.Count} Black Knight files.";
-            MessageBox.Show(this, $"Black Knight was installed and verified at:{Environment.NewLine}{result.DestinationPath}",
-                "Installation complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            if (installedLauncher.IsAvailable)
-            {
-                installedLauncher.Start();
-                Close();
-            }
-        }
-        catch (OperationCanceledException)
-        {
-            operationStatus.Text = "Installation cancelled; staged files and owned media resources were released.";
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or Win32Exception or TimeoutException)
-        {
-            operationStatus.Text = "Black Knight installation failed safely.";
-            MessageBox.Show(this, error.Message, "Installation failed", MessageBoxButtons.OK, MessageBoxIcon.Error);
-        }
-        finally
-        {
-            SetBusy(false);
-            RefreshDestinationPlan();
         }
     }
 
@@ -573,15 +504,8 @@ internal sealed class InstallerForm : Form
     private void UpdateInstallAvailability()
     {
         var snapshot = selection.Current;
-        var blackKnight = snapshot.Capabilities.Single(item =>
-            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
-        var destination = GetBlackKnightDestination();
-        var alreadyInstalled = destination is not null &&
-            (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath));
+        var alreadyInstalled = HasExistingPlannedInstall();
         var launcherAvailable = alreadyInstalled && installedLauncher.IsAvailable && !UseWaitCursor;
-
-        cards[blackKnight.ProductId].Update(blackKnight);
-        if (alreadyInstalled) cards[blackKnight.ProductId].ShowInstalled();
 
         installButton.Enabled = launcherAvailable;
         installButton.Text = launcherAvailable ? "DONE — OPEN LAUNCHER"
@@ -592,48 +516,22 @@ internal sealed class InstallerForm : Form
         installButton.AccessibleDescription = "Installation remains disabled until the shared Vengeance-first product path is qualified.";
     }
 
-    private InstallDestinationProduct? GetBlackKnightDestination()
+    private bool HasExistingPlannedInstall()
     {
-        if (currentDestinationPlan is null) return null;
-        var snapshot = selection.Current;
-        var blackKnightReady = snapshot.Capabilities.Any(item =>
-            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase) && item.IsComplete);
-        if (!blackKnightReady) return null;
-
-        try
-        {
-            return destinationPlanner
-                .Plan(CreateBlackKnightSelection(snapshot), currentDestinationPlan.RootPath)
-                .Products.SingleOrDefault();
-        }
-        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
-        {
-            return null;
-        }
+        return currentDestinationPlan?.Products.Any(item =>
+            Directory.Exists(item.DestinationPath) || File.Exists(item.DestinationPath)) == true;
     }
 
     private string GetNextStepText()
     {
-        var destination = GetBlackKnightDestination();
-        if (destination is not null && (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath)))
+        if (HasExistingPlannedInstall())
         {
             return installedLauncher.IsAvailable
-                ? "An earlier Black Knight test installation exists. Open the launcher to use or remove it."
-                : "Black Knight is already installed, but the launcher is missing. Repair the application shell before continuing.";
+                ? "An earlier verified game installation exists. Open the launcher to use or remove it."
+                : "A game is already installed, but the launcher is missing. Repair the application shell before continuing.";
         }
         if (selection.Current.Layouts.Count > 0) return "Media validated. Installation is disabled while the Vengeance-first shared path is being qualified.";
         return "Choose one or more ISO or ZIP files to begin.";
-    }
-
-    private static MediaSelectionSnapshot CreateBlackKnightSelection(MediaSelectionSnapshot snapshot)
-    {
-        var layouts = snapshot.Layouts.Where(item =>
-            item.Layout.Id.Equals("black-knight-disc-1", StringComparison.OrdinalIgnoreCase)).ToArray();
-        return new MediaSelectionSnapshot(
-            layouts,
-            snapshot.Capabilities.Where(item => item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase)).ToArray(),
-            layouts.Select(item => item.SourcePath).Distinct(StringComparer.OrdinalIgnoreCase).Count(),
-            layouts.Sum(item => item.ExcludedContentCount));
     }
 
     private void CancelOperation()

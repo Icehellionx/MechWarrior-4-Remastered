@@ -61,7 +61,10 @@ public sealed class InstallDestinationPlanner
         this.capacityReader = capacityReader ?? new DriveStorageCapacityReader();
     }
 
-    public InstallDestinationPlan Plan(MediaSelectionSnapshot selection, string destinationRoot)
+    public InstallDestinationPlan Plan(
+        MediaSelectionSnapshot selection,
+        string destinationRoot,
+        IEnumerable<string>? installedProductIds = null)
     {
         ArgumentNullException.ThrowIfNull(selection);
         ArgumentException.ThrowIfNullOrWhiteSpace(destinationRoot);
@@ -78,13 +81,21 @@ public sealed class InstallDestinationPlanner
 
         RejectExistingReparsePath(root);
 
-        var products = new List<InstallDestinationProduct>();
-        foreach (var capability in selection.Capabilities.Where(item => item.Kind == ProductKind.Game && item.IsComplete))
-        {
-            if (!GameBudgets.TryGetValue(capability.ProductId, out var budget))
-                throw new InvalidDataException($"No install-size budget exists for product: {capability.ProductId}");
+        var completeGames = selection.Capabilities
+            .Where(item => item.Kind == ProductKind.Game && item.IsComplete)
+            .Select(item => item.ProductId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var availableProducts = new HashSet<string>(completeGames, StringComparer.OrdinalIgnoreCase);
+        if (installedProductIds is not null) availableProducts.UnionWith(installedProductIds);
 
-            var product = ProductCatalog.All.Single(item => item.Id.Equals(capability.ProductId, StringComparison.OrdinalIgnoreCase));
+        var products = new List<InstallDestinationProduct>();
+        foreach (var product in ProductCatalog.All.Where(item =>
+            item.Kind == ProductKind.Game && completeGames.Contains(item.Id) &&
+            ProductDependencies.AreSatisfied(item.Id, availableProducts)))
+        {
+            if (!GameBudgets.TryGetValue(product.Id, out var budget))
+                throw new InvalidDataException($"No install-size budget exists for product: {product.Id}");
+
             var destination = Path.GetFullPath(Path.Combine(root, product.Id));
             if (!destination.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Planned product destination escaped the install root: {destination}");
