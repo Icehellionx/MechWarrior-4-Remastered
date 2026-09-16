@@ -6,6 +6,12 @@ using System.Security.Cryptography;
 using System.IO.Compression;
 
 var failures = new List<string>();
+var safeDiscBlock = Convert.FromHexString("234319fa48b20e26");
+SafeDisc1R0R1BlockCipher.DecryptBlock(
+    safeDiscBlock,
+    new uint[] { 0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210 });
+Check(Convert.ToHexString(safeDiscBlock).Equals("4433221188776655", StringComparison.OrdinalIgnoreCase),
+    "SafeDisc 1 r0/r1 block cipher matches the independent TEA-family test vector");
 Check(ProductCatalog.All.Count == 5, "catalog contains exactly three games and two packs");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.Game) == 3, "catalog contains three games");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.OptionalPack) == 2, "catalog contains two optional packs");

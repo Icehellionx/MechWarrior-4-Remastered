@@ -17,6 +17,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 
 - [x] Detect supported Vengeance media layouts and stage a disposable install.
 - [ ] Determine required official patch level and implement exact-input transforms.
+- [x] Reimplement and independently vector-test the SafeDisc 1.5 r0/r1 eight-byte block-decryption primitive; key derivation and PE repair remain unqualified.
 - [x] Extend the shared transaction contract to Black Knight and Mercenaries, including contained cabinet extraction for Mercenaries.
 - [x] Diagnose the Inner Sphere and Clan 64-bit failure boundary from installer/payload evidence: plain resource payload plus official game patch plus obsolete SafeCast/C-Dilla entitlement; replacement remains unqualified.
 - [ ] Install optional packs through a tested extraction/configuration path.
