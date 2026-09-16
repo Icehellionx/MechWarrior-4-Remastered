@@ -145,6 +145,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Reopened only Black Knight source evidence for the operation lifetime, surfaced coordinator progress, added chunk-cancellable staging/cabinet process control, and preserved the atomic commit plus mandatory post-commit verification boundary.
 - Added coordinator/transaction cancellation regressions, started the rebuilt installer responsively with the exact bundle present, and passed a current Defender scan of that combined output tree.
 
+## Launcher game removal — 2026-09-16
+
+- Unified installer and launcher product directories on the catalog IDs so newly installed Black Knight is immediately discoverable by the launcher.
+- Exposed per-game ownership-safe removal for ready and repair-required directories, with confirmation, off-UI-thread hashing/removal, preserved-data reporting, and refreshed status.
+- Kept whole-application uninstall explicitly pending until packaging owns a complete shell-file manifest; the launcher does not broadly delete its own directory.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

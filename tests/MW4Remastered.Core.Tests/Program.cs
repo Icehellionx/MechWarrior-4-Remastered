@@ -16,9 +16,12 @@ try
 {
     Directory.CreateDirectory(Path.Combine(root, "vengeance"));
     File.WriteAllText(Path.Combine(root, "vengeance", "MW4.exe"), "synthetic fixture");
+    Directory.CreateDirectory(Path.Combine(root, "mercenaries"));
     var statuses = new InstallStatusReader(root).Read().ToDictionary(item => item.Product.Id);
     Check(!statuses["vengeance"].IsInstalled && statuses["vengeance"].State == ProductInstallState.NeedsRepair, "unmanifested Vengeance executable requires repair");
     Check(!statuses["black-knight"].IsInstalled, "missing Black Knight executable stays absent");
+    Check(statuses["mercenaries"].State == ProductInstallState.NeedsRepair && statuses["mercenaries"].InstallPath is not null,
+        "an existing incomplete game directory remains removable as repair-required");
     Check(!statuses["clan"].IsInstalled, "Clan pack is not claimed without verified payload evidence");
     Check(!statuses["inner-sphere"].IsInstalled, "Inner Sphere pack is not claimed without verified payload evidence");
 }
@@ -95,6 +98,7 @@ try
     Check(new InstallManifestVerifier().Verify(destination).IsValid, "manifest verifier accepts the committed tree");
     var installedStatuses = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().ToDictionary(item => item.Product.Id);
     Check(installedStatuses["vengeance"].State == ProductInstallState.Ready && installedStatuses["vengeance"].LaunchPath is not null, "status reader requires a verified ownership manifest before enabling launch");
+    Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
     var processStarter = new RecordingProcessStarter();
     new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");

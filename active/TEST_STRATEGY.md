@@ -45,6 +45,7 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Install cancellation is accepted through bounded staging operations and immediately before commit; after atomic commit, exact-tree verification is non-cancellable and must finish.
 - Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
+- Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal requires a separate package ownership manifest.
 - Launcher status is derived from verified files/configuration, not registry keys alone.
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.
 - Diagnostics redact serials, credentials, private paths, and media content.

@@ -46,12 +46,12 @@ public sealed class InstallDestinationPlanner
 {
     private const long SafetyReserveBytes = 512L * 1024 * 1024;
 
-    private static readonly IReadOnlyDictionary<string, (string Folder, long BudgetBytes)> GameBudgets =
-        new Dictionary<string, (string Folder, long BudgetBytes)>(StringComparer.OrdinalIgnoreCase)
+    private static readonly IReadOnlyDictionary<string, long> GameBudgets =
+        new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
         {
-            ["vengeance"] = ("Vengeance", 1280L * 1024 * 1024),
-            ["black-knight"] = ("Black Knight", 768L * 1024 * 1024),
-            ["mercenaries"] = ("Mercenaries", 1536L * 1024 * 1024),
+            ["vengeance"] = 1280L * 1024 * 1024,
+            ["black-knight"] = 768L * 1024 * 1024,
+            ["mercenaries"] = 1536L * 1024 * 1024,
         };
 
     private readonly IStorageCapacityReader capacityReader;
@@ -85,10 +85,10 @@ public sealed class InstallDestinationPlanner
                 throw new InvalidDataException($"No install-size budget exists for product: {capability.ProductId}");
 
             var product = ProductCatalog.All.Single(item => item.Id.Equals(capability.ProductId, StringComparison.OrdinalIgnoreCase));
-            var destination = Path.GetFullPath(Path.Combine(root, budget.Folder));
+            var destination = Path.GetFullPath(Path.Combine(root, product.Id));
             if (!destination.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Planned product destination escaped the install root: {destination}");
-            products.Add(new InstallDestinationProduct(product.Id, product.DisplayName, destination, budget.BudgetBytes));
+            products.Add(new InstallDestinationProduct(product.Id, product.DisplayName, destination, budget));
         }
 
         var requiredBytes = products.Count == 0 ? 0 : checked(products.Sum(item => item.BudgetBytes) + SafetyReserveBytes);

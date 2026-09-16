@@ -15,9 +15,9 @@ internal static class InstallDestinationPlannerSmoke
             .Plan(selection.Current, destination);
 
         Check(plan.Products.Count == 2, "destination planner includes only media-complete games", failures);
-        Check(plan.Products.Any(item => item.ProductId == "vengeance" && item.DestinationPath.EndsWith("Vengeance", StringComparison.Ordinal)),
+        Check(plan.Products.Any(item => item.ProductId == "vengeance" && item.DestinationPath.EndsWith("vengeance", StringComparison.Ordinal)),
             "destination planner assigns the contained Vengeance directory", failures);
-        Check(plan.Products.Any(item => item.ProductId == "black-knight" && item.DestinationPath.EndsWith("Black Knight", StringComparison.Ordinal)),
+        Check(plan.Products.Any(item => item.ProductId == "black-knight" && item.DestinationPath.EndsWith("black-knight", StringComparison.Ordinal)),
             "destination planner assigns the contained Black Knight directory", failures);
         Check(plan.HasEnoughSpace && plan.RequiredBytes > plan.Products.Sum(item => item.BudgetBytes),
             "destination planner includes safety reserve and reports adequate capacity", failures);

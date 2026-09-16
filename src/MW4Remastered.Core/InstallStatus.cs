@@ -15,6 +15,7 @@ public sealed record ProductStatus(
     string? LaunchPath,
     string? CompatibilityLaunchPath,
     string? ManualPath,
+    string? InstallPath,
     string? Detail)
 {
     public bool IsInstalled => State == ProductInstallState.Ready;
@@ -49,23 +50,24 @@ public sealed class InstallStatusReader
         {
             // Pack status remains missing until pack-specific payload evidence is defined.
             // A registry value or marker file alone must never claim installed content.
-            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, "Pack payload not installed");
+            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null, "Pack payload not installed");
         }
 
         var productRoot = Path.Combine(installationRoot, product.Id);
+        if (!Directory.Exists(productRoot))
+        {
+            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null, "Game files not found");
+        }
         var executable = product.ExecutableCandidates
             .Select(name => Path.Combine(productRoot, name))
             .FirstOrDefault(File.Exists);
-        if (executable is null)
-        {
-            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, "Game files not found");
-        }
 
         var verification = verifier.Verify(productRoot, InstallVerificationScope.OwnedFiles);
-        if (!verification.IsValid || !string.Equals(verification.Manifest?.ProductId, product.Id, StringComparison.OrdinalIgnoreCase))
+        if (executable is null || !verification.IsValid || !string.Equals(verification.Manifest?.ProductId, product.Id, StringComparison.OrdinalIgnoreCase))
         {
-            var detail = verification.Issues.FirstOrDefault() ?? "Ownership manifest identifies a different product";
-            return new ProductStatus(product, ProductInstallState.NeedsRepair, null, null, manualPath, detail);
+            var detail = executable is null ? "Game executable is missing"
+                : verification.Issues.FirstOrDefault() ?? "Ownership manifest identifies a different product";
+            return new ProductStatus(product, ProductInstallState.NeedsRepair, null, null, manualPath, productRoot, detail);
         }
 
         const string compatibilityRelativePath = "MW4RemasteredCompatLauncher.exe";
@@ -73,7 +75,7 @@ public sealed class InstallStatusReader
             file.Path.Equals(compatibilityRelativePath, StringComparison.OrdinalIgnoreCase))
             ? Path.Combine(productRoot, compatibilityRelativePath)
             : null;
-        return new ProductStatus(product, ProductInstallState.Ready, executable, compatibilityLaunchPath, manualPath, "Verified installation");
+        return new ProductStatus(product, ProductInstallState.Ready, executable, compatibilityLaunchPath, manualPath, productRoot, "Verified installation");
     }
 
     private string? FindManual(ProductDefinition product)

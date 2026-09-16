@@ -1,4 +1,5 @@
 using MW4Remastered.Core;
+using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Launch;
 
 namespace MW4Remastered.Launcher;
@@ -14,6 +15,7 @@ internal static class Program
         Application.Run(new MainForm(
             new InstallStatusReader(root),
             new LaunchOrchestrator(processStarter),
-            new DocumentOpener(processStarter)));
+            new DocumentOpener(processStarter),
+            new OwnedInstallUninstaller()));
     }
 }

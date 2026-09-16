@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using MW4Remastered.Core;
+using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Launch;
 
 namespace MW4Remastered.Launcher;
@@ -14,11 +15,21 @@ internal sealed class MainForm : Form
     private static readonly Color Warning = Color.FromArgb(220, 116, 70);
     private readonly LaunchOrchestrator launchOrchestrator;
     private readonly DocumentOpener documentOpener;
+    private readonly InstallStatusReader statusReader;
+    private readonly OwnedInstallUninstaller uninstaller;
+    private readonly TableLayoutPanel gameGrid = new();
+    private readonly FlowLayoutPanel packRow = new();
 
-    public MainForm(InstallStatusReader statusReader, LaunchOrchestrator launchOrchestrator, DocumentOpener documentOpener)
+    public MainForm(
+        InstallStatusReader statusReader,
+        LaunchOrchestrator launchOrchestrator,
+        DocumentOpener documentOpener,
+        OwnedInstallUninstaller uninstaller)
     {
+        this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
         this.documentOpener = documentOpener ?? throw new ArgumentNullException(nameof(documentOpener));
+        this.uninstaller = uninstaller ?? throw new ArgumentNullException(nameof(uninstaller));
         Text = "MechWarrior 4 Remastered";
         BackColor = Armor;
         ForeColor = TextColor;
@@ -36,34 +47,18 @@ internal sealed class MainForm : Form
             Margin = new Padding(8, 8, 8, 20),
         };
 
-        var gameGrid = new TableLayoutPanel
-        {
-            AutoSize = true,
-            ColumnCount = 3,
-            Dock = DockStyle.Top,
-            GrowStyle = TableLayoutPanelGrowStyle.FixedSize,
-        };
+        gameGrid.AutoSize = true;
+        gameGrid.ColumnCount = 3;
+        gameGrid.Dock = DockStyle.Top;
+        gameGrid.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
         gameGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
         gameGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.33F));
         gameGrid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.34F));
 
-        var statuses = statusReader.Read();
-        foreach (var status in statuses.Where(value => value.Product.Kind == ProductKind.Game))
-        {
-            gameGrid.Controls.Add(CreateGameCard(status));
-        }
-
-        var packRow = new FlowLayoutPanel
-        {
-            AutoSize = true,
-            Dock = DockStyle.Top,
-            FlowDirection = FlowDirection.LeftToRight,
-            Padding = new Padding(0, 18, 0, 18),
-        };
-        foreach (var status in statuses.Where(value => value.Product.Kind == ProductKind.OptionalPack))
-        {
-            packRow.Controls.Add(CreatePackStatus(status));
-        }
+        packRow.AutoSize = true;
+        packRow.Dock = DockStyle.Top;
+        packRow.FlowDirection = FlowDirection.LeftToRight;
+        packRow.Padding = new Padding(0, 18, 0, 18);
 
         var footer = new FlowLayoutPanel
         {
@@ -71,7 +66,7 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Bottom,
             FlowDirection = FlowDirection.RightToLeft,
         };
-        footer.Controls.Add(CreateFooterButton("UNINSTALL", enabled: false));
+        footer.Controls.Add(CreateFooterButton("APP UNINSTALL PENDING", enabled: false));
         footer.Controls.Add(CreateFooterButton("DIAGNOSTICS", enabled: false));
         footer.Controls.Add(CreateFooterButton("SETTINGS", enabled: false));
 
@@ -91,11 +86,12 @@ internal sealed class MainForm : Form
         layout.Controls.Add(packRow, 0, 2);
         layout.Controls.Add(footer, 0, 3);
         Controls.Add(layout);
+        RefreshStatuses();
     }
 
     private Control CreateGameCard(ProductStatus status)
     {
-        var card = new Panel { BackColor = Panel, Height = 316, Dock = DockStyle.Fill, Margin = new Padding(8) };
+        var card = new Panel { BackColor = Panel, Height = 352, Dock = DockStyle.Fill, Margin = new Padding(8) };
         var monogram = new Label
         {
             Dock = DockStyle.Top,
@@ -126,15 +122,79 @@ internal sealed class MainForm : Form
         };
         manual.FlatAppearance.BorderColor = Color.FromArgb(70, 83, 84);
         if (status.ManualPath is not null) manual.Click += (_, _) => TryAction(() => documentOpener.Open(status.ManualPath));
+        var remove = new Button
+        {
+            Dock = DockStyle.Bottom,
+            Height = 36,
+            FlatStyle = FlatStyle.Flat,
+            Enabled = status.InstallPath is not null,
+            Text = status.InstallPath is null ? "NOTHING TO REMOVE" : "REMOVE GAME FILES",
+            BackColor = Armor,
+            ForeColor = status.InstallPath is null ? Color.Gray : Warning,
+        };
+        remove.FlatAppearance.BorderColor = Color.FromArgb(70, 83, 84);
+        if (status.InstallPath is not null) remove.Click += async (_, _) => await RemoveGameAsync(status, remove);
         var launch = new Button { Dock = DockStyle.Bottom, Height = 46, FlatStyle = FlatStyle.Flat, Enabled = status.IsInstalled, Text = status.State == ProductInstallState.NeedsRepair ? "REPAIR REQUIRED" : status.IsInstalled ? "LAUNCH" : "INSTALL REQUIRED", BackColor = Amber, ForeColor = Color.Black };
         launch.FlatAppearance.BorderSize = 0;
         if (status.IsInstalled) launch.Click += (_, _) => TryAction(() => launchOrchestrator.Launch(status));
         card.Controls.Add(launch);
+        card.Controls.Add(remove);
         card.Controls.Add(manual);
         card.Controls.Add(state);
         card.Controls.Add(name);
         card.Controls.Add(monogram);
         return card;
+    }
+
+    private void RefreshStatuses()
+    {
+        var statuses = statusReader.Read();
+        gameGrid.SuspendLayout();
+        packRow.SuspendLayout();
+        gameGrid.Controls.Clear();
+        packRow.Controls.Clear();
+        foreach (var status in statuses.Where(value => value.Product.Kind == ProductKind.Game))
+            gameGrid.Controls.Add(CreateGameCard(status));
+        foreach (var status in statuses.Where(value => value.Product.Kind == ProductKind.OptionalPack))
+            packRow.Controls.Add(CreatePackStatus(status));
+        packRow.ResumeLayout(performLayout: true);
+        gameGrid.ResumeLayout(performLayout: true);
+    }
+
+    private async Task RemoveGameAsync(ProductStatus status, Button sourceButton)
+    {
+        if (status.InstallPath is null) return;
+        var confirmation = MessageBox.Show(this,
+            $"Remove manifest-owned {status.Product.DisplayName} files?{Environment.NewLine}{Environment.NewLine}Unowned saves and configuration will be preserved.",
+            "Remove game files", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2);
+        if (confirmation != DialogResult.Yes) return;
+
+        sourceButton.Enabled = false;
+        sourceButton.Text = "VERIFYING OWNERSHIP…";
+        try
+        {
+            var result = await Task.Run(() => uninstaller.Remove(status.InstallPath));
+            if (result.Status == InstallRemovalStatus.Blocked)
+            {
+                MessageBox.Show(this, string.Join(Environment.NewLine, result.Issues),
+                    "Removal blocked", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+
+            var preserved = result.PreservedPaths.Count == 0
+                ? "No unowned files remained."
+                : $"Preserved {result.PreservedPaths.Count} unowned save/configuration file(s).";
+            MessageBox.Show(this, $"Removed {result.RemovedFiles.Count} manifest-owned file(s).{Environment.NewLine}{preserved}",
+                "Game files removed", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+        {
+            MessageBox.Show(this, error.Message, "Removal failed safely", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            RefreshStatuses();
+        }
     }
 
     private static Control CreatePackStatus(ProductStatus status)
