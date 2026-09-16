@@ -47,6 +47,7 @@ Updated: 2026-09-16.
 - Defender traced the visible warning to `Program:Script/Wacapew.A!ml` in an ignored historical SafeDiscLoader 1 `SDLoader.dll` and a disposable executable embedding it. Both were quarantined and were never product inputs. Exact opaque/generated research binaries were removed, known injector/unwrapper/patch/dump names are now hard-forbidden by release policy, and ADR 0008 requires current-engine scans plus detection-event review with no exclusions or warning suppression.
 - ADR 0006 fixes the privilege contract: normal game launch never elevates; the upstream `VersionInjector.exe` and legacy unwrappers are explicitly forbidden from release trees even if someone adds them to an executable allowlist. ADR 0007 fixes the reproducible media-derived Black Knight payload contract.
 - ADR 0009 fixes the per-user package boundary. A pinned Inno Setup 7.1.0 compiler produces a deterministic setup with no broad uninstall-delete behavior; signing and SmartScreen reputation remain separate release gates.
+- Application CI now rechecks the core smoke suite, installer/launcher builds, privilege manifests, release-tree policy, packaging contract, and compatibility-source contract on a hosted Windows runner without uploading binaries. Defender/package qualification remains a separate local release gate.
 
 ## Best resume path
 

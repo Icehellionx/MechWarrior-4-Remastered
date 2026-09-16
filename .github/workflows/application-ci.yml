@@ -1,0 +1,68 @@
+name: Application contracts
+
+on:
+  push:
+    paths:
+      - '.github/workflows/application-ci.yml'
+      - 'global.json'
+      - 'packaging/**'
+      - 'src/MW4Remastered.Core/**'
+      - 'src/MW4Remastered.Installer/**'
+      - 'src/MW4Remastered.Launcher/**'
+      - 'tests/**'
+      - 'third_party/*.lock.json'
+      - 'tools/assert-release-tree.ps1'
+      - 'tools/package/**'
+  pull_request:
+    paths:
+      - '.github/workflows/application-ci.yml'
+      - 'global.json'
+      - 'packaging/**'
+      - 'src/MW4Remastered.Core/**'
+      - 'src/MW4Remastered.Installer/**'
+      - 'src/MW4Remastered.Launcher/**'
+      - 'tests/**'
+      - 'third_party/*.lock.json'
+      - 'tools/assert-release-tree.ps1'
+      - 'tools/package/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: application-contracts-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  contracts:
+    runs-on: windows-2022
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v6
+
+      - name: Install pinned .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '10.0.300'
+
+      - name: Run core smoke suite
+        shell: pwsh
+        run: dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csproj --configuration Release
+
+      - name: Build non-elevating applications
+        shell: pwsh
+        run: |
+          dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release
+          dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
+
+      - name: Validate security and packaging contracts
+        shell: pwsh
+        run: |
+          ./tests/ApplicationPrivilegeBoundary.Tests.ps1
+          ./tests/ReleaseTreePolicy.Tests.ps1
+          ./tests/PackagingContract.Tests.ps1
+          ./tests/CompatibilitySourceBuild.Tests.ps1
+
+      # No binaries are uploaded here. Release packaging consumes separately
+      # qualified compatibility evidence and requires a local Defender gate.

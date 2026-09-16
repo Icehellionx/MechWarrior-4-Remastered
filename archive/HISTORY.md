@@ -158,6 +158,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Produced byte-identical 72,276,429-byte setup executables across two clean builds, emitted the SHA-256 sidecar, and passed release-tree plus privilege-boundary contracts.
 - Completed a disposable package install/start/uninstall smoke: both apps were responsive, all package-owned shell files were removed, and a synthetic Black Knight save remained.
 - Scanned the final setup and representative installed trees with current Defender intelligence; no threat or matching remediation event was reported. Signing/SmartScreen reputation remains a separate release gap.
+- Added hosted Windows application CI for synthetic core behavior, both application builds, non-elevation manifests, release-tree policy, packaging ownership, and pinned compatibility-source contracts; it deliberately publishes no binary artifact.
 
 ## Scaffold origin
 

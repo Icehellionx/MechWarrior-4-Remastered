@@ -33,6 +33,8 @@ python tools/manuals/clean_manuals.py Manuals output/pdf
 
 Native WinForms visual and interaction smoke remains a manual/automation coverage gap; compilation does not qualify visual layout or the eventual install transaction.
 
+`.github/workflows/application-ci.yml` runs the synthetic core suite, both application builds, privilege checks, release-tree policy, packaging contract, and compatibility-source contract on Windows. It uploads no binaries; packaging still requires separately qualified compatibility evidence and a current local Defender scan.
+
 ## Required contracts
 
 - Input fixtures use synthetic trees or hashes/metadata; tests never copy proprietary game payloads into source.
