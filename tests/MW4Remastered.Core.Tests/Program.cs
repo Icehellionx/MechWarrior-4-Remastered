@@ -365,6 +365,7 @@ finally
 InstallationCoordinatorSmoke.Run(failures);
 IsoMediaSessionSmoke.Run(failures);
 IsoArchiveExtractorSmoke.Run(failures);
+MediaSourceInspectorSmoke.Run(failures);
 
 if (failures.Count > 0)
 {

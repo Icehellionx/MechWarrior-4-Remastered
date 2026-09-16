@@ -18,6 +18,7 @@ Updated: 2026-09-15.
 - A media catalog and directory inspector recognize both Vengeance discs, Black Knight, both Mercenaries discs, and both Mech Paks. Unsafe paths fail closed; recognized media reports crack/DRM paths for mandatory exclusion.
 - An ownership-aware ISO media session now validates regular `.iso` inputs, refuses pre-attached images, mounts explicitly read-only through a bounded Windows PowerShell adapter, validates the returned root, and dismounts only its owned image. ADR 0004 records the replaceable backend choice.
 - Archival ZIP input now has an ISO-only extractor: it validates every entry, rejects unsafe/link/duplicate paths, enforces count and expanded-size limits, reports but never writes non-ISO files, verifies its exact extracted inventory, and commits atomically. ADR 0005 records why already-extracted trees and generic archive unpacking are excluded.
+- `MediaSourceInspector` now composes directory inspection, owned ISO sessions, and ISO-only ZIP extraction behind one read-only call suitable for installer UI. The media probe is only a thin reporter over that service.
 - A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
 - The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
 - The Vengeance install plan now stages 231 allowlisted files from both discs plus one exact-hash user-supplied version-2.0 executable. It restores patch-relevant 8.3 names, excludes setup/SafeDisc content, clears read-only media attributes, commits atomically, and writes a repair/uninstall ownership manifest.
@@ -35,7 +36,7 @@ Updated: 2026-09-15.
 2. Compare official-patch outputs and version resources with the supplied exact-hash 2.0/3.0 executables without publishing those binaries.
 3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
 4. Record ADRs for the permanent patch/no-disc method, compatibility baseline, and remaining registry/save-location ownership.
-5. Compose ISO/ZIP media sessions with the game-install coordinator behind an installer UI, including free-space checks, progress, and cancellation.
+5. Build the installer UI over `MediaSourceInspector` and `GameInstallationCoordinator`, including free-space checks, progress, cancellation, and reopening selected sources for the install lifetime.
 
 ## Known constraints and risks
 

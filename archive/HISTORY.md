@@ -75,6 +75,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added a bounded ZIP extractor that validates all entry paths but writes only ISO files, reports non-ISO entries without materializing them, rejects links/traversal/duplicates, and verifies the exact staged inventory before atomic commit.
 - Composed ZIP extraction with owned read-only ISO sessions in the media probe.
 - Proved the path against the real Black Knight archival ZIP: only `MW4BK.iso` was extracted, recognition succeeded with SafeDisc exclusions, and no probe scratch directory remained.
+- Added `MediaSourceInspector` as the UI-facing composition boundary for directories, ISOs, and ISO-containing ZIPs; refactored the media probe to a thin reporter and re-ran the real ZIP smoke with identical recognition and cleanup results.
 
 ## Scaffold origin
 
