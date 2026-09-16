@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "product": "MechWarrior 4: Vengeance official Patch 3 (English, Inner Sphere Mech Pak media)",
+  "classification": "local compatibility evidence; redistribution not authorized",
+  "components": [
+    {
+      "path": "GOODIES/PATCH3/MW4P3/ENGLISH/MW4.RTP",
+      "size": 40042724,
+      "sha256": "caf43123e64be0a03083d4ae728b1314808569e8a7319fb35d140e20a51831c2"
+    },
+    {
+      "path": "PATCHW32.DLL",
+      "size": 185344,
+      "sha256": "0ec6e25234ad74489eb1890d4de57bb6140bb8196bdc4a5dcac90dd9d16eb2dd"
+    }
+  ],
+  "qualifiedExperiment": {
+    "date": "2026-09-16",
+    "method": "Applied the official RTP payload to disposable retail and Patch-2 trees through an ignored x86 asInvoker harness. The historical engine was used only as a local oracle and is not a product dependency. SafeDisc player routines were emulated, never executed natively.",
+    "result": "Patch 3 applies directly to original retail Vengeance. Its output matches the Patch-2-then-Patch-3 path except for Patch-2-only drvmgt.dll, so Patch 2 is not a prerequisite. The source-owned exact-input transform emits a disc-free executable and removes the CdaC14BA.dll and ARTPCLNT.dll import descriptors.",
+    "rawPatchedInputs": [
+      { "path": "MW4.EXE", "size": 344863, "sha256": "578800c3f3d8d74c366a7229240c34850a85379573059fc8b7e7dc5603563e80" },
+      { "path": "MW4.ICD", "size": 3698804, "sha256": "9e13cfda761d655222da523f4c603ea91f46c1669341fe82d8b6630ccbe3ecf6" },
+      { "path": "DPLAYERX.DLL", "size": 138752, "sha256": "eb751d527e8c9b893ae0f5dd6ade3e15bbce468c5b0331afc87d0a23ba621ff7" }
+    ],
+    "changedOutputs": [
+      { "path": "autoconfig.exe", "size": 438272, "sha256": "85c62ecdf39b327c4b2166dd0e8f4033b852743e1a1e8637c5f2b9b31fd63757" },
+      { "path": "MissionLang.dll", "size": 196608, "sha256": "06fdc773b3077cbb7ca44e90fd06e0d5b512200dd925d5c427a04f43701010eb" },
+      { "path": "NFOEditor.exe", "size": 471040, "sha256": "cfbc2087595904aef932f23699fc64ab7b5a8f8b6b383b6cd4c0151692d210c1" },
+      { "path": "RESOURCE/core.mw4", "size": 1252036, "sha256": "f59dfecb9aa4f76648b9c7f1e0c1c7e58ba5bcd0022c113dc87c20f6d33aa73c" },
+      { "path": "RESOURCE/props.mw4", "size": 128704483, "sha256": "21d4f234f8c19ee9b101330c0682223a4023fb649a19946600ea4dbed5a60b19" },
+      { "path": "RESOURCE/textures.mw4", "size": 158439264, "sha256": "11a0aa030bc40aa18531b6e5a814f5b0279c18561b4d1b3e36343ffad64856aa" },
+      { "path": "ScriptStrings.dll", "size": 147456, "sha256": "3b7abc2bb57130e554fa88a4f8f5057c8f252089fd802ca5df73fa848acbc505" }
+    ],
+    "legacyAdditionsExcludedFromRuntime": [
+      { "path": "artpclnt.dll", "size": 106496, "sha256": "30ea1455f4ade24f4b6426781632b29c23c8006bc478da3a0d3c1fd6381925ee" },
+      { "path": "cabarc.exe", "size": 114688, "sha256": "3ed33e71641645367442e65dca6dab0d326b22b48ef9a4c2a2488e67383aa9a6" },
+      { "path": "Cdac14ba.dll", "size": 112128, "sha256": "9d8379cd2cf899e8873d40932c66bc683676d9bdad6f0cdec7873859c95b13c1" }
+    ],
+    "managedExecutable": {
+      "size": 3698688,
+      "sha256": "25b921583ee8114a34f35e83bf5f78bb48cb71086ea39e12d7a386e9fddd019e",
+      "smoke": "Opened a responsive MechWarrior Vengeance window from a clean Inner Sphere resource tree without mounted media, elevation, C-Dilla, or ARTPCLNT; current Defender scan found no threats."
+    }
+  }
+}

@@ -71,6 +71,33 @@ finally
     if (Directory.Exists(transformRejectionRoot)) Directory.Delete(transformRejectionRoot, true);
 }
 
+var patch3TransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-patch3-transform-rejection-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(patch3TransformRejectionRoot);
+    File.WriteAllText(Path.Combine(patch3TransformRejectionRoot, "MW4.EXE"), "unsupported Patch 3 loader");
+    File.WriteAllText(Path.Combine(patch3TransformRejectionRoot, "MW4.ICD"), "unsupported Patch 3 image");
+    File.WriteAllText(Path.Combine(patch3TransformRejectionRoot, "DPLAYERX.DLL"), "unsupported player");
+    var rejected = false;
+    try
+    {
+        new VengeancePatch3ExecutableTransform().Transform(
+            patch3TransformRejectionRoot,
+            Path.Combine(patch3TransformRejectionRoot, "scratch"));
+    }
+    catch (InvalidDataException exception)
+    {
+        rejected = exception.Message.Contains("Unsupported SafeDisc input MW4.EXE SHA-256", StringComparison.Ordinal);
+    }
+    Check(rejected, "Vengeance Patch 3 transform rejects inputs outside the qualified revision");
+    Check(!Directory.Exists(Path.Combine(patch3TransformRejectionRoot, "scratch")),
+        "Vengeance Patch 3 transform writes nothing after input validation fails");
+}
+finally
+{
+    if (Directory.Exists(patch3TransformRejectionRoot)) Directory.Delete(patch3TransformRejectionRoot, true);
+}
+
 var mercenariesTransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-mercenaries-transform-rejection-" + Guid.NewGuid().ToString("N"));
 try
 {

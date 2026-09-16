@@ -31,6 +31,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Collect a neutral multi-file ISO/ZIP set in the package wizard before Install and hand it directly to intake validation without a second picker.
 - [x] Remove the caller-supplied Vengeance replacement executable from installation requests; confine the qualified retail media-derived transform to coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Remove the caller-supplied Mercenaries replacement executable; derive its disc-free executable from exact original-media inputs inside coordinator-owned scratch and fail closed on unknown revisions or output hashes.
+- [x] Prove official Vengeance Patch 3 applies directly to retail media and add an exact-input managed executable transform that removes its obsolete C-Dilla and ARTP client imports; keep pack installation disabled until product-owned RTP application and visible-content proof exist.
 - [x] Validate and assemble the exact internal Black Knight helper/loader/license/corresponding-source bundle from reproducible CI evidence.
 - [x] Prove the Black Knight media transformation internally; keep it out of the primary product flow until the Vengeance base path and dependency-aware orchestration are qualified.
 
@@ -84,7 +85,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: install the optional Inner Sphere and Clan Mech Paks from original media without invoking obsolete C-Dilla/SafeCast components.
 Owning boundary: official patch transforms, pack resource overlay, entitlement/visibility state, manifest update, and rollback.
-Smallest verifiable slice: establish a controlled patched Vengeance baseline, add one pack's exact ten-file payload, and prove in-game visibility without legacy activation software.
+Smallest verifiable slice: replace the now-qualified Patch 3 oracle with a contained product-owned patch application path, then prove the Inner Sphere payload visible in game without legacy activation software.
 Focused evidence: exact patch/media hashes, before/after resource and configuration state, manifest overlay, and current Defender scan.
 Smoke/regression evidence: pack-specific visibility plus launch/config/save/uninstall regression on Vengeance and Black Knight targets.
 Rollback or disable path: overlays stage before commit and restore the prior manifest/files on failure; unqualified packs remain disabled in setup.

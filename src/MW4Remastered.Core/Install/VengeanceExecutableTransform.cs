@@ -18,6 +18,7 @@ public interface IVengeanceExecutableTransform
 internal enum SafeDisc15020TitlePatch
 {
     Vengeance,
+    VengeancePatch3,
     Mercenaries,
 }
 
@@ -660,6 +661,9 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             case SafeDisc15020TitlePatch.Vengeance:
                 PatchDiscCheck(image, pe.RawEnd);
                 break;
+            case SafeDisc15020TitlePatch.VengeancePatch3:
+                RemoveImportDescriptors(image, pe, "CdaC14BA.dll", "ARTPCLNT.dll");
+                break;
             case SafeDisc15020TitlePatch.Mercenaries:
                 PatchMercenariesEntitlement(image, pe);
                 break;
@@ -697,28 +701,39 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         var patchOffset = gate + 0x15;
         Convert.FromHexString("E946000000").CopyTo(image[patchOffset..]);
 
+        RemoveImportDescriptors(image, pe, "CdaC14BA.dll");
+    }
+
+    private static void RemoveImportDescriptors(Span<byte> image, MutablePe32 pe, params string[] libraryNames)
+    {
+        var requested = libraryNames.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (requested.Count != libraryNames.Length)
+        {
+            throw new ArgumentException("Import descriptor names must be unique.", nameof(libraryNames));
+        }
+
         var descriptors = pe.ReadImportDescriptors();
-        var cdillaIndex = -1;
+        var matches = new List<int>();
         for (var index = 0; index < descriptors.Count; index++)
         {
             var library = ReadAsciiZ(image, pe.RvaToOffset(descriptors[index].NameRva));
-            if (library.Equals("CdaC14BA.dll", StringComparison.OrdinalIgnoreCase))
+            if (requested.Contains(library))
             {
-                if (cdillaIndex >= 0)
-                {
-                    throw new InvalidDataException("Mercenaries contains more than one C-Dilla import descriptor.");
-                }
-                cdillaIndex = index;
+                matches.Add(index);
+                requested.Remove(library);
             }
         }
-        if (cdillaIndex < 0)
+        if (requested.Count > 0)
         {
-            throw new InvalidDataException("Mercenaries C-Dilla import descriptor was not found.");
+            throw new InvalidDataException("Required import descriptors were not found: " + string.Join(", ", requested));
         }
 
-        var descriptorOffset = descriptors[cdillaIndex].HeaderOffset;
-        var bytesToMove = checked((descriptors.Count - cdillaIndex) * 20);
-        image.Slice(descriptorOffset + 20, bytesToMove).CopyTo(image[descriptorOffset..]);
+        foreach (var descriptorIndex in matches.OrderDescending())
+        {
+            var descriptorOffset = descriptors[descriptorIndex].HeaderOffset;
+            var bytesToMove = checked((descriptors.Count - descriptorIndex) * 20);
+            image.Slice(descriptorOffset + 20, bytesToMove).CopyTo(image[descriptorOffset..]);
+        }
     }
 
     private static int FindUniquePattern(ReadOnlySpan<byte> image, ReadOnlySpan<byte> pattern, string description)

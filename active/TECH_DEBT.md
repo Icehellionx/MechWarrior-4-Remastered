@@ -19,7 +19,7 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 1. The legal history of “freeware” MW4 releases is easy to overstate; media must remain user-supplied until rights are documented.
 2. The local input set contains opaque no-CD/fix archives and a serial-key file. They are evidence only, never automatic release inputs.
 3. Multi-disc and archive variants may differ in executable revision or modifications despite similar names.
-4. Disc/readme/archived-support evidence separates plain Mech Pak resources, required official game patches, and C-Dilla/SafeCast entitlement with a 16-bit helper. The clean entitlement replacement still needs controlled before/after and game-visible proof; copying resources alone is not qualified.
+4. Disc/readme/archived-support evidence separates plain Mech Pak resources, required official game patches, and C-Dilla/SafeCast entitlement with a 16-bit helper. Patch 3 and an Inner Sphere payload now launch without the obsolete components, but game-visible chassis/variant proof and any remaining entitlement marker are still required.
 5. Copying the mature MW3 launcher's structure wholesale would carry title-specific assumptions and historical complexity into a cleaner project.
 6. Manual cleanup can silently clip or reorder content without full-page render comparison.
 7. Uninstall is destructive and must be designed from a precise ownership/save inventory before implementation.
@@ -30,6 +30,8 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 12. Mercenaries no longer accepts the opaque local replacement executable. The exact retail `50.06.09.3002` loader/ICD/DPLAYER set is transformed by reviewed managed source into a deterministic, Defender-clean executable that passed a bounded launch smoke. Official patch provenance and broader runtime qualification remain open; the adjacent `mercpr1.exe` was not executed or included.
 13. Mercenaries cabinet extraction currently relies on the Windows-provided `tar.exe`/libarchive surface. Release qualification must pin the supported Windows behavior or replace it with a reviewed, licensed in-process cabinet reader.
 14. The selected launcher icon derives from original Vengeance artwork supplied by the user. It is technically isolated and documented, but redistribution rights must be resolved before it enters a public release payload.
+15. Official Patch 3 output is locked and its executable transform is source-owned, but generating the patched data files still depends on a disposable proprietary RTPatch oracle. Do not connect Mech Paks to the installer until a contained product-owned application path reproduces the locked outputs.
+16. `VengeanceExecutableTransform.cs` exceeds the C# hard ceiling. Extraction plan: move `MutablePe32` plus PE normalization into `SafeDiscPeImage`, and import/pointer repair into `SafeDisc15020ImportRepair`; callers remain the exact-input Vengeance, Patch 3, and Mercenaries transforms; protect byte-for-byte output hashes, wrong-input rejection, cipher vectors, and all three launch smokes; target fewer than 450 lines in the title transform file without changing any public request contract.
 
 ## Debt-negative rules
 

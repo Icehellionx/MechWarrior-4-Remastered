@@ -55,12 +55,14 @@ Updated: 2026-09-16.
 - Application CI now rechecks the core smoke suite, installer/launcher builds, privilege manifests, release-tree policy, packaging contract, and compatibility-source contract on a hosted Windows runner without uploading binaries. Defender/package qualification remains a separate local release gate.
 - The latest user review rejected the shell-first package flow and Black Knight-only emphasis. Setup now collects media before installing the application shell, and the launched installer performs the qualified Vengeance-first game installation rather than stopping at `MEDIA READY`.
 - Internal all-games setup `0.3.0` built at SHA-256 `0504ac47857c94ad00e8aa5e7ee16804e12457e29f3019483dc411972081ab12`. Defender engine `1.1.26080.3` and intelligence `1.459.226.0` found no threats in the bounded package scan. Interactive package clicking remains an acceptance test rather than an inferred pass.
+- Official Vengeance Patch 3 from Inner Sphere media applies directly to original retail Vengeance; Patch 2 is not a prerequisite. Its exact RTP/engine inputs and changed outputs are recorded in `third_party/VengeancePatch3.lock.json`; the proprietary patch engine remains local oracle evidence only.
+- `VengeancePatch3ExecutableTransform` validates the exact patched loader/ICD/DPLAYER inputs and deterministically emits SHA-256 `25b921583ee8114a34f35e83bf5f78bb48cb71086ea39e12d7a386e9fddd019e`, removing the C-Dilla and ARTP client imports. A clean Patch 3 plus Inner Sphere resource tree opened a responsive game window without disc/UAC or legacy files and passed Defender. In-game pack visibility and a product-owned RTP application path remain open gates.
 
 ## Best resume path
 
 1. Exercise setup `0.3.0` interactively with representative Vengeance, Black Knight, and Mercenaries selections and verify the media-first → install → launcher handoff on the user-visible path.
-2. Qualify the official Vengeance 2.0/3.0, Black Knight, and Mercenaries patch transforms.
-3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
+2. Implement a contained product-owned application path for the now-locked official Vengeance Patch 3 outputs; never ship or invoke the proprietary oracle.
+3. Prove Inner Sphere content visibly available in game from Patch 3 plus the exact resource overlay, then repeat for Clan and Black Knight while avoiding C-Dilla installation.
 4. Exercise the packaged interactive UI path through media intake, Black Knight install, launch, repair, per-game removal, and standard app uninstall on a disposable destination.
 5. Exercise the qualified Black Knight path through menu, configuration, save, renderer, audio, and input tests; retain hardware coverage as an explicit release gap.
 
