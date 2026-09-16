@@ -50,8 +50,8 @@ Completed implementation, verification, durable decisions, and disproven investi
 
 ## Launcher remaster mark — 2026-09-15
 
-- Generated an original transparent gunmetal/amber heavy-mech and `4` emblem with a lower-right `R`, then simplified it for small-size legibility.
-- Preserved the selected RGBA master and prompt/provenance note, packaged a 256×256 Windows icon, and embedded it into the launcher build.
+- Replaced the initial generated concept at the user's direction with the supplied original Vengeance icon treatment.
+- Isolated the installed MW3 launcher's exact 6×7 silver/gray `R` glyph, composited it onto the MW4 artwork's native 32×32 grid without changing the remaining source cells, packaged a nearest-neighbor 256×256 Windows icon, and embedded it into the launcher build.
 
 ## Scaffold origin
 
