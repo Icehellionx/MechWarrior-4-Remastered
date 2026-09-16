@@ -105,7 +105,7 @@ public sealed class StagedInstallTransaction
         return candidate;
     }
 
-    private static void RejectPathChain(string root, string file)
+    internal static void RejectPathChain(string root, string file)
     {
         var current = new DirectoryInfo(Path.GetDirectoryName(file)!);
         var rootPath = Path.TrimEndingDirectorySeparator(Path.GetFullPath(root));

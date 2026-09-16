@@ -35,6 +35,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.
 - `GameInstallationCoordinator` is the UI-independent application service for all three games. It reports common stages, delegates title policy to plan builders, owns Mercenaries cabinet scratch lifetime, commits through the shared transaction, and requires exact-tree verification before success.
 - `MechPakResourceOverlayPlanBuilder` owns only the exact 10-file resource allowlist for each retail pack and permits only documented Vengeance/Black Knight targets. It deliberately does not own official patch transforms, entitlement replacement, merge transactions, or Mercenaries behavior.
+- `OwnedInstallOverlayTransaction` adds non-colliding files to an already verified matching game tree, atomically replaces its ownership manifest, rolls payload back on manifest failure, preserves unowned user data, and leaves recovery state when rollback itself fails. It does not decide whether a pack is runtime-visible.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
 - `MW4Remastered.Installer` is the initial WinForms intake shell. It requests inspection through the application service, renders selection state, and can transactionally reopen/revalidate the current selection; its install action remains locked until the permanent patch/no-disc contract and install planning UX exist.
 

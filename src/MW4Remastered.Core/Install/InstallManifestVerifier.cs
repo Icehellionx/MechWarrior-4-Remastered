@@ -62,6 +62,7 @@ public sealed class InstallManifestVerifier
         var issues = new List<string>();
         if (manifest.SchemaVersion != 1) issues.Add($"Unsupported ownership manifest schema: {manifest.SchemaVersion}");
         if (string.IsNullOrWhiteSpace(manifest.ProductId)) issues.Add("Ownership manifest has no product id.");
+        if (manifest.Files is null || manifest.Files.Count == 0) issues.Add("Ownership manifest contains no installed files.");
 
         var declared = new Dictionary<string, InstalledFile>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in manifest.Files ?? Array.Empty<InstalledFile>())

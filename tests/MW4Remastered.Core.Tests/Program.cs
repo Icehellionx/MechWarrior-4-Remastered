@@ -370,6 +370,7 @@ MediaSelectionSetSmoke.Run(failures);
 MediaSourceSessionSmoke.Run(failures);
 MediaSelectionSessionSmoke.Run(failures);
 MechPakResourceOverlayPlanSmoke.Run(failures);
+OwnedInstallOverlayTransactionSmoke.Run(failures);
 
 if (failures.Count > 0)
 {

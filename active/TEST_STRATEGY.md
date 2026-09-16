@@ -38,6 +38,7 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Extraction prevents traversal, links/reparse escape, device paths, and writes outside staging.
 - Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
 - Install commits atomically where practical and removes partial state after failure.
+- Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
 - Launcher status is derived from verified files/configuration, not registry keys alone.
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.

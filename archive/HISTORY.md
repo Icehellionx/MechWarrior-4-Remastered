@@ -98,6 +98,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Confirmed the protection stack references a 16-bit helper while the setup engines and payload are 32-bit; this explains the 64-bit boundary more precisely without running legacy DRM.
 - Rejected a generic Mercenaries overlay because four same-named staged files differ from the older pack media; the clean entitlement replacement and game-visible proof remain open.
 - Added a payload-only overlay planner with exact per-pack resource allowlists and explicit Vengeance/Black Knight targeting; no legacy setup, protection, patch executable, or crack enters the plan.
+- Added a verified-install overlay transaction with collision refusal, atomic manifest replacement, rollback, save preservation, and uninstall ownership; production pack installation remains disabled pending patch/entitlement proof.
 
 ## Scaffold origin
 
