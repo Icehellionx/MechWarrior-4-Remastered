@@ -20,14 +20,14 @@ jobs:
     runs-on: windows-2022
     steps:
       - name: Check out project
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Validate source-build contract
         shell: pwsh
         run: ./tests/CompatibilitySourceBuild.Tests.ps1
 
       - name: Install pinned .NET SDK
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v5
         with:
           dotnet-version: '10.0.300'
 
@@ -46,7 +46,7 @@ jobs:
         run: ./tools/compatibility/publish-launch-helper.ps1 -OutputDirectory artifacts/SafeDiscLoader2
 
       - name: Upload evidence artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: SafeDiscLoader2-v1.3-source-build
           path: artifacts/SafeDiscLoader2
