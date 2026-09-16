@@ -1,10 +1,12 @@
 {
-  "schemaVersion": 1,
+  "schemaVersion": 2,
   "manuals": [
     {
       "name": "Mechwarrior 4 Black Knight Manual.pdf",
       "inputSha256": "42ed2d22ec2bad4508ca80672bef8908b5f9e18596bec365d911644193abebec",
       "outputSha256": "6ebf4c7d756b1454da203f69baf02b3beb1d3b218e053f5f6c39f3670d4be0e3",
+      "coverName": "Mechwarrior 4 Black Knight Manual.cover.png",
+      "coverSha256": "c464b3c3cb6c76772b2abd4c1cf6c94aaec97b4c40c508ccc89b80bf01527855",
       "pageCount": 36,
       "pageSizes": [[327.14, 510.36]]
     },
@@ -12,6 +14,8 @@
       "name": "Mechwarrior 4 Mercenaries Manual.pdf",
       "inputSha256": "0b3da278b4f730566065d6749c12ccfc52e6dea3e5273e5c706be82826116742",
       "outputSha256": "61c8d570eae96f1affc3d93f3add562982c0f1ace18d214b5938ef87b61530a4",
+      "coverName": "Mechwarrior 4 Mercenaries Manual.cover.png",
+      "coverSha256": "e86583ac562680d1bb2ce3878f3cffb1a366ab8455e2edfc730308be02e96cba",
       "pageCount": 19,
       "pageSizes": [[652.12, 510.26]]
     },
@@ -19,6 +23,8 @@
       "name": "Mechwarrior 4 Vengeance Manual.pdf",
       "inputSha256": "66abae75727a5d144782cb656fb5d8e5510e2665185079682ec441e2f24d690c",
       "outputSha256": "b944d033aaa9a94d35570e7bd49f12b41bf9ce840483d9823f6f953f71f106af",
+      "coverName": "Mechwarrior 4 Vengeance Manual.cover.png",
+      "coverSha256": "90e87a2dc600fc645f7d9559a57de8cff1c626b213597e9a782c67e9c9c93678",
       "pageCount": 98,
       "pageSizes": [[611.76, 342.0]]
     }

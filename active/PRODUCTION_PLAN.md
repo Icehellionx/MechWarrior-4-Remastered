@@ -47,6 +47,8 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [ ] Complete settings, diagnostics, and repair actions. Manual opening is wired for packaged cleaned outputs.
 - [x] Expose one launcher uninstall action that removes verified owned game payloads, closes the launcher, and visibly hands off removal of the application shell, manuals, shortcuts, and registration.
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
+- [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
+- [x] Reproduce and fix Vengeance/Mercenaries first-launch failures with narrow per-user legacy registration and a stable non-elevating windowed launch profile.
 
 ## 4. Manuals
 
@@ -57,6 +59,7 @@ Outcome: readable manuals are generated reproducibly from user-local scans and p
 - [x] Crop Vengeance pages to content bounds without clipping art, text, folios, or bleed.
 - [x] Confirm Mercenaries needs no geometry cleanup.
 - [x] Add page-count, dimensions, content-presence, deterministic-output, and visual render checks.
+- [x] Generate, exact-hash, package, and visually verify one launcher cover thumbnail per manual.
 
 ## 5. Compatibility qualification
 
@@ -84,7 +87,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: qualify setup 0.5.2's single media-first wizard, corrected three-game runtime payloads, MW3-style game/manual launcher grid, and unified uninstall while proving the installed Mech Pak content is visible in game.
+User-facing goal: qualify setup 0.5.3's single media-first wizard, corrected three-game runtime payloads, real manual-cover launcher grid, and unified uninstall while proving the installed Mech Pak content is visible in game.
 Owning boundary: package wizard handoff, installer progress/completion state, launcher capability status, and Vengeance content visibility.
 Smallest verifiable slice: exercise the packaged UI from ISO/ZIP selection through install and launcher handoff, then capture evidence that Inner Sphere and Clan chassis/variants are selectable.
 Focused evidence: selected-media summary, enabled install action, completed game/pack status, exact installed manifest, and visible in-game content.

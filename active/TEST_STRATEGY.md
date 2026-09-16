@@ -30,6 +30,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/ApplicationPrivilegeBo
 & tests/MediaRecognitionSmoke.ps1 -Images $knownMediaImages
 # Local manuals stay ignored:
 python tools/manuals/clean_manuals.py Manuals output/pdf
+python tools/manuals/render_covers.py output/pdf output/manual-covers
+python tools/manuals/verify_manuals.py Manuals output/pdf tools/manuals/manuals.lock.json --cover-directory output/manual-covers
 ```
 
 Native WinForms rendering is captured with the actual window renderer to check hierarchy, clipping, and disabled states. Automated clicking through the full interactive package/media flow remains a coverage gap; compilation or a static capture alone does not qualify interaction behavior.
@@ -56,8 +58,9 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Two clean release builds from identical declared inputs must produce byte-identical setup executables and checksum sidecars.
 - Launcher status is derived from verified files/configuration, not registry keys alone.
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.
-- Release assembly exact-hash validates and packages exactly the three cleaned manuals; launcher contract tests retain a distinct icon for every installed game and a visual identifier for every manual.
-- Every executable's non-system runtime imports must be represented by the title install plan. Fresh corrected Vengeance, Black Knight, and Mercenaries trees must reach responsive windows before a package is handed to field testing.
+- Release assembly exact-hash validates and packages exactly the three cleaned manuals plus their three deterministic cover PNGs; launcher contract tests retain a distinct icon for every installed game and load the corresponding cover for every manual.
+- Every executable's non-system runtime imports must be represented by the title install plan. Fresh corrected Vengeance, Black Knight, and Mercenaries trees must remain responsive for at least 30 seconds before a package is handed to field testing. A responsive window alone is insufficient: any delayed `STOP`, `EXCEPTION`, fullscreen, or incorrect-install log is a failure.
+- Vengeance and Mercenaries package smokes must exercise the real launch orchestrator, verify the narrow per-user compatibility registration, and prove that uninstall removes only the matching project-owned records.
 - Unified uninstall must close the launcher and invoke the standard shell uninstaller in visible-progress silent mode after owned-game removal; field acceptance must confirm the launcher, manuals, shortcuts, and registration disappear after the asynchronous handoff.
 - Setup must remain the only visible installation UI. Contract tests reject `Application.Run`/`InstallerForm`, require a hidden synchronous worker invocation, and an unattended package smoke supplies media through the same Inno page state before verifying the installed shell and game manifest.
 - Diagnostics redact serials, credentials, private paths, and media content.

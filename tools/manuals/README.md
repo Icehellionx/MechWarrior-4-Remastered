@@ -1,6 +1,6 @@
 # Manual cleanup pipeline
 
-Raw scans under the ignored root `Manuals/` are local inputs. Cleaned PDFs under ignored `output/pdf/` are local artifacts and are not published until redistribution rights are documented.
+Raw scans under the ignored root `Manuals/` are local inputs. Cleaned PDFs under ignored `output/pdf/` and launcher cover renders under ignored `output/manual-covers/` are local artifacts and are not published until redistribution rights are documented.
 
 Install the pinned tools into the ignored workspace-local directory:
 
@@ -13,7 +13,8 @@ Build and verify the three qualified manuals:
 
 ```powershell
 python tools/manuals/clean_manuals.py Manuals output/pdf
-python tools/manuals/verify_manuals.py Manuals output/pdf tools/manuals/manuals.lock.json
+python tools/manuals/render_covers.py output/pdf output/manual-covers
+python tools/manuals/verify_manuals.py Manuals output/pdf tools/manuals/manuals.lock.json --cover-directory output/manual-covers
 python tools/manuals/inspect_manuals.py output/pdf tmp/pdfs-final --dpi 90
 ```
 

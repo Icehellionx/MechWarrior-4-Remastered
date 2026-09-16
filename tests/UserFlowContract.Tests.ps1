@@ -13,7 +13,7 @@ function Assert-True {
 Assert-True ($launcher -match 'operationGrid\.ColumnCount\s*=\s*3' -and $launcher -match 'operationGrid\.RowCount\s*=\s*2') 'Launcher must retain the three-game by game/manual operation grid.'
 Assert-True ($launcher -match 'CreateGameButton' -and $launcher -match 'CreateManualButton') 'Launcher must expose separate game and manual operations.'
 Assert-True ($launcher -match 'Mech4\.ico' -and $launcher -match 'Mech4X\.ico' -and $launcher -match 'Mech4Merc\.ico' -and $launcher -match 'TextImageRelation\.ImageBeforeText') 'Each installed game tile must show its own media icon rather than a text-only title mark.'
-Assert-True ($launcher -match 'CreateBookImage' -and $launcher -match 'CreateManualButton') 'Manual tiles must retain MW3-style visual identifiers below their games.'
+Assert-True ($launcher -match 'LoadManualCover' -and $launcher -match '\.cover\.png' -and $launcher -match 'CreateManualButton') 'Manual tiles must load the packaged first-page cover art below their games.'
 Assert-True ($launcher -match 'MECH PAKS' -and $launcher -match 'CreatePackIndicator') 'Launcher must keep compact pack indicators below primary operations.'
 Assert-True ($launcher -match 'Text\s*=\s*"UNINSTALL"') 'Launcher must retain one clear lower-corner uninstall action.'
 Assert-True ($launcher -match 'REMOVING LAUNCHER AND SHORTCUTS' -and $launcher -match 'Application\.Exit\(\)') 'Unified uninstall must visibly hand off shell removal and terminate the launcher.'

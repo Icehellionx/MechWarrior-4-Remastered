@@ -18,10 +18,12 @@ public sealed class SystemProcessStarter : IProcessStarter
 public sealed class LaunchOrchestrator
 {
     private readonly IProcessStarter processStarter;
+    private readonly ILegacyGameRegistration gameRegistration;
 
-    public LaunchOrchestrator(IProcessStarter processStarter)
+    public LaunchOrchestrator(IProcessStarter processStarter, ILegacyGameRegistration gameRegistration)
     {
         this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
+        this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
     }
 
     public void Launch(ProductStatus status)
@@ -34,6 +36,7 @@ public sealed class LaunchOrchestrator
 
         var executable = Path.GetFullPath(status.LaunchPath);
         if (!File.Exists(executable)) throw new FileNotFoundException("Verified game executable is no longer present.", executable);
+        gameRegistration.Ensure(status);
         var workingDirectory = Path.GetDirectoryName(executable)!;
         var startInfo = new ProcessStartInfo
         {
@@ -55,11 +58,14 @@ public sealed class LaunchOrchestrator
             startInfo.FileName = compatibilityLauncher;
             startInfo.ArgumentList.Add(Path.GetFileName(executable));
         }
-        else if (status.Product.Id.Equals("mercenaries", StringComparison.OrdinalIgnoreCase))
+        else if (status.Product.Id is "vengeance" or "mercenaries")
         {
             // Retail DirectInput enumeration crashes before the menu on current
-            // Windows when no compatible legacy joystick stack is available.
+            // Windows. Exclusive fullscreen initialization is also unreliable,
+            // so start in a stable window without rerunning obsolete AutoConfig.
             startInfo.ArgumentList.Add("/gosnojoystick");
+            startInfo.ArgumentList.Add("-window");
+            startInfo.ArgumentList.Add("-noautoconfig");
         }
         processStarter.Start(startInfo);
     }

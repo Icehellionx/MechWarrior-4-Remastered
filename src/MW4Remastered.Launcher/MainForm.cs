@@ -24,6 +24,7 @@ internal sealed class MainForm : Form
     private readonly InstallStatusReader statusReader;
     private readonly OwnedInstallUninstaller gameUninstaller;
     private readonly ApplicationUninstallOrchestrator applicationUninstaller;
+    private readonly ILegacyGameRegistration gameRegistration;
     private readonly TableLayoutPanel operationGrid = new();
     private readonly FlowLayoutPanel packRow = new();
     private readonly Label statusLine = new();
@@ -35,13 +36,15 @@ internal sealed class MainForm : Form
         LaunchOrchestrator launchOrchestrator,
         DocumentOpener documentOpener,
         OwnedInstallUninstaller gameUninstaller,
-        ApplicationUninstallOrchestrator applicationUninstaller)
+        ApplicationUninstallOrchestrator applicationUninstaller,
+        ILegacyGameRegistration gameRegistration)
     {
         this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
         this.documentOpener = documentOpener ?? throw new ArgumentNullException(nameof(documentOpener));
         this.gameUninstaller = gameUninstaller ?? throw new ArgumentNullException(nameof(gameUninstaller));
         this.applicationUninstaller = applicationUninstaller ?? throw new ArgumentNullException(nameof(applicationUninstaller));
+        this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
 
         Text = "MechWarrior 4 Remastered";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -267,7 +270,7 @@ internal sealed class MainForm : Form
             $"{status.Product.DisplayName.ToUpperInvariant()} MANUAL{Environment.NewLine}{(available ? "OPEN PDF" : "NOT AVAILABLE")}",
             available,
             large: false);
-        button.Image = CreateBookImage(GameMark(status.Product.Id));
+        button.Image = LoadManualCover(status.ManualPath) ?? CreateBookImage(GameMark(status.Product.Id));
         button.ImageAlign = ContentAlignment.MiddleLeft;
         button.TextImageRelation = TextImageRelation.ImageBeforeText;
         button.AccessibleName = $"{status.Product.DisplayName} manual: {(available ? "Open PDF" : "Not available")}";
@@ -348,11 +351,13 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            foreach (var item in installed) gameRegistration.RemoveOwned(item);
+
             statusLine.Text = "REMOVING LAUNCHER AND SHORTCUTS…";
             applicationUninstaller.Start();
             Application.Exit();
         }
-        catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException or Win32Exception)
+        catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException or Win32Exception or System.Security.SecurityException)
         {
             MessageBox.Show(this, error.Message, "Uninstall failed safely", MessageBoxButtons.OK, MessageBoxIcon.Error);
             await RefreshStatusesAsync();
@@ -382,7 +387,7 @@ internal sealed class MainForm : Form
             action();
             return true;
         }
-        catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
+        catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or Win32Exception or System.Security.SecurityException)
         {
             MessageBox.Show(this, error.Message, "MechWarrior 4 Remastered", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return false;
@@ -442,6 +447,22 @@ internal sealed class MainForm : Form
         using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
         graphics.DrawString(label, labelFont, Brushes.Black, labelBounds, format);
         return image;
+    }
+
+    private static Bitmap? LoadManualCover(string? manualPath)
+    {
+        if (string.IsNullOrWhiteSpace(manualPath)) return null;
+        var coverPath = Path.ChangeExtension(manualPath, ".cover.png");
+        if (!File.Exists(coverPath)) return null;
+        try
+        {
+            using var source = Image.FromFile(coverPath);
+            return new Bitmap(source);
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or ExternalException)
+        {
+            return null;
+        }
     }
 
     private sealed class OperationButton : Button

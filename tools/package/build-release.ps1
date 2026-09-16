@@ -54,13 +54,16 @@ try {
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
 
     $manualSource = Join-Path $projectRoot 'output/pdf'
+    $coverSource = Join-Path $projectRoot 'output/manual-covers'
     $manualLockPath = Join-Path $projectRoot 'tools/manuals/manuals.lock.json'
     $manualLock = Get-Content -LiteralPath $manualLockPath -Raw | ConvertFrom-Json
-    if ($manualLock.schemaVersion -ne 1 -or @($manualLock.manuals).Count -ne 3) {
-        throw 'Manual lock must declare exactly the three qualified version-1 outputs.'
+    if ($manualLock.schemaVersion -ne 2 -or @($manualLock.manuals).Count -ne 3) {
+        throw 'Manual lock must declare exactly the three qualified version-2 PDF and cover outputs.'
     }
     $manualFiles = @(Get-ChildItem -LiteralPath $manualSource -File -Filter '*.pdf')
     if ($manualFiles.Count -ne 3) { throw 'Manual output directory must contain exactly three PDFs.' }
+    $coverFiles = @(Get-ChildItem -LiteralPath $coverSource -File -Filter '*.cover.png')
+    if ($coverFiles.Count -ne 3) { throw 'Manual cover output directory must contain exactly three cover PNGs.' }
     $manualDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Manuals')
     foreach ($manual in $manualLock.manuals) {
         $source = Join-Path $manualSource $manual.name
@@ -68,6 +71,12 @@ try {
         $actualHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
         if ($actualHash -ne $manual.outputSha256) { throw "Qualified manual output hash mismatch: $($manual.name)" }
         Copy-Item -LiteralPath $source -Destination (Join-Path $manualDestination $manual.name)
+
+        $cover = Join-Path $coverSource $manual.coverName
+        if (-not (Test-Path -LiteralPath $cover -PathType Leaf)) { throw "Qualified manual cover is missing: $($manual.coverName)" }
+        $actualCoverHash = (Get-FileHash -LiteralPath $cover -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actualCoverHash -ne $manual.coverSha256) { throw "Qualified manual cover hash mismatch: $($manual.coverName)" }
+        Copy-Item -LiteralPath $cover -Destination (Join-Path $manualDestination $manual.coverName)
     }
     & (Join-Path $projectRoot 'tools/compatibility/assemble-black-knight-bundle.ps1') `
         -EvidenceDirectory $CompatibilityEvidenceDirectory `

@@ -24,9 +24,10 @@ def main() -> int:
     parser.add_argument("input_directory", type=Path)
     parser.add_argument("output_directory", type=Path)
     parser.add_argument("lock_file", type=Path)
+    parser.add_argument("--cover-directory", type=Path, required=True)
     args = parser.parse_args()
     lock = json.loads(args.lock_file.read_text(encoding="utf-8"))
-    if lock.get("schemaVersion") != 1:
+    if lock.get("schemaVersion") != 2:
         raise ValueError("Unsupported manual lock schema")
 
     for expected in lock["manuals"]:
@@ -36,6 +37,9 @@ def main() -> int:
             raise ValueError(f"Unqualified manual input: {expected['name']}")
         if sha256(output_path) != expected["outputSha256"]:
             raise ValueError(f"Manual output hash mismatch: {expected['name']}")
+        cover_path = args.cover_directory / expected["coverName"]
+        if sha256(cover_path) != expected["coverSha256"]:
+            raise ValueError(f"Manual cover hash mismatch: {expected['coverName']}")
 
         document = pymupdf.open(output_path)
         sizes = sorted({(round(page.rect.width, 2), round(page.rect.height, 2)) for page in document})
@@ -43,7 +47,7 @@ def main() -> int:
         if document.page_count != expected["pageCount"] or sizes != expected_sizes:
             raise ValueError(f"Manual geometry mismatch: {expected['name']}")
         document.close()
-        print(f"Verified {expected['name']}")
+        print(f"Verified {expected['name']} and {expected['coverName']}")
     return 0
 
 

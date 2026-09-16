@@ -232,16 +232,20 @@ try
     Check(installedStatuses["vengeance"].State == ProductInstallState.Ready && installedStatuses["vengeance"].LaunchPath is not null, "status reader requires a verified ownership manifest before enabling launch");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
     var processStarter = new RecordingProcessStarter();
-    new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
+    var gameRegistration = new RecordingGameRegistration();
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
+    Check(gameRegistration.LastEnsured == installedStatuses["vengeance"], "launch orchestration prepares per-user legacy registration before starting Vengeance");
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "/gosnojoystick", "-window", "-noautoconfig" }) == true,
+        "Vengeance launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
     var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
     var mercenaryExecutable = Path.Combine(mercenaryRoot, "MW4Mercs.exe");
     File.WriteAllText(mercenaryExecutable, "synthetic executable");
     var mercenaryProduct = ProductCatalog.All.Single(item => item.Id == "mercenaries");
-    new LaunchOrchestrator(processStarter).Launch(new ProductStatus(
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
         mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic"));
-    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "/gosnojoystick" }) == true,
-        "Mercenaries launch bypasses the crashing legacy joystick enumeration on current Windows");
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "/gosnojoystick", "-window", "-noautoconfig" }) == true,
+        "Mercenaries launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
 
     var applicationRoot = Path.Combine(transactionRoot, "application-shell");
     Directory.CreateDirectory(applicationRoot);
@@ -270,7 +274,7 @@ try
     var compatibilityLauncher = Path.Combine(destination, "MW4RemasteredCompatLauncher.exe");
     File.WriteAllText(compatibilityLauncher, "synthetic helper");
     var statusWithUnownedHelper = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().Single(item => item.Product.Id == "vengeance");
-    new LaunchOrchestrator(processStarter).Launch(statusWithUnownedHelper);
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(statusWithUnownedHelper);
     Check(processStarter.LastStart?.FileName == statusWithUnownedHelper.LaunchPath,
         "launch orchestration ignores an adjacent helper that is not owned by the verified manifest");
     File.Delete(compatibilityLauncher);
@@ -283,7 +287,7 @@ try
         new InstallFile(disc1, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
     }), compatibilityDestination);
     var compatibleStatus = new InstallStatusReader(Path.Combine(transactionRoot, "compatible-installed")).Read().Single(item => item.Product.Id == "vengeance");
-    new LaunchOrchestrator(processStarter).Launch(compatibleStatus);
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(compatibleStatus);
     var compatibleStart = processStarter.LastStart;
     Check(compatibleStart is not null && compatibleStart.FileName == compatibleStatus.CompatibilityLaunchPath &&
           compatibleStart.ArgumentList.Count == 1 &&
@@ -710,5 +714,21 @@ sealed class RecordingProcessStarter : IProcessStarter
     public void Start(System.Diagnostics.ProcessStartInfo startInfo)
     {
         LastStart = startInfo;
+    }
+}
+
+sealed class RecordingGameRegistration : ILegacyGameRegistration
+{
+    public ProductStatus? LastEnsured { get; private set; }
+    public ProductStatus? LastRemoved { get; private set; }
+
+    public void Ensure(ProductStatus status)
+    {
+        LastEnsured = status;
+    }
+
+    public void RemoveOwned(ProductStatus status)
+    {
+        LastRemoved = status;
     }
 }
