@@ -8,9 +8,15 @@ public sealed record InstallDestinationProduct(
     string DestinationPath,
     long BudgetBytes);
 
+public sealed record BlockedInstallProduct(
+    string ProductId,
+    string DisplayName,
+    IReadOnlyList<string> MissingDependencyIds);
+
 public sealed record InstallDestinationPlan(
     string RootPath,
     IReadOnlyList<InstallDestinationProduct> Products,
+    IReadOnlyList<BlockedInstallProduct> BlockedProducts,
     long RequiredBytes,
     long AvailableBytes)
 {
@@ -89,10 +95,17 @@ public sealed class InstallDestinationPlanner
         if (installedProductIds is not null) availableProducts.UnionWith(installedProductIds);
 
         var products = new List<InstallDestinationProduct>();
-        foreach (var product in ProductCatalog.All.Where(item =>
-            item.Kind == ProductKind.Game && completeGames.Contains(item.Id) &&
-            ProductDependencies.AreSatisfied(item.Id, availableProducts)))
+        var blockedProducts = new List<BlockedInstallProduct>();
+        foreach (var product in ProductCatalog.All.Where(item => item.Kind == ProductKind.Game && completeGames.Contains(item.Id)))
         {
+            var missingDependencies = ProductDependencies.GetRequiredBaseProducts(product.Id)
+                .Where(required => !availableProducts.Contains(required))
+                .ToArray();
+            if (missingDependencies.Length > 0)
+            {
+                blockedProducts.Add(new BlockedInstallProduct(product.Id, product.DisplayName, missingDependencies));
+                continue;
+            }
             if (!GameBudgets.TryGetValue(product.Id, out var budget))
                 throw new InvalidDataException($"No install-size budget exists for product: {product.Id}");
 
@@ -104,7 +117,7 @@ public sealed class InstallDestinationPlanner
 
         var requiredBytes = products.Count == 0 ? 0 : checked(products.Sum(item => item.BudgetBytes) + SafetyReserveBytes);
         var availableBytes = capacityReader.GetAvailableBytes(root);
-        return new InstallDestinationPlan(root, products, requiredBytes, availableBytes);
+        return new InstallDestinationPlan(root, products, blockedProducts, requiredBytes, availableBytes);
     }
 
     private static void RejectExistingReparsePath(string destinationRoot)

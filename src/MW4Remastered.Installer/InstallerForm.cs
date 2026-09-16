@@ -459,8 +459,10 @@ internal sealed class InstallerForm : Form
             currentDestinationPlan = plan;
             if (!plan.HasSelectedGames)
             {
-                destinationStatus.ForeColor = Muted;
-                destinationStatus.Text = "Select complete game media to calculate destination space.";
+                destinationStatus.ForeColor = plan.BlockedProducts.Count > 0 ? Warning : Muted;
+                destinationStatus.Text = plan.BlockedProducts.Count > 0
+                    ? FormatBlockedProducts(plan.BlockedProducts)
+                    : "Select complete game media to calculate destination space.";
                 UpdateInstallAvailability();
                 return;
             }
@@ -548,6 +550,15 @@ internal sealed class InstallerForm : Form
             ? $"{bytes / gibibyte:0.0} GiB"
             : $"{bytes / (1024d * 1024d):0} MiB";
     }
+
+    private static string FormatBlockedProducts(IReadOnlyList<BlockedInstallProduct> blocked)
+    {
+        return string.Join("  •  ", blocked.Select(item =>
+            $"{item.DisplayName} requires {string.Join(" + ", item.MissingDependencyIds.Select(DependencyDisplayName))}"));
+    }
+
+    private static string DependencyDisplayName(string productId) =>
+        ProductCatalog.All.Single(item => item.Id.Equals(productId, StringComparison.OrdinalIgnoreCase)).DisplayName;
 
     private static void ConfigureSourceButton(Button button, string text)
     {
