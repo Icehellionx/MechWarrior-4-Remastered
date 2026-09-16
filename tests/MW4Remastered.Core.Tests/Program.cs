@@ -1,5 +1,6 @@
 using MW4Remastered.Core;
 using MW4Remastered.Core.Install;
+using MW4Remastered.Core.Launch;
 using MW4Remastered.Core.Media;
 using System.Security.Cryptography;
 
@@ -15,7 +16,7 @@ try
     Directory.CreateDirectory(Path.Combine(root, "vengeance"));
     File.WriteAllText(Path.Combine(root, "vengeance", "MW4.exe"), "synthetic fixture");
     var statuses = new InstallStatusReader(root).Read().ToDictionary(item => item.Product.Id);
-    Check(statuses["vengeance"].IsInstalled, "Vengeance executable is detected");
+    Check(!statuses["vengeance"].IsInstalled && statuses["vengeance"].State == ProductInstallState.NeedsRepair, "unmanifested Vengeance executable requires repair");
     Check(!statuses["black-knight"].IsInstalled, "missing Black Knight executable stays absent");
     Check(!statuses["clan"].IsInstalled, "Clan pack is not claimed without verified payload evidence");
     Check(!statuses["inner-sphere"].IsInstalled, "Inner Sphere pack is not claimed without verified payload evidence");
@@ -91,6 +92,11 @@ try
     Check(File.Exists(Path.Combine(destination, InstallManifest.RelativePath.Replace('/', Path.DirectorySeparatorChar))), "transaction persists its ownership manifest");
     Check(manifest.Files.Count == 2 && manifest.Files.All(file => file.Sha256.Length == 64), "manifest hashes every installed file");
     Check(new InstallManifestVerifier().Verify(destination).IsValid, "manifest verifier accepts the committed tree");
+    var installedStatuses = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().ToDictionary(item => item.Product.Id);
+    Check(installedStatuses["vengeance"].State == ProductInstallState.Ready && installedStatuses["vengeance"].LaunchPath is not null, "status reader requires a verified ownership manifest before enabling launch");
+    var processStarter = new RecordingProcessStarter();
+    new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
+    Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
 
     File.AppendAllText(Path.Combine(destination, "MW4.EXE"), "tampered");
     var tampered = new InstallManifestVerifier().Verify(destination);
@@ -261,4 +267,14 @@ void WriteFixture(string rootPath, string relativePath, string contents)
     var file = Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
     Directory.CreateDirectory(Path.GetDirectoryName(file)!);
     File.WriteAllText(file, contents);
+}
+
+sealed class RecordingProcessStarter : IProcessStarter
+{
+    public System.Diagnostics.ProcessStartInfo? LastStart { get; private set; }
+
+    public void Start(System.Diagnostics.ProcessStartInfo startInfo)
+    {
+        LastStart = startInfo;
+    }
 }

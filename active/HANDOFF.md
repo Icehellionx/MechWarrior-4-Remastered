@@ -13,7 +13,7 @@ Updated: 2026-09-15.
 - Inner Sphere and Clan setup/DRM components are 32-bit, but their C-Dilla activation stack explicitly references `CDILLA16.EXE`; the exact replacement contract still needs controlled before/after proof.
 - Root `.env` is local-only. Its configured auxiliary model names are recorded without credentials in `active/AUXILIARY_MODELS.md`.
 - The root Git repository is published publicly at `Icehellionx/MechWarrior-4-Remastered`; local `main` tracks `origin/main`.
-- An initial .NET 10 WinForms launcher scaffold now models three games and two optional packs through a UI-free core catalog. It only recognizes game executables; pack status deliberately remains false until a payload-manifest verifier exists.
+- The .NET 10 WinForms launcher now models three games and two optional packs through a UI-free core catalog. It enables game launch only for a manifest-verified installation, reports an unverified executable as needing repair, opens a cleaned manual when present, and leaves unfinished settings/diagnostics/uninstall controls visibly disabled. Pack status deliberately remains false until a payload-manifest verifier exists.
 - A media catalog and directory inspector recognize both Vengeance discs, Black Knight, both Mercenaries discs, and both Mech Paks. Unsafe paths fail closed; recognized media reports crack/DRM paths for mandatory exclusion.
 - A release-tree policy rejects disc images, secrets/keys, crack directories, legacy DRM files, reparse points, and executable/DLL/script content not named by an explicit allowlist.
 - The manual pipeline reproducibly creates three ignored local outputs. Black Knight is 36 portrait pages with the front cover first and separated back cover last; Vengeance is 98 cropped 611.76×342-point spreads; Mercenaries preserves its 19 original pages. Two consecutive runs produced identical hashes and every output page was rendered for review.
@@ -43,6 +43,7 @@ Updated: 2026-09-15.
 - Governance intake completed; local inputs enumerated without opening or publishing content.
 - Auxiliary router syntax and four unit tests passed. Ollama was reachable with all nine configured local model names installed; Featherless roles are configured but were not live-billed.
 - The launcher/core Release build completed with zero warnings/errors, and the synthetic core smoke test passed.
+- Launcher process-boundary tests confirm that an unmanifested executable cannot be launched and that a verified game starts with its own directory as the working directory. The available automation surface could not capture native WinForms windows, so visual inspection remains an explicit UI coverage gap.
 - A local-only SHA-256 inventory recorded all 23 media/manual inputs under ignored `.local/`; no source media was changed.
 - ISO directory inspection confirmed C-Dilla/SafeCast and SafeDisc-era files on both pack discs plus directly accessible content/patch payloads. The direct-extraction hypothesis remains unqualified.
 - The real-media recognition smoke passed all seven supplied ISOs and confirmed every owned mount was detached afterward.

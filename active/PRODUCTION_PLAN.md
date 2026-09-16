@@ -28,9 +28,9 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 
 - [x] Choose the application stack and record an ADR.
 - [ ] Create launcher visual direction from legally usable MW4-era references without copying unlicensed web art.
-- [ ] Show Vengeance, Black Knight, and Mercenaries actions only when installed.
+- [x] Show Vengeance, Black Knight, and Mercenaries launch actions only for manifest-verified installations; distinguish repair-required trees.
 - [ ] Show Inner Sphere and Clan pack status with clear installed/missing states.
-- [ ] Add manual, settings, diagnostics, repair, and uninstall actions.
+- [ ] Complete settings, diagnostics, repair, and uninstall actions. Manual opening is wired for installed cleaned outputs.
 - [ ] Create a project-owned Vengeance-inspired remaster icon with a distinct `R` mark.
 
 ## 4. Manuals

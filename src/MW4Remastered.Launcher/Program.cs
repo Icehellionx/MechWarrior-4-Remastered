@@ -1,4 +1,5 @@
 using MW4Remastered.Core;
+using MW4Remastered.Core.Launch;
 
 namespace MW4Remastered.Launcher;
 
@@ -9,6 +10,10 @@ internal static class Program
     {
         ApplicationConfiguration.Initialize();
         var root = AppContext.BaseDirectory;
-        Application.Run(new MainForm(new InstallStatusReader(root)));
+        var processStarter = new SystemProcessStarter();
+        Application.Run(new MainForm(
+            new InstallStatusReader(root),
+            new LaunchOrchestrator(processStarter),
+            new DocumentOpener(processStarter)));
     }
 }
