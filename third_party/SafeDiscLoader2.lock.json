@@ -11,6 +11,15 @@
     "versionDllSha256": "2e9ca4bb2c650dafe2556176aeeef2fb5c4d733e398b45e467fae10c3195035b",
     "versionDllSize": 79872
   },
+  "qualifiedSourceBuild": {
+    "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35046767845",
+    "msbuildVersion": "17.14.51.32402",
+    "platformToolset": "v143",
+    "versionDllSha256": "18f13072cf42fbacb5b228864bdb4a67fb1dff8c7ca7362054525816f8a4565a",
+    "versionDllSize": 91136,
+    "defenderResult": "no threats",
+    "blackKnightSmoke": "helper exit 0; responsive window titled MechWarrior Black Knight after 10 seconds; no mounted media"
+  },
   "includedProjects": [
     "version-proxy.vcxproj"
   ],

@@ -69,6 +69,11 @@ New-Item -ItemType Directory -Path $output -Force | Out-Null
 $outputDll = Join-Path $output 'version.dll'
 Copy-Item -LiteralPath $builtDll -Destination $outputDll -Force
 Copy-Item -LiteralPath $license -Destination (Join-Path $output 'SafeDiscLoader2-LICENSE.txt') -Force
+$sourceArchive = Join-Path $output "SafeDiscLoader2-source-$expectedCommit.zip"
+& git -C $source archive --format=zip --output=$sourceArchive $expectedCommit
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) {
+    throw 'Could not create the corresponding GPL source archive.'
+}
 
 $dll = Get-Item -LiteralPath $outputDll
 $metadata = [ordered]@{
@@ -83,6 +88,7 @@ $metadata = [ordered]@{
     msbuildVersion = (& $MSBuildPath -version -nologo | Select-Object -Last 1).Trim()
     versionDllSize = $dll.Length
     versionDllSha256 = (Get-FileHash -LiteralPath $outputDll -Algorithm SHA256).Hash.ToLowerInvariant()
+    sourceArchiveSha256 = (Get-FileHash -LiteralPath $sourceArchive -Algorithm SHA256).Hash.ToLowerInvariant()
 }
 $metadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $output 'build-metadata.json') -Encoding utf8
 

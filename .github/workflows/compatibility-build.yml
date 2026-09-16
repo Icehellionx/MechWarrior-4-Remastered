@@ -7,6 +7,8 @@ on:
       - '.github/workflows/compatibility-build.yml'
       - 'third_party/SafeDiscLoader2.lock.json'
       - 'tools/compatibility/build-safedisc-loader2.ps1'
+      - 'tools/compatibility/publish-launch-helper.ps1'
+      - 'src/MW4Remastered.CompatLauncher/**'
       - 'tests/CompatibilitySourceBuild.Tests.ps1'
 
 permissions:
@@ -32,6 +34,10 @@ jobs:
       - name: Build x86 compatibility DLL only
         shell: pwsh
         run: ./tools/compatibility/build-safedisc-loader2.ps1 -SourceRoot vendor/SafeDiscLoader2 -OutputDirectory artifacts/SafeDiscLoader2
+
+      - name: Publish non-elevating launch helper
+        shell: pwsh
+        run: ./tools/compatibility/publish-launch-helper.ps1 -OutputDirectory artifacts/SafeDiscLoader2
 
       - name: Upload evidence artifact
         uses: actions/upload-artifact@v4
