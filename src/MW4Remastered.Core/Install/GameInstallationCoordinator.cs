@@ -8,7 +8,7 @@ public sealed record VengeanceInstallRequest(string DiscOneRoot, string DiscTwoR
 public sealed record BlackKnightInstallRequest(string DiscRoot)
     : GameInstallRequest("black-knight");
 
-public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot, string CompatibilityExecutablePath)
+public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot)
     : GameInstallRequest("mercenaries");
 
 public enum GameInstallationStage
@@ -28,7 +28,8 @@ public sealed record GameInstallationResult(string ProductId, string Destination
 
 public sealed record PreparedInstallInputs(
     string? VengeanceExecutablePath = null,
-    string? MercenariesCabinetPayloadRoot = null);
+    string? MercenariesCabinetPayloadRoot = null,
+    string? MercenariesExecutablePath = null);
 
 public interface IGameInstallPlanFactory
 {
@@ -65,9 +66,16 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
                 vengeance.Build(input.DiscOneRoot, input.DiscTwoRoot, preparedInputs.VengeanceExecutablePath),
             VengeanceInstallRequest => throw new ArgumentException("Vengeance installation requires an internally prepared executable.", nameof(preparedInputs)),
             BlackKnightInstallRequest input => blackKnight.Build(input.DiscRoot),
-            MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.MercenariesCabinetPayloadRoot) =>
-                mercenaries.Build(input.DiscOneRoot, input.DiscTwoRoot, preparedInputs.MercenariesCabinetPayloadRoot, input.CompatibilityExecutablePath),
-            MercenariesInstallRequest => throw new ArgumentException("Mercenaries installation requires an extracted cabinet payload.", nameof(preparedInputs)),
+            MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.MercenariesCabinetPayloadRoot) &&
+                !string.IsNullOrWhiteSpace(preparedInputs.MercenariesExecutablePath) =>
+                mercenaries.Build(
+                    input.DiscOneRoot,
+                    input.DiscTwoRoot,
+                    preparedInputs.MercenariesCabinetPayloadRoot,
+                    preparedInputs.MercenariesExecutablePath),
+            MercenariesInstallRequest => throw new ArgumentException(
+                "Mercenaries installation requires an extracted cabinet payload and internally prepared executable.",
+                nameof(preparedInputs)),
             _ => throw new ArgumentException($"Unsupported game install request: {request.GetType().Name}", nameof(request)),
         };
     }
@@ -80,10 +88,11 @@ public sealed class GameInstallationCoordinator
     private readonly StagedInstallTransaction transaction;
     private readonly InstallManifestVerifier verifier;
     private readonly IVengeanceExecutableTransform vengeanceTransform;
+    private readonly IMercenariesExecutableTransform mercenariesTransform;
 
     public GameInstallationCoordinator()
         : this(new GameInstallPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
-            new VengeanceRetailExecutableTransform())
+            new VengeanceRetailExecutableTransform(), new MercenariesRetailExecutableTransform())
     {
     }
 
@@ -92,13 +101,15 @@ public sealed class GameInstallationCoordinator
         CabinetPayloadExtractor cabinetExtractor,
         StagedInstallTransaction transaction,
         InstallManifestVerifier verifier,
-        IVengeanceExecutableTransform? vengeanceTransform = null)
+        IVengeanceExecutableTransform? vengeanceTransform = null,
+        IMercenariesExecutableTransform? mercenariesTransform = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
         this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
         this.verifier = verifier ?? throw new ArgumentNullException(nameof(verifier));
         this.vengeanceTransform = vengeanceTransform ?? new VengeanceRetailExecutableTransform();
+        this.mercenariesTransform = mercenariesTransform ?? new MercenariesRetailExecutableTransform();
     }
 
     public GameInstallationResult Install(
@@ -116,6 +127,8 @@ public sealed class GameInstallationCoordinator
         string? cabinetPayload = null;
         string? vengeanceTransformScratch = null;
         string? vengeanceExecutable = null;
+        string? mercenariesTransformScratch = null;
+        string? mercenariesExecutable = null;
         try
         {
             if (request is VengeanceInstallRequest vengeance)
@@ -130,9 +143,21 @@ public sealed class GameInstallationCoordinator
 
             if (request is MercenariesInstallRequest mercenaries)
             {
-                Report(GameInstallationStage.Extracting, "Extracting the validated Mercenaries cabinet payload.");
                 var parent = Directory.GetParent(destination)?.FullName
                     ?? throw new InvalidDataException("Install destination must have a parent directory.");
+                Report(GameInstallationStage.Transforming, "Producing the Mercenaries executable from validated original media.");
+                mercenariesTransformScratch = Path.Combine(parent, $".mercenaries-transform-{Guid.NewGuid():N}");
+                var prepared = mercenariesTransform.Transform(
+                    mercenaries.DiscOneRoot,
+                    mercenariesTransformScratch,
+                    cancellationToken);
+                mercenariesExecutable = ValidatePreparedExecutable(
+                    prepared.ExecutablePath,
+                    prepared.TransformId,
+                    mercenariesTransformScratch,
+                    "Mercenaries");
+
+                Report(GameInstallationStage.Extracting, "Extracting the validated Mercenaries cabinet payload.");
                 cabinetPayload = Path.Combine(parent, $".mercenaries-cabinet-{Guid.NewGuid():N}");
                 var cabinet = Path.Combine(Path.GetFullPath(mercenaries.DiscOneRoot), "MSGAME.CAB");
                 cabinetExtractor.ExtractGamePayload(cabinet, cabinetPayload, cancellationToken);
@@ -140,7 +165,10 @@ public sealed class GameInstallationCoordinator
 
             cancellationToken.ThrowIfCancellationRequested();
             Report(GameInstallationStage.Planning, "Building the exact game payload plan.");
-            var plan = plans.Build(request, new PreparedInstallInputs(vengeanceExecutable, cabinetPayload));
+            var plan = plans.Build(request, new PreparedInstallInputs(
+                vengeanceExecutable,
+                cabinetPayload,
+                mercenariesExecutable));
             if (!string.Equals(plan.ProductId, request.ProductId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException($"Install plan product '{plan.ProductId}' does not match request '{request.ProductId}'.");
@@ -161,6 +189,7 @@ public sealed class GameInstallationCoordinator
         finally
         {
             if (cabinetPayload is not null) RemoveScratchTree(cabinetPayload);
+            if (mercenariesTransformScratch is not null) RemoveScratchTree(mercenariesTransformScratch);
             if (vengeanceTransformScratch is not null) RemoveScratchTree(vengeanceTransformScratch);
         }
 
@@ -187,6 +216,33 @@ public sealed class GameInstallationCoordinator
         if ((File.GetAttributes(executable) & FileAttributes.ReparsePoint) != 0)
         {
             throw new InvalidDataException("The prepared Vengeance executable cannot be a reparse point.");
+        }
+        return executable;
+    }
+
+    private static string ValidatePreparedExecutable(
+        string executablePath,
+        string transformId,
+        string scratchDirectory,
+        string productName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(executablePath);
+        ArgumentException.ThrowIfNullOrWhiteSpace(transformId);
+        var scratch = Path.GetFullPath(scratchDirectory);
+        var executable = Path.GetFullPath(executablePath);
+        var relative = Path.GetRelativePath(scratch, executable);
+        if (Path.IsPathRooted(relative) || relative.Equals("..", StringComparison.Ordinal) ||
+            relative.StartsWith(".." + Path.DirectorySeparatorChar, StringComparison.Ordinal))
+        {
+            throw new InvalidDataException($"The {productName} transform returned an executable outside its owned scratch directory.");
+        }
+        if (!File.Exists(executable))
+        {
+            throw new FileNotFoundException($"The {productName} transform did not produce an executable.", executable);
+        }
+        if ((File.GetAttributes(executable) & FileAttributes.ReparsePoint) != 0)
+        {
+            throw new InvalidDataException($"The prepared {productName} executable cannot be a reparse point.");
         }
         return executable;
     }

@@ -27,10 +27,11 @@ internal static class InstallationCoordinatorSmoke
             Check(blackKnight.Manifest.ProductId == "black-knight" && blackKnight.Manifest.Files.Count > 0, "coordinator installs and verifies Black Knight", failures);
 
             var mercenaries = coordinator.Install(
-                new MercenariesInstallRequest(inputs.MercenariesDiscOne, inputs.MercenariesDiscTwo, inputs.MercenariesExecutable),
+                new MercenariesInstallRequest(inputs.MercenariesDiscOne, inputs.MercenariesDiscTwo),
                 Path.Combine(root, "installed", "mercenaries"), progress);
             Check(mercenaries.Manifest.ProductId == "mercenaries" && mercenaries.Manifest.Files.Count > 0, "coordinator extracts, installs, and verifies Mercenaries", failures);
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".mercenaries-cabinet-*").Any(), "coordinator removes Mercenaries cabinet scratch after success", failures);
+            Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".mercenaries-transform-*").Any(), "coordinator removes Mercenaries transform scratch after success", failures);
             Check(progress.Events.Count(item => item.Stage == GameInstallationStage.Completed) == 3, "coordinator reports completion for all three games", failures);
 
             using var cancelledSource = new CancellationTokenSource();
@@ -67,13 +68,32 @@ internal static class InstallationCoordinatorSmoke
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "failed"), ".vengeance-transform-*").Any(),
                 "coordinator removes Vengeance transform scratch after rejection", failures);
 
+            var escapedMercenariesDestination = Path.Combine(root, "failed", "mercenaries-escape");
+            var escapedMercenaries = false;
+            try
+            {
+                new GameInstallationCoordinator(
+                    new ThrowingPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
+                    new FixtureVengeanceTransform(inputs.VengeanceExecutable), new EscapingMercenariesTransform(inputs.MercenariesExecutable))
+                    .Install(new MercenariesInstallRequest(inputs.MercenariesDiscOne, inputs.MercenariesDiscTwo), escapedMercenariesDestination);
+            }
+            catch (InvalidDataException)
+            {
+                escapedMercenaries = true;
+            }
+            Check(escapedMercenaries && !Directory.Exists(escapedMercenariesDestination),
+                "coordinator rejects a Mercenaries transform result outside owned scratch", failures);
+            Check(!Directory.EnumerateDirectories(Path.Combine(root, "failed"), ".mercenaries-transform-*").Any(),
+                "coordinator removes Mercenaries transform scratch after rejection", failures);
+
             var failedDestination = Path.Combine(root, "failed", "mercenaries");
             var failed = false;
             try
             {
                 new GameInstallationCoordinator(
-                    new ThrowingPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier())
-                    .Install(new MercenariesInstallRequest(inputs.MercenariesDiscOne, inputs.MercenariesDiscTwo, inputs.MercenariesExecutable), failedDestination);
+                    new ThrowingPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
+                    new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable))
+                    .Install(new MercenariesInstallRequest(inputs.MercenariesDiscOne, inputs.MercenariesDiscTwo), failedDestination);
             }
             catch (InvalidDataException)
             {
@@ -81,6 +101,7 @@ internal static class InstallationCoordinatorSmoke
             }
             Check(failed && !Directory.Exists(failedDestination), "coordinator leaves no install when planning fails", failures);
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "failed"), ".mercenaries-cabinet-*").Any(), "coordinator removes Mercenaries cabinet scratch after failure", failures);
+            Check(!Directory.EnumerateDirectories(Path.Combine(root, "failed"), ".mercenaries-transform-*").Any(), "coordinator removes Mercenaries transform scratch after failure", failures);
         }
         finally
         {
@@ -97,7 +118,7 @@ internal static class InstallationCoordinatorSmoke
             new BlackKnightInstallPlanBuilder(CreateBlackKnightCompatibility(inputs.BlackKnightCompatibilityRoot), inspection, inventory),
             new MercenariesInstallPlanBuilder(Hash(inputs.MercenariesExecutable), inspection, inventory));
         return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
-            new FixtureVengeanceTransform(inputs.VengeanceExecutable));
+            new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable));
     }
 
     private static FixtureInputs PrepareInputs(string root)
@@ -199,6 +220,27 @@ internal static class InstallationCoordinatorSmoke
         {
             Directory.CreateDirectory(scratchDirectory);
             return new PreparedVengeanceExecutable(fixtureExecutable, "synthetic-escape-transform");
+        }
+    }
+
+    private sealed class FixtureMercenariesTransform(string fixtureExecutable) : IMercenariesExecutableTransform
+    {
+        public PreparedMercenariesExecutable Transform(string discOneRoot, string scratchDirectory, CancellationToken cancellationToken = default)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            Directory.CreateDirectory(scratchDirectory);
+            var output = Path.Combine(scratchDirectory, "MW4Mercs.exe");
+            File.Copy(fixtureExecutable, output);
+            return new PreparedMercenariesExecutable(output, "synthetic-test-transform");
+        }
+    }
+
+    private sealed class EscapingMercenariesTransform(string fixtureExecutable) : IMercenariesExecutableTransform
+    {
+        public PreparedMercenariesExecutable Transform(string discOneRoot, string scratchDirectory, CancellationToken cancellationToken = default)
+        {
+            Directory.CreateDirectory(scratchDirectory);
+            return new PreparedMercenariesExecutable(fixtureExecutable, "synthetic-escape-transform");
         }
     }
 }

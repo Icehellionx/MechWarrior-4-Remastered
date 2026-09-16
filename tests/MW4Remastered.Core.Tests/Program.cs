@@ -21,6 +21,16 @@ Check(
         StringComparison.Ordinal),
     "SafeDisc 1.50.20 second layer matches the independent modifier-chain vector");
 
+var mercenariesSecondLayerVector = Convert.FromHexString("000102030405060708090A0B0C0D0E0F");
+SafeDisc15020SecondLayer.DecodePage(
+    mercenariesSecondLayerVector,
+    SafeDisc15020SecondLayerProfile.Mercenaries);
+Check(
+    Convert.ToHexString(mercenariesSecondLayerVector).Equals(
+        "A6D0D913842538B95A1A9171B462FEDF",
+        StringComparison.Ordinal),
+    "Mercenaries SafeDisc 1.50.20 second layer matches its independent modifier-chain vector");
+
 var safeDiscSectionVector = Enumerable.Range(0, 4110)
     .Select(index => unchecked((byte)((index * 37) + 11)))
     .ToArray();
@@ -50,7 +60,7 @@ try
     }
     catch (InvalidDataException exception)
     {
-        rejected = exception.Message.Contains("Unsupported Vengeance MW4.EXE SHA-256", StringComparison.Ordinal);
+        rejected = exception.Message.Contains("Unsupported SafeDisc input MW4.EXE SHA-256", StringComparison.Ordinal);
     }
     Check(rejected, "Vengeance transform rejects media that does not match the qualified retail revision");
     Check(!Directory.Exists(Path.Combine(transformRejectionRoot, "scratch")),
@@ -59,6 +69,33 @@ try
 finally
 {
     if (Directory.Exists(transformRejectionRoot)) Directory.Delete(transformRejectionRoot, true);
+}
+
+var mercenariesTransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-mercenaries-transform-rejection-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(mercenariesTransformRejectionRoot);
+    File.WriteAllText(Path.Combine(mercenariesTransformRejectionRoot, "MW4MERCS.EXE"), "unsupported loader");
+    File.WriteAllText(Path.Combine(mercenariesTransformRejectionRoot, "MW4MERCS.ICD"), "unsupported image");
+    File.WriteAllText(Path.Combine(mercenariesTransformRejectionRoot, "DPLAYERX.DLL"), "unsupported player");
+    var rejected = false;
+    try
+    {
+        new MercenariesRetailExecutableTransform().Transform(
+            mercenariesTransformRejectionRoot,
+            Path.Combine(mercenariesTransformRejectionRoot, "scratch"));
+    }
+    catch (InvalidDataException exception)
+    {
+        rejected = exception.Message.Contains("Unsupported SafeDisc input MW4MERCS.EXE SHA-256", StringComparison.Ordinal);
+    }
+    Check(rejected, "Mercenaries transform rejects media that does not match the qualified retail revision");
+    Check(!Directory.Exists(Path.Combine(mercenariesTransformRejectionRoot, "scratch")),
+        "Mercenaries transform does not write output after input validation fails");
+}
+finally
+{
+    if (Directory.Exists(mercenariesTransformRejectionRoot)) Directory.Delete(mercenariesTransformRejectionRoot, true);
 }
 
 Check(ProductCatalog.All.Count == 5, "catalog contains exactly three games and two packs");

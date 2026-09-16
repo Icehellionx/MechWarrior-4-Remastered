@@ -15,6 +15,12 @@ public interface IVengeanceExecutableTransform
         CancellationToken cancellationToken = default);
 }
 
+internal enum SafeDisc15020TitlePatch
+{
+    Vengeance,
+    Mercenaries,
+}
+
 public sealed class UnavailableVengeanceExecutableTransform : IVengeanceExecutableTransform
 {
     public PreparedVengeanceExecutable Transform(
@@ -43,22 +49,60 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
     public PreparedVengeanceExecutable Transform(
         string discOneRoot,
         string scratchDirectory,
+        CancellationToken cancellationToken = default) => TransformCore(
+            discOneRoot,
+            scratchDirectory,
+            "MW4.EXE",
+            "MW4.ICD",
+            "DPLAYERX.DLL",
+            "MW4.exe",
+            TransformId,
+            LoaderSha256,
+            EncryptedImageSha256,
+            PlayerSha256,
+            OutputSha256,
+            0x309380,
+            CipherKey,
+            MissingThunkSeeds,
+            0x58,
+            false,
+            SafeDisc15020TitlePatch.Vengeance,
+            cancellationToken);
+
+    internal static PreparedVengeanceExecutable TransformCore(
+        string mediaRootPath,
+        string scratchDirectory,
+        string loaderFileName,
+        string encryptedImageFileName,
+        string playerFileName,
+        string outputFileName,
+        string transformId,
+        string loaderSha256,
+        string encryptedImageSha256,
+        string playerSha256,
+        string outputSha256,
+        uint expectedEntryPointRva,
+        uint[] cipherKey,
+        uint[] missingThunkSeeds,
+        byte importNameSeed,
+        bool chainImportNameFromDecodedByte,
+        SafeDisc15020TitlePatch titlePatch,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(discOneRoot);
+        ArgumentException.ThrowIfNullOrWhiteSpace(mediaRootPath);
         ArgumentException.ThrowIfNullOrWhiteSpace(scratchDirectory);
         cancellationToken.ThrowIfCancellationRequested();
 
-        var mediaRoot = Path.GetFullPath(discOneRoot);
-        var loaderPath = RequireInput(mediaRoot, "MW4.EXE", LoaderSha256);
-        var imagePath = RequireInput(mediaRoot, "MW4.ICD", EncryptedImageSha256);
-        _ = RequireInput(mediaRoot, "DPLAYERX.DLL", PlayerSha256);
+        var mediaRoot = Path.GetFullPath(mediaRootPath);
+        var loaderPath = RequireInput(mediaRoot, loaderFileName, loaderSha256);
+        var imagePath = RequireInput(mediaRoot, encryptedImageFileName, encryptedImageSha256);
+        _ = RequireInput(mediaRoot, playerFileName, playerSha256);
 
         var image = File.ReadAllBytes(imagePath);
         var pe = new MutablePe32(image);
-        if (pe.EntryPointRva != 0x309380 || pe.ImageBase != 0x00400000)
+        if (pe.EntryPointRva != expectedEntryPointRva || pe.ImageBase != 0x00400000)
         {
-            throw new InvalidDataException("The Vengeance retail ICD PE layout is not the qualified revision.");
+            throw new InvalidDataException("The SafeDisc image PE layout is not the qualified revision.");
         }
 
         var loaderLength = checked((uint)new FileInfo(loaderPath).Length);
@@ -69,27 +113,36 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             SafeDisc15020ImageCipher.DecodeSection(
                 image.AsSpan(section.RawOffset, section.RawSize),
                 section.VirtualSize,
-                CipherKey);
+                cipherKey,
+                titlePatch == SafeDisc15020TitlePatch.Mercenaries
+                    ? SafeDisc15020SecondLayerProfile.Mercenaries
+                    : SafeDisc15020SecondLayerProfile.Vengeance);
         }
 
-        RepairImportNamesAndThunks(image, pe);
-        PermuteProtectedThunkTables(image, pe);
+        RepairImportNamesAndThunks(
+            image,
+            pe,
+            cipherKey,
+            missingThunkSeeds,
+            importNameSeed,
+            chainImportNameFromDecodedByte);
+        PermuteProtectedThunkTables(image, pe, cipherKey);
         var ranges = RebuildProtectedIatRanges(image, pe);
-        RepairIndirectImportReferences(image, pe, ranges, cancellationToken);
+        RepairIndirectImportReferences(image, pe, ranges, cipherKey, titlePatch, cancellationToken);
         NormalizePortableExecutable(image, pe);
-        PatchDiscCheck(image, pe.RawEnd);
+        ApplyTitlePatch(image, pe, titlePatch);
 
         var output = image.AsSpan(0, pe.RawEnd).ToArray();
         var outputHash = ComputeSha256(output);
-        if (!string.Equals(outputHash, OutputSha256, StringComparison.Ordinal))
+        if (!string.Equals(outputHash, outputSha256, StringComparison.Ordinal))
         {
-            throw new InvalidDataException($"Vengeance transform produced unexpected SHA-256: {outputHash}");
+            throw new InvalidDataException($"SafeDisc transform produced unexpected SHA-256: {outputHash}");
         }
 
         Directory.CreateDirectory(scratchDirectory);
-        var outputPath = Path.Combine(Path.GetFullPath(scratchDirectory), "MW4.exe");
+        var outputPath = Path.Combine(Path.GetFullPath(scratchDirectory), outputFileName);
         File.WriteAllBytes(outputPath, output);
-        return new PreparedVengeanceExecutable(outputPath, TransformId);
+        return new PreparedVengeanceExecutable(outputPath, transformId);
     }
 
     private static string RequireInput(string mediaRoot, string relativePath, string expectedHash)
@@ -103,17 +156,17 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         }
         if (!File.Exists(path))
         {
-            throw new FileNotFoundException($"Required Vengeance transform input is missing: {relativePath}", path);
+            throw new FileNotFoundException($"Required SafeDisc transform input is missing: {relativePath}", path);
         }
         if ((File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
         {
-            throw new InvalidDataException($"Vengeance transform input cannot be a reparse point: {relativePath}");
+            throw new InvalidDataException($"SafeDisc transform input cannot be a reparse point: {relativePath}");
         }
         using var stream = File.OpenRead(path);
         var actualHash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
         if (!string.Equals(actualHash, expectedHash, StringComparison.Ordinal))
         {
-            throw new InvalidDataException($"Unsupported Vengeance {relativePath} SHA-256: {actualHash}");
+            throw new InvalidDataException($"Unsupported SafeDisc input {relativePath} SHA-256: {actualHash}");
         }
         return path;
     }
@@ -141,17 +194,29 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         BinaryPrimitives.WriteUInt32BigEndian(image[markerOffset..], loaderLength);
     }
 
-    private static void RepairImportNamesAndThunks(Span<byte> image, MutablePe32 pe)
+    private static void RepairImportNamesAndThunks(
+        Span<byte> image,
+        MutablePe32 pe,
+        IReadOnlyList<uint> cipherKey,
+        IReadOnlyList<uint> missingThunkSeeds,
+        byte importNameSeed,
+        bool chainFromDecodedByte)
     {
         var seedIndex = 0;
+        var decodedImportNames = new HashSet<uint>();
+        var descriptors = new List<(ImportDescriptor Descriptor, string Library)>();
         foreach (var descriptor in pe.ReadImportDescriptors())
         {
-            var library = ReadAsciiZ(image, pe.RvaToOffset(descriptor.NameRva));
-            if (!IsProtectedLibrary(library))
+            descriptors.Add((descriptor, ReadAsciiZ(image, pe.RvaToOffset(descriptor.NameRva))));
+        }
+        foreach (var item in descriptors)
+        {
+            var descriptor = item.Descriptor;
+            if (!IsProtectedLibrary(item.Library))
             {
                 continue;
             }
-            if (seedIndex >= MissingThunkSeeds.Length)
+            if (seedIndex >= missingThunkSeeds.Count)
             {
                 throw new InvalidDataException("Vengeance import metadata contains too many protected thunk tables.");
             }
@@ -159,7 +224,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             var thunkOffset = pe.RvaToOffset(descriptor.OriginalFirstThunkRva);
             if (BinaryPrimitives.ReadUInt32LittleEndian(image[thunkOffset..]) == 0)
             {
-                BinaryPrimitives.WriteUInt32LittleEndian(image[thunkOffset..], MissingThunkSeeds[seedIndex]);
+                BinaryPrimitives.WriteUInt32LittleEndian(image[thunkOffset..], missingThunkSeeds[seedIndex]);
             }
             seedIndex++;
 
@@ -170,22 +235,30 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                 {
                     break;
                 }
-                var decodedRva = encodedRva ^ CipherKey[0];
+                var decodedRva = encodedRva ^ cipherKey[0];
                 BinaryPrimitives.WriteUInt32LittleEndian(image[cursor..], decodedRva);
+                if (!decodedImportNames.Add(decodedRva))
+                {
+                    continue;
+                }
                 var importNameOffset = pe.RvaToOffset(decodedRva);
                 BinaryPrimitives.WriteUInt16LittleEndian(image[importNameOffset..], 0);
-                DecodeRollingXorString(image[(importNameOffset + sizeof(ushort))..]);
+                DecodeRollingXorString(
+                    image[(importNameOffset + sizeof(ushort))..],
+                    importNameSeed,
+                    chainFromDecodedByte);
             }
         }
-        if (seedIndex != MissingThunkSeeds.Length)
+        if (seedIndex != missingThunkSeeds.Count)
         {
-            throw new InvalidDataException("Vengeance import metadata did not contain both protected thunk tables.");
+            throw new InvalidDataException(
+                $"SafeDisc import metadata contained {seedIndex} protected thunk tables; expected {missingThunkSeeds.Count}.");
         }
     }
 
-    private static void DecodeRollingXorString(Span<byte> encoded)
+    private static void DecodeRollingXorString(Span<byte> encoded, byte seed, bool chainFromDecodedByte)
     {
-        byte previous = 0x58;
+        var previous = seed;
         for (var index = 0; index < encoded.Length; index++)
         {
             var current = encoded[index];
@@ -195,12 +268,15 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             {
                 return;
             }
-            previous = current;
+            previous = chainFromDecodedByte ? decoded : current;
         }
         throw new InvalidDataException("Vengeance import name is not null terminated.");
     }
 
-    private static void PermuteProtectedThunkTables(Span<byte> image, MutablePe32 pe)
+    private static void PermuteProtectedThunkTables(
+        Span<byte> image,
+        MutablePe32 pe,
+        IReadOnlyList<uint> cipherKey)
     {
         foreach (var descriptor in pe.ReadImportDescriptors())
         {
@@ -223,7 +299,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
 
             var permutation = Enumerable.Range(0, values.Count).ToArray();
             var bitCount = 32 - BitOperations.LeadingZeroCount((uint)values.Count);
-            var state = CipherKey[0];
+            var state = cipherKey[0];
             for (var index = 0; index < values.Count; index++)
             {
                 state = unchecked((state * 0x35e85a6d) + 0x361962e9);
@@ -289,6 +365,8 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         Span<byte> image,
         MutablePe32 pe,
         ProtectedIatRanges ranges,
+        IReadOnlyList<uint> cipherKey,
+        SafeDisc15020TitlePatch titlePatch,
         CancellationToken cancellationToken)
     {
         foreach (var section in pe.Sections.Where(section => IsEncryptedSection(section.Name)))
@@ -305,8 +383,12 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                     continue;
                 }
                 var localOffset = checked((uint)(opcodeOffset - section.RawOffset));
-                var mixed = RepairFilterSecond(localOffset) ^ localOffset;
-                mixed = RepairFilterFirst(mixed) ^ mixed;
+                var mixed = (titlePatch == SafeDisc15020TitlePatch.Mercenaries
+                    ? MercenariesRepairFilterSecond(localOffset)
+                    : RepairFilterSecond(localOffset)) ^ localOffset;
+                mixed = (titlePatch == SafeDisc15020TitlePatch.Mercenaries
+                    ? MercenariesRepairFilterFirst(mixed)
+                    : RepairFilterFirst(mixed)) ^ mixed;
                 if ((mixed & 3) >= 2)
                 {
                     continue;
@@ -319,8 +401,8 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                     continue;
                 }
                 var rva = absolute - pe.ImageBase;
-                if (TryRepairIatReference(rva, localOffset, ranges.Kernel, out var repaired) ||
-                    TryRepairIatReference(rva, localOffset, ranges.User, out repaired))
+                if (TryRepairIatReference(rva, localOffset, ranges.Kernel, cipherKey[0], out var repaired) ||
+                    TryRepairIatReference(rva, localOffset, ranges.User, cipherKey[0], out repaired))
                 {
                     BinaryPrimitives.WriteUInt32LittleEndian(image[operandOffset..], pe.ImageBase + repaired);
                 }
@@ -328,7 +410,12 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         }
     }
 
-    private static bool TryRepairIatReference(uint rva, uint localOffset, IReadOnlyList<IatRange> ranges, out uint repaired)
+    private static bool TryRepairIatReference(
+        uint rva,
+        uint localOffset,
+        IReadOnlyList<IatRange> ranges,
+        uint keyWord,
+        out uint repaired)
     {
         foreach (var range in ranges)
         {
@@ -338,7 +425,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             }
             var count = (range.EndRva - range.StartRva) / sizeof(uint);
             var index = (rva - range.StartRva) / sizeof(uint);
-            var rotation = unchecked(localOffset + CipherKey[0]) % count;
+            var rotation = unchecked(localOffset + keyWord) % count;
             var repairedIndex = (index + count - rotation) % count;
             repaired = range.StartRva + repairedIndex * sizeof(uint);
             return true;
@@ -450,12 +537,135 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         }
     }
 
+    private static uint MercenariesRepairFilterFirst(uint value)
+    {
+        unchecked
+        {
+            value -= 0x39fc4094;
+            value ^= 0x0e3405cb;
+            value = BitOperations.RotateLeft(value, 0x62);
+            value = BitOperations.RotateLeft(value, 0xb4);
+            value += 0x635f0c0c;
+            value += 0x260e2dd9;
+            value += 0x55df3105;
+            value -= 0x3f3c38a9;
+            value -= 0x6c2121e8;
+            value -= 0x6ac842fb;
+            value = BitOperations.RotateRight(value, 0x36);
+            value -= 0x05814930;
+            value += 0x43312af2;
+            value = BitOperations.RotateRight(value, 0xe4);
+            value += 0x0dd219e5;
+            value += 0x6ea07aa2;
+            value += 0x7ed36e9a;
+            value += 0x23c0027d;
+            value -= 0x1e0c5c37;
+            value = BitOperations.RotateLeft(value, 0x0b);
+            value = BitOperations.RotateRight(value, 6);
+            value ^= 0x7d842a41;
+            value += 0x4c4a6a8d;
+            value = BitOperations.RotateLeft(value, 0xd9);
+            value = BitOperations.RotateLeft(value, 0x24);
+            value = BitOperations.RotateLeft(value, 3);
+            value = BitOperations.RotateRight(value, 0xd9);
+            value ^= 0x489777be;
+            value ^= 0x6b8b347b;
+            value = BitOperations.RotateLeft(value, 1);
+            value -= 0x5d5f375e;
+            value = BitOperations.RotateRight(value, 0xa7);
+            value += 0x26357cb6;
+            value = BitOperations.RotateLeft(value, 0xec);
+            value = BitOperations.RotateLeft(value, 0xd3);
+            value += 0x5c1108d2;
+            value ^= 0x661d761d;
+            value -= 0x45876e80;
+            value -= 0x3dfe4780;
+            return value + 0x07b10fd8;
+        }
+    }
+
+    private static uint MercenariesRepairFilterSecond(uint value)
+    {
+        unchecked
+        {
+            value -= 0x39fc4094;
+            value = BitOperations.RotateLeft(value, 0x4e);
+            value += 0x653e5062;
+            value--;
+            value ^= 0x3e3342af;
+            value = BitOperations.RotateRight(value, 0xd9);
+            value = BitOperations.RotateLeft(value, 0xa9);
+            value ^= 0x6ac842fb;
+            value++;
+            value--;
+            value += 0x43312af2;
+            value--;
+            value = BitOperations.RotateRight(value, 0xe5);
+            value = BitOperations.RotateRight(value, 0xe4);
+            value = BitOperations.RotateRight(value, 0xa2);
+            value = BitOperations.RotateRight(value, 0x9a);
+            value -= 0x23c0027d;
+            value = BitOperations.RotateRight(value, 0x37);
+            value = BitOperations.RotateRight(value, 0x0b);
+            value ^= 0x78996a6d;
+            value++;
+            value--;
+            value--;
+            value -= 0x31d07503;
+            value = 0u - value;
+            value = BitOperations.RotateLeft(value, 0xbe);
+            value ^= 0x6b8b347b;
+            value = BitOperations.RotateLeft(value, 0xb7);
+            value = BitOperations.RotateLeft(value, 1);
+            value = BitOperations.RotateRight(value, 0x5e);
+            value ^= 0x3e7c7ca7;
+            value -= 0x0de051b1;
+            value--;
+            value ^= 0x2b5814d3;
+            value += 0x2a641ba9;
+            value--;
+            value--;
+            value++;
+            value = BitOperations.RotateLeft(value, 0x7a);
+            value = 0u - value;
+            value -= 0x3dfe4780;
+            value = 0u - value;
+            value ^= 0x17b2105b;
+            value += 0x3a4c2635;
+            value++;
+            value = BitOperations.RotateLeft(value, 0x5c);
+            value -= 0x791b7041;
+            value--;
+            value -= 0x074f611b;
+            value ^= 0x05b4300f;
+            value = 0u - value;
+            value++;
+            value++;
+            return value + 1;
+        }
+    }
+
     private static void NormalizePortableExecutable(Span<byte> image, MutablePe32 pe)
     {
         image[pe.PeOffset - 2] = 0x2b;
         image[pe.PeOffset - 1] = 0xad;
         Encoding.ASCII.GetBytes("1911").CopyTo(image[(pe.PeOffset + 8)..]);
         BinaryPrimitives.WriteUInt32BigEndian(image[(pe.RawEnd - sizeof(uint))..], checked((uint)pe.RawEnd));
+    }
+
+    private static void ApplyTitlePatch(Span<byte> image, MutablePe32 pe, SafeDisc15020TitlePatch titlePatch)
+    {
+        switch (titlePatch)
+        {
+            case SafeDisc15020TitlePatch.Vengeance:
+                PatchDiscCheck(image, pe.RawEnd);
+                break;
+            case SafeDisc15020TitlePatch.Mercenaries:
+                PatchMercenariesEntitlement(image, pe);
+                break;
+            default:
+                throw new InvalidDataException($"Unsupported SafeDisc title patch: {titlePatch}");
+        }
     }
 
     private static void PatchDiscCheck(Span<byte> image, int rawEnd)
@@ -478,6 +688,50 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             throw new InvalidDataException("Vengeance disc-check pattern was not found.");
         }
         image[match + 2] = 0xeb;
+    }
+
+    private static void PatchMercenariesEntitlement(Span<byte> image, MutablePe32 pe)
+    {
+        var gatePattern = Convert.FromHexString("A1446B7D008B0081EC8002000056573305406B7D008B480C6A0181F131957385");
+        var gate = FindUniquePattern(image[..pe.RawEnd], gatePattern, "Mercenaries entitlement gate");
+        var patchOffset = gate + 0x15;
+        Convert.FromHexString("E946000000").CopyTo(image[patchOffset..]);
+
+        var descriptors = pe.ReadImportDescriptors();
+        var cdillaIndex = -1;
+        for (var index = 0; index < descriptors.Count; index++)
+        {
+            var library = ReadAsciiZ(image, pe.RvaToOffset(descriptors[index].NameRva));
+            if (library.Equals("CdaC14BA.dll", StringComparison.OrdinalIgnoreCase))
+            {
+                if (cdillaIndex >= 0)
+                {
+                    throw new InvalidDataException("Mercenaries contains more than one C-Dilla import descriptor.");
+                }
+                cdillaIndex = index;
+            }
+        }
+        if (cdillaIndex < 0)
+        {
+            throw new InvalidDataException("Mercenaries C-Dilla import descriptor was not found.");
+        }
+
+        var descriptorOffset = descriptors[cdillaIndex].HeaderOffset;
+        var bytesToMove = checked((descriptors.Count - cdillaIndex) * 20);
+        image.Slice(descriptorOffset + 20, bytesToMove).CopyTo(image[descriptorOffset..]);
+    }
+
+    private static int FindUniquePattern(ReadOnlySpan<byte> image, ReadOnlySpan<byte> pattern, string description)
+    {
+        var match = -1;
+        for (var index = 0; index <= image.Length - pattern.Length; index++)
+        {
+            if (!image.Slice(index, pattern.Length).SequenceEqual(pattern)) continue;
+            if (match >= 0) throw new InvalidDataException($"{description} is not unique.");
+            match = index;
+        }
+        if (match < 0) throw new InvalidDataException($"{description} was not found.");
+        return match;
     }
 
     private static bool IsProtectedLibrary(string library) =>
@@ -505,7 +759,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
     private sealed record ProtectedIatRanges(IReadOnlyList<IatRange> User, IReadOnlyList<IatRange> Kernel);
 
     private sealed record PeSection(string Name, int HeaderOffset, int VirtualSize, uint VirtualAddress, int RawSize, int RawOffset);
-    private sealed record ImportDescriptor(uint OriginalFirstThunkRva, uint NameRva, uint FirstThunkRva);
+    private sealed record ImportDescriptor(int HeaderOffset, uint OriginalFirstThunkRva, uint NameRva, uint FirstThunkRva);
 
     private sealed class MutablePe32
     {
@@ -603,7 +857,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                 {
                     return descriptors;
                 }
-                descriptors.Add(new ImportDescriptor(originalThunk, name, firstThunk));
+                descriptors.Add(new ImportDescriptor(offset, originalThunk, name, firstThunk));
                 offset += 20;
             }
         }

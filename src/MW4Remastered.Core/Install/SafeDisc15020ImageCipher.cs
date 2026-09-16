@@ -5,7 +5,11 @@ public static class SafeDisc15020ImageCipher
     private const int PageSize = 4096;
     private const int BlockSize = 8;
 
-    public static void DecodeSection(Span<byte> rawSection, int virtualSize, ReadOnlySpan<uint> key)
+    public static void DecodeSection(
+        Span<byte> rawSection,
+        int virtualSize,
+        ReadOnlySpan<uint> key,
+        SafeDisc15020SecondLayerProfile secondLayerProfile = SafeDisc15020SecondLayerProfile.Vengeance)
     {
         if (virtualSize < 0)
         {
@@ -23,7 +27,7 @@ public static class SafeDisc15020ImageCipher
         for (var pageStart = 0; pageStart < encryptedLength; pageStart += PageSize)
         {
             var pageLength = Math.Min(PageSize, encryptedLength - pageStart);
-            SafeDisc15020SecondLayer.DecodePage(rawSection.Slice(pageStart, pageLength));
+            SafeDisc15020SecondLayer.DecodePage(rawSection.Slice(pageStart, pageLength), secondLayerProfile);
         }
 
         var position = 0;

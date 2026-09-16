@@ -47,11 +47,11 @@ if (args.Length == 3 && string.Equals(args[0], "--black-knight", StringCompariso
     }
 }
 
-if (args.Length == 5 && string.Equals(args[0], "--mercenaries", StringComparison.OrdinalIgnoreCase))
+if (args.Length == 4 && string.Equals(args[0], "--mercenaries", StringComparison.OrdinalIgnoreCase))
 {
     try
     {
-        return Install(new MercenariesInstallRequest(args[1], args[2], args[3]), args[4], "Mercenaries");
+        return Install(new MercenariesInstallRequest(args[1], args[2]), args[3], "Mercenaries");
     }
     catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
     {
@@ -65,7 +65,7 @@ if (args.Length != 4 || !string.Equals(args[0], "--vengeance", StringComparison.
     Console.Error.WriteLine("Usage:");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --vengeance <disc-1-root> <disc-2-root> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --black-knight <disc-root> <new-destination>");
-    Console.Error.WriteLine("  MW4Remastered.InstallProbe --mercenaries <disc-1-root> <disc-2-root> <compatibility-executable> <new-destination>");
+    Console.Error.WriteLine("  MW4Remastered.InstallProbe --mercenaries <disc-1-root> <disc-2-root> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --extract-mercenaries-cabinet <MSGAME.CAB> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --verify <install-root>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --uninstall <install-root>");

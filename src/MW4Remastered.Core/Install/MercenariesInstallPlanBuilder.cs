@@ -5,7 +5,7 @@ namespace MW4Remastered.Core.Install;
 
 public sealed class MercenariesInstallPlanBuilder
 {
-    public const string QualifiedCompatibilityExecutableSha256 = "eff39b2f6b9f6498a09da83497a335fd9891a209b9987c714723c378f8b0a000";
+    public const string QualifiedCompatibilityExecutableSha256 = MercenariesRetailExecutableTransform.OutputSha256;
 
     private static readonly IReadOnlyDictionary<string, string> DiscOneRootFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -15,7 +15,6 @@ public sealed class MercenariesInstallPlanBuilder
             ["ARTPCLNT.DLL"] = "ArtpClnt.dll",
             ["AUTOCO_1.EXE"] = "AutoConfig.exe",
             ["BLADE.DLL"] = "Blade.dll",
-            ["DPLAYERX.DLL"] = "DPlayerX.dll",
             ["EBUEULA.DLL"] = "EBUEula.dll",
             ["EULA.RTF"] = "EULA.rtf",
             ["GUNDLL.DLL"] = "GunDll.dll",

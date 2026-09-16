@@ -175,7 +175,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             ForeColor = Warning,
             Font = new Font("Segoe UI Semibold", 9F),
-            Text = "MEDIA-FIRST SETUP  •  VENGEANCE AND BLACK KNIGHT INSTALL DIRECTLY FROM VALIDATED ORIGINAL MEDIA",
+            Text = "MEDIA-FIRST SETUP  •  ALL THREE GAMES INSTALL DIRECTLY FROM VALIDATED ORIGINAL MEDIA",
             Margin = new Padding(3, 5, 0, 0),
         });
         return panel;
@@ -393,6 +393,9 @@ internal sealed class InstallerForm : Form
             media.GetRoot("vengeance-disc-1"),
             media.GetRoot("vengeance-disc-2")),
         "black-knight" => new BlackKnightInstallRequest(media.GetRoot("black-knight-disc-1")),
+        "mercenaries" => new MercenariesInstallRequest(
+            media.GetRoot("mercenaries-disc-1"),
+            media.GetRoot("mercenaries-disc-2")),
         _ => throw new InvalidOperationException($"{ProductDisplayName(productId)} is not enabled in this installer build."),
     };
 
@@ -624,7 +627,7 @@ internal sealed class InstallerForm : Form
     private bool CanInstallPlan(InstallDestinationPlan plan)
     {
         if (!plan.HasSelectedGames || plan.BlockedProducts.Count > 0) return false;
-        if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "black-knight"))) return false;
+        if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "black-knight" or "mercenaries"))) return false;
         var unsupportedPackSelected = selection.Current.Capabilities.Any(item =>
             item.Kind == ProductKind.OptionalPack && item.IsComplete);
         return !unsupportedPackSelected;
@@ -642,9 +645,7 @@ internal sealed class InstallerForm : Form
             return "Media validated. Click INSTALL SELECTED GAMES to continue.";
         if (selection.Current.Capabilities.Any(item => item.Kind == ProductKind.OptionalPack && item.IsComplete))
             return "Mech Pak media was validated, but pack entitlement installation is not enabled in this build.";
-        if (selection.Current.Capabilities.Any(item => item.ProductId == "mercenaries" && item.IsComplete))
-            return "Mercenaries media was validated, but its media-only executable transform is not enabled in this build.";
-        if (selection.Current.Layouts.Count > 0) return "Add both discs for Vengeance, or Vengeance plus Black Knight, to enable installation.";
+        if (selection.Current.Layouts.Count > 0) return "Add both discs for Vengeance or Mercenaries; Black Knight also requires Vengeance.";
         return "Choose one or more ISO or ZIP files to begin.";
     }
 

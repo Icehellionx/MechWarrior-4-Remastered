@@ -17,12 +17,12 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 
 - [x] Detect supported Vengeance media layouts and stage a disposable install.
 - [ ] Determine required official patch level and implement exact-input transforms.
-- [x] Reimplement and independently vector-test the SafeDisc 1 eight-byte block cipher, 1.50.20 page-local second layer, and exact-input Vengeance PE/import/pointer repair transform.
+- [x] Reimplement and independently vector-test the SafeDisc 1 eight-byte block cipher, title-specific 1.50.20 page-local second layers, and exact-input Vengeance/Mercenaries PE/import/pointer repair transforms.
 - [x] Extend the shared transaction contract to Black Knight and Mercenaries, including contained cabinet extraction for Mercenaries.
 - [x] Diagnose the Inner Sphere and Clan 64-bit failure boundary from installer/payload evidence: plain resource payload plus official game patch plus obsolete SafeCast/C-Dilla entitlement; replacement remains unqualified.
 - [ ] Install optional packs through a tested extraction/configuration path.
 - [x] Persist an ownership manifest sufficient for repair and safe file uninstall.
-- [x] Add atomic multi-source readiness for all games and packs, and enable dependency-ordered mutation only for the qualified Vengeance and Black Knight paths.
+- [x] Add atomic multi-source readiness for all games and packs, and enable dependency-ordered mutation for all three qualified game paths.
 - [x] Reopen and re-recognize selected directory/ISO/ZIP sources under one disposable transaction lifetime with success and failure cleanup.
 - [x] Add read-only destination planning with contained per-game folders, conservative space budgets, current-volume capacity, and unsafe-root rejection.
 - [x] Add cooperative cancellation for installer media inspection/revalidation with owned mount and ZIP scratch cleanup.
@@ -30,6 +30,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Apply that topology to destination planning and remove the obsolete hidden Black Knight-only installer execution path.
 - [x] Collect a neutral multi-file ISO/ZIP set in the package wizard before Install and hand it directly to intake validation without a second picker.
 - [x] Remove the caller-supplied Vengeance replacement executable from installation requests; confine the qualified retail media-derived transform to coordinator-owned scratch and fail closed on unknown revisions or output hashes.
+- [x] Remove the caller-supplied Mercenaries replacement executable; derive its disc-free executable from exact original-media inputs inside coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Validate and assemble the exact internal Black Knight helper/loader/license/corresponding-source bundle from reproducible CI evidence.
 - [x] Prove the Black Knight media transformation internally; keep it out of the primary product flow until the Vengeance base path and dependency-aware orchestration are qualified.
 
@@ -64,6 +65,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process launch from the untouched ISO executable through a constrained project helper and pinned open-source loader release.
 - [x] Reproduce the Black Knight compatibility bundle across two clean Windows CI builds, exact-hash it into installation policy, and pass a fresh ISO-derived install/launch/Defender smoke.
+- [x] Qualify fresh Vengeance and Mercenaries media-only coordinator installs through exact verification, bounded Defender scans, responsive disc-free launches, and ownership-safe uninstall.
 - [ ] Test representative Intel/AMD/NVIDIA systems and current supported Windows versions.
 
 ## 6. Release and operations
@@ -74,17 +76,17 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 - [ ] Smoke every available game/pack/media combination.
 - [x] Preserve saves/configuration through both ownership-safe game removal and standard shell-package uninstall smoke paths.
 - [x] Emit and verify the setup checksum while enforcing payload and release-tree allowlists.
-- [x] Scan the current setup, extracted payload, installed shell, and qualified Black Knight tree with current Defender intelligence.
+- [x] Scan the current setup and qualified Vengeance, Black Knight, and Mercenaries trees with current Defender intelligence.
 - [ ] Document signing, SmartScreen, rollback, support bundles, and coverage gaps.
 
 ## Next slice
 
 ```text
-User-facing goal: require only Vengeance ISO/ISO-ZIP input and complete a verified, disc-free Vengeance install.
-Owning boundary: coordinator-owned media transform, staging transaction, manifest verification, and ownership-safe uninstall.
-Smallest verifiable slice: run the now-qualified managed transform through a fresh full coordinator install and remove it through the owned-file uninstaller.
-Focused evidence: exact loader/ICD/DPLAYER input hashes, deterministic output hash, exact install manifest, current Defender scan, and a bounded non-elevating launch.
-Smoke/regression evidence: transform unit vectors plus fresh Vengeance install/launch/repair/uninstall smoke from media alone.
-Rollback or disable path: transforms operate in staging; failed or unknown revisions never modify media or an existing install.
-Hardware coverage gap: Black Knight menu presence is proven only on the current Windows device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.
+User-facing goal: install the optional Inner Sphere and Clan Mech Paks from original media without invoking obsolete C-Dilla/SafeCast components.
+Owning boundary: official patch transforms, pack resource overlay, entitlement/visibility state, manifest update, and rollback.
+Smallest verifiable slice: establish a controlled patched Vengeance baseline, add one pack's exact ten-file payload, and prove in-game visibility without legacy activation software.
+Focused evidence: exact patch/media hashes, before/after resource and configuration state, manifest overlay, and current Defender scan.
+Smoke/regression evidence: pack-specific visibility plus launch/config/save/uninstall regression on Vengeance and Black Knight targets.
+Rollback or disable path: overlays stage before commit and restore the prior manifest/files on failure; unqualified packs remain disabled in setup.
+Hardware coverage gap: only responsive title windows are proven on the current device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.
 ```
