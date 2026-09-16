@@ -15,7 +15,7 @@ Outcome: supported inputs and publishable outputs are explicit and defensible.
 
 Outcome: user media becomes a verified, rollback-safe installation without invoking unsupported legacy setup paths where avoidable.
 
-- [ ] Detect supported Vengeance media layouts and stage a disposable install.
+- [x] Detect supported Vengeance media layouts and stage a disposable install.
 - [ ] Determine required official patch level and implement exact-input transforms.
 - [ ] Extend the shared contract to Black Knight and Mercenaries.
 - [ ] Diagnose Inner Sphere and Clan pack failures on 64-bit Windows from installer/payload evidence.
@@ -66,11 +66,11 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: produce the first safe, runnable Vengeance installation from recognized user media.
-Owning boundary: media access, extraction plan, official patch transform, install transaction.
-Smallest verifiable slice: stage the two validated Vengeance discs into a disposable tree, reproduce installer file mapping without running SafeDisc/setup code, and verify rollback.
-Focused evidence: exact source/output manifests, path containment, excluded-file assertions, and official-patch provenance.
-Smoke/regression evidence: disposable Vengeance install tree plus adjacent recognition checks for Black Knight, Mercenaries, and both packs.
-Rollback or disable path: staging-only transaction with no registry or permanent install mutation.
+User-facing goal: advance the verified Vengeance baseline from version 2.0 to the official version 3 data contract without executing setup, SafeDisc, or C-Dilla code.
+Owning boundary: game transforms and install transaction.
+Smallest verifiable slice: qualify a checksum-enforcing RTPatch transform for the supplied official 2.0/3.0 payloads, then reproduce and verify every changed output in a second disposable tree.
+Focused evidence: patch revision/license, source rolling checksums, output SHA-256 manifest, path containment, and comparison with the known 2.0/3.0 executable versions.
+Smoke/regression evidence: unchanged verified 231-file Vengeance baseline plus deterministic patched-tree comparison.
+Rollback or disable path: retain the verified baseline and emit patched output to a new sibling tree only.
 Hardware coverage gap: all runtime behavior remains unqualified.
 ```

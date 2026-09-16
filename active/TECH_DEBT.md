@@ -1,6 +1,6 @@
 # Technical debt and risk backlog
 
-No product code exists yet. These are design risks to prevent, not inherited implementation debt.
+The first media/install core now exists. This ledger tracks both design risks and implementation debt.
 
 ## Complexity gates
 
@@ -19,10 +19,12 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 1. The legal history of “freeware” MW4 releases is easy to overstate; media must remain user-supplied until rights are documented.
 2. The local input set contains opaque no-CD/fix archives and a serial-key file. They are evidence only, never automatic release inputs.
 3. Multi-disc and archive variants may differ in executable revision or modifications despite similar names.
-4. Mech Pak failure causes on 64-bit Windows are unverified. Do not design around the tentative “16-bit encryption” theory without binary/installer evidence.
+4. Static evidence identifies a C-Dilla 16-bit helper in the pack activation path, but the exact failure and clean replacement contract still need controlled before/after proof.
 5. Copying the mature MW3 launcher's structure wholesale would carry title-specific assumptions and historical complexity into a cleaner project.
 6. Manual cleanup can silently clip or reorder content without full-page render comparison.
 7. Uninstall is destructive and must be designed from a precise ownership/save inventory before implementation.
+8. The evaluated MIT RTPatch parser does not understand the supplied patch variants and its CLI lacks record-path containment. It is evaluation evidence only, not an accepted dependency.
+9. The current Vengeance 8.3 restoration map is sufficient for staging and Patch 2 naming, but every inferred name must be compared with a legacy-setup reference tree before release qualification.
 
 ## Debt-negative rules
 
