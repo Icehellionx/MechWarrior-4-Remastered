@@ -9,10 +9,12 @@ MechWarrior 4's retail executables use obsolete SafeDisc generations that cannot
 
 A project-owned 32-bit proof-of-contract helper was then built with an explicit `asInvoker` manifest. It created an original Vengeance process suspended, loaded only the adjacent compatibility DLL, resumed the process, exited successfully, and reached the same responsive Vengeance CD-check dialog without elevation. This proves elevation is not inherently required for same-user, same-integrity launch-time loading. It does not yet qualify the compatibility DLL or solve Vengeance's remaining raw optical-media check.
 
+Follow-up testing also reproduced Windows installer-detection heuristics: legacy executables without a requested-execution-level manifest were elevated based partly on names such as `patch` and `unSafeDisc`, while a disposable copy with an embedded `asInvoker` manifest ran at the caller's integrity level. The project must therefore declare the privilege contract explicitly in every executable; relying on filenames or SDK defaults is not acceptable.
+
 ## Decision
 
 - Installed game launch must run at the calling user's integrity level and must never request administrator elevation.
-- Installer, repair, and uninstaller operations may elevate only when their selected destination or owned system changes require it. Their privilege is not inherited by normal game launch.
+- Installer, launcher, and compatibility helper all embed `asInvoker` manifests. Any future privileged operation must be isolated behind an explicit, narrow broker and must never be inherited by normal game launch.
 - The compatibility launch helper is constrained to the three adjacent product executable names and the adjacent `version.dll`; it does not accept arbitrary target processes or DLL paths.
 - The helper creates its child suspended, loads compatibility before original protection startup, terminates the child on any pre-resume failure, and closes every process/thread handle it owns.
 - The upstream `VersionInjector.exe` is evaluation evidence only and is excluded from product packages.
@@ -43,4 +45,5 @@ Remove the helper from packaging and restore direct executable launch. Media-der
 - Embedded manifest extraction confirmed `requestedExecutionLevel level="asInvoker"`.
 - A bounded Vengeance smoke test returned helper exit code `0`, produced a responsive game process, and reached the expected CD-check dialog without an elevation request.
 - `tests/CompatLauncherBoundary.Tests.ps1` locks the architecture, privilege level, target/DLL constraints, least-access source rule, and failed-child cleanup contract.
+- `tests/ApplicationPrivilegeBoundary.Tests.ps1` locks explicit `asInvoker` manifests for both the installer and launcher so Windows installer-name heuristics cannot silently reintroduce UAC.
 - A fresh media-only Black Knight install launched to a responsive game window through the manifest-owned helper without mounted media or UAC; ADR 0007 records the reproducible payload evidence.

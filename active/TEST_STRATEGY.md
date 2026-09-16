@@ -21,6 +21,7 @@ git status --short --ignored
 dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csproj --configuration Release
 dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release
 dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/ApplicationPrivilegeBoundary.Tests.ps1
 & tests/ReleaseTreePolicy.Tests.ps1
 # Elevated, local-media-only gate:
 & tests/MediaRecognitionSmoke.ps1 -Images $knownMediaImages

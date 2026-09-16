@@ -108,6 +108,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Installed and exactly verified a fresh 142-file Black Knight tree from media alone, launched a responsive game window with no mounted disc or UAC, and passed a current Defender scan.
 - Repeated uninstall on a disposable copy: all 143 owned entries were removed while the sole synthetic user configuration file was preserved.
 
+## Explicit no-UAC application boundary — 2026-09-16
+
+- Reproduced Windows installer-detection elevation on unmanifested legacy executables with setup-like names and proved that embedding `requestedExecutionLevel="asInvoker"` removes the prompt without changing the operation.
+- Added checked-in `asInvoker` manifests to the installer and launcher, complementing the existing non-elevating compatibility helper, and added a regression test that locks all three privilege contracts.
+- Applied official Vengeance Patch 2 through a disposable non-elevating wrapper around its 32-bit patch engine; the resulting SafeDisc 1 loader/ICD still performs raw-sector verification, so the ordinary ISO and volume-label emulation are not sufficient for disc-free launch.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.
