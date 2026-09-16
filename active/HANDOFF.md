@@ -52,6 +52,7 @@ Updated: 2026-09-16.
 - ADR 0009 fixes the per-user package boundary. A pinned Inno Setup 7.1.0 compiler produces a deterministic setup with no broad uninstall-delete behavior; signing and SmartScreen reputation remain separate release gates.
 - Application CI now rechecks the core smoke suite, installer/launcher builds, privilege manifests, release-tree policy, packaging contract, and compatibility-source contract on a hosted Windows runner without uploading binaries. Defender/package qualification remains a separate local release gate.
 - The latest user review rejected the shell-first package flow and the Black Knight-only emphasis. The package now collects media before installation and preserves the Vengeance → Black Knight/Mech Pak dependency contract, but no current setup package is an acceptance build: selected media is validated after shell deployment while complete selected-topology installation remains locked pending the Vengeance transform.
+- A fresh internal setup built after the media-first/dependency cleanup at SHA-256 `b67bddc8d1740203ec650ce60354bd64666bc7320dc4e1e468731930ba9306c0`. Defender engine/signature state reported antivirus and real-time protection enabled with signature `1.459.226.0`; a custom scan restricted to that ignored package directory reported zero new detections. This is regression evidence only, not an acceptance installer.
 
 ## Best resume path
 
