@@ -49,8 +49,106 @@ Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLa
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\MW4RemasteredInstaller.exe"; StatusMsg: "Choose original media and install games..."; Flags: skipifsilent
+Filename: "{app}\MW4RemasteredInstaller.exe"; Parameters: "{code:GetMediaParameters}"; StatusMsg: "Validating selected original media..."; Flags: skipifsilent
 
 [UninstallDelete]
 ; Intentionally empty. Inno removes only files it installed. Media-derived game trees,
 ; saves, and configuration are managed by the launcher's ownership-safe per-game action.
+
+[Code]
+var
+  MediaPage: TWizardPage;
+  MediaList: TNewListBox;
+  AddMediaButton: TNewButton;
+  RemoveMediaButton: TNewButton;
+  MediaFiles: TStringList;
+
+procedure RefreshMediaList;
+var
+  Index: Integer;
+begin
+  MediaList.Items.Clear;
+  for Index := 0 to MediaFiles.Count - 1 do
+    MediaList.Items.Add(MediaFiles[Index]);
+  RemoveMediaButton.Enabled := MediaList.ItemIndex >= 0;
+end;
+
+procedure AddMediaButtonClick(Sender: TObject);
+var
+  SelectedFiles: TStringList;
+  Index: Integer;
+begin
+  SelectedFiles := TStringList.Create;
+  try
+    if GetOpenFileNameMulti('Choose original MechWarrior 4 ISO or ZIP files', SelectedFiles, '',
+      'Original media (*.iso;*.zip)|*.iso;*.zip|All files (*.*)|*.*', '') then
+      for Index := 0 to SelectedFiles.Count - 1 do
+        if MediaFiles.IndexOf(SelectedFiles[Index]) < 0 then
+          MediaFiles.Add(SelectedFiles[Index]);
+  finally
+    SelectedFiles.Free;
+  end;
+  RefreshMediaList;
+end;
+
+procedure RemoveMediaButtonClick(Sender: TObject);
+begin
+  if MediaList.ItemIndex >= 0 then
+    MediaFiles.Delete(MediaList.ItemIndex);
+  RefreshMediaList;
+end;
+
+procedure MediaListClick(Sender: TObject);
+begin
+  RemoveMediaButton.Enabled := MediaList.ItemIndex >= 0;
+end;
+
+procedure InitializeWizard;
+begin
+  MediaFiles := TStringList.Create;
+  MediaFiles.CaseSensitive := False;
+  MediaPage := CreateCustomPage(wpWelcome, 'Choose original game media',
+    'Add every MechWarrior 4 ISO or ISO-containing ZIP you want Setup to validate.');
+
+  MediaList := TNewListBox.Create(MediaPage);
+  MediaList.Parent := MediaPage.Surface;
+  MediaList.SetBounds(0, 0, MediaPage.SurfaceWidth, ScaleY(190));
+  MediaList.OnClick := @MediaListClick;
+
+  AddMediaButton := TNewButton.Create(MediaPage);
+  AddMediaButton.Parent := MediaPage.Surface;
+  AddMediaButton.SetBounds(0, ScaleY(202), ScaleX(150), ScaleY(30));
+  AddMediaButton.Caption := 'Add ISO / ZIP files...';
+  AddMediaButton.OnClick := @AddMediaButtonClick;
+
+  RemoveMediaButton := TNewButton.Create(MediaPage);
+  RemoveMediaButton.Parent := MediaPage.Surface;
+  RemoveMediaButton.SetBounds(ScaleX(160), ScaleY(202), ScaleX(110), ScaleY(30));
+  RemoveMediaButton.Caption := 'Remove selected';
+  RemoveMediaButton.Enabled := False;
+  RemoveMediaButton.OnClick := @RemoveMediaButtonClick;
+end;
+
+procedure DeinitializeSetup;
+begin
+  MediaFiles.Free;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  Result := True;
+  if (CurPageID = MediaPage.ID) and (MediaFiles.Count = 0) then
+  begin
+    MsgBox('Add at least one original MechWarrior 4 ISO or ISO-containing ZIP before continuing.', mbError, MB_OK);
+    Result := False;
+  end;
+end;
+
+function GetMediaParameters(Param: String): String;
+var
+  Index: Integer;
+begin
+  Result := '';
+  for Index := 0 to MediaFiles.Count - 1 do
+    Result := Result + ' --media "' + MediaFiles[Index] + '"';
+end;

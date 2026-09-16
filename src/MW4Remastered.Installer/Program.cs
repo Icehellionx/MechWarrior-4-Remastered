@@ -7,9 +7,10 @@ namespace MW4Remastered.Installer;
 internal static class Program
 {
     [STAThread]
-    private static void Main()
+    private static void Main(string[] args)
     {
         ApplicationConfiguration.Initialize();
+        var initialMediaPaths = ParseMediaPaths(args);
         var mediaSessions = new MediaSourceSessionFactory();
         var mediaInspection = new MediaInspectionService();
         var processStarter = new SystemProcessStarter();
@@ -39,6 +40,19 @@ internal static class Program
             new InstallDestinationPlanner(),
             blackKnightInstaller,
             compatibilityStatus,
-            new InstalledLauncherOrchestrator(AppContext.BaseDirectory, processStarter)));
+            new InstalledLauncherOrchestrator(AppContext.BaseDirectory, processStarter),
+            initialMediaPaths));
+    }
+
+    private static IReadOnlyList<string> ParseMediaPaths(IReadOnlyList<string> args)
+    {
+        var paths = new List<string>();
+        for (var index = 0; index < args.Count - 1; index++)
+        {
+            if (!args[index].Equals("--media", StringComparison.OrdinalIgnoreCase)) continue;
+            var path = args[++index];
+            if (!string.IsNullOrWhiteSpace(path)) paths.Add(path);
+        }
+        return paths;
     }
 }

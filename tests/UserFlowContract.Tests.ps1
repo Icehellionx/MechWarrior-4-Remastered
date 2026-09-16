@@ -2,6 +2,8 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $launcher = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Launcher/MainForm.cs') -Raw
 $installer = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/InstallerForm.cs') -Raw
+$installerProgram = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/Program.cs') -Raw
+$setup = Get-Content -LiteralPath (Join-Path $root 'packaging/MechWarrior4Remastered.iss') -Raw
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -22,5 +24,8 @@ Assert-True ($installer -match 'DONE — OPEN LAUNCHER' -and $installer -match '
 Assert-True ($installer -notmatch 'BLACK KNIGHT ALREADY INSTALLED') 'Installer must not strand an existing install behind a disabled status-only button.'
 Assert-True ($installer -notmatch 'INSTALLATION LOCKED') 'Installer must explain the next action instead of showing an unexplained locked state.'
 Assert-True ($installer -match 'InstalledLauncherOrchestrator' -and $installer -match 'installedLauncher\.Start') 'Successful game installation must hand off to the simple launcher.'
+Assert-True ($setup -match 'Choose original game media' -and $setup -match 'GetOpenFileNameMulti') 'The package must ask for media before its installation action.'
+Assert-True ($setup -notmatch 'Black Knight ISO or ZIP \(required\)') 'The package media page must not privilege or require Black Knight.'
+Assert-True ($installerProgram -match 'ParseMediaPaths' -and $installer -match 'InspectInitialMediaAsync') 'Wizard-selected media must enter validation without a second picker.'
 
 Write-Host 'User flow contract tests passed.'

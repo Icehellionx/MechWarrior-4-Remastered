@@ -24,6 +24,7 @@ internal sealed class InstallerForm : Form
     private readonly GameInstallationCoordinator? blackKnightInstaller;
     private readonly string compatibilityStatus;
     private readonly InstalledLauncherOrchestrator installedLauncher;
+    private readonly IReadOnlyList<string> initialMediaPaths;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
     private readonly ListBox evidenceList = new();
     private readonly Label exclusionStatus = new();
@@ -47,7 +48,8 @@ internal sealed class InstallerForm : Form
         InstallDestinationPlanner destinationPlanner,
         GameInstallationCoordinator? blackKnightInstaller,
         string compatibilityStatus,
-        InstalledLauncherOrchestrator installedLauncher)
+        InstalledLauncherOrchestrator installedLauncher,
+        IReadOnlyList<string> initialMediaPaths)
     {
         this.inspector = inspector ?? throw new ArgumentNullException(nameof(inspector));
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
@@ -56,6 +58,7 @@ internal sealed class InstallerForm : Form
         this.blackKnightInstaller = blackKnightInstaller;
         this.compatibilityStatus = compatibilityStatus ?? throw new ArgumentNullException(nameof(compatibilityStatus));
         this.installedLauncher = installedLauncher ?? throw new ArgumentNullException(nameof(installedLauncher));
+        this.initialMediaPaths = initialMediaPaths ?? throw new ArgumentNullException(nameof(initialMediaPaths));
 
         Text = "MechWarrior 4 Remastered Setup";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -69,6 +72,12 @@ internal sealed class InstallerForm : Form
         Controls.Add(CreateRootLayout());
         RefreshSnapshot(selection.Current);
         if (blackKnightInstaller is null) operationStatus.Text = compatibilityStatus;
+        Shown += async (_, _) => await InspectInitialMediaAsync();
+    }
+
+    private async Task InspectInitialMediaAsync()
+    {
+        if (initialMediaPaths.Count > 0) await InspectSourcesAsync(initialMediaPaths);
     }
 
     private Control CreateRootLayout()

@@ -26,6 +26,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Add read-only destination planning with contained per-game folders, conservative space budgets, current-volume capacity, and unsafe-root rejection.
 - [x] Add cooperative cancellation for installer media inspection/revalidation with owned mount and ZIP scratch cleanup.
 - [x] Encode the original product topology: Vengeance base, Black Knight dependent expansion, independent Mercenaries, and Vengeance-dependent Mech Paks.
+- [x] Collect a neutral multi-file ISO/ZIP set in the package wizard before Install and hand it directly to intake validation without a second picker.
 - [x] Validate and assemble the exact internal Black Knight helper/loader/license/corresponding-source bundle from reproducible CI evidence.
 - [x] Prove the Black Knight media transformation internally; keep it out of the primary product flow until the Vengeance base path and dependency-aware orchestration are qualified.
 
