@@ -30,6 +30,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `MediaSelectionSet` owns atomic source acceptance, latest-source evidence per recognized layout, three-game disc completeness, optional-pack presence, and excluded-content counts. It holds evidence only; it never mounts, extracts, or installs.
 - `MediaSourceSessionFactory` provides transaction-length directory/ISO/ZIP roots and owns every mount and ZIP scratch directory until disposal. `MediaSelectionSessionFactory` reopens a complete selection, re-recognizes every expected layout, and fails closed if media changed after intake.
 - `VengeanceInstallPlanBuilder` owns the current full-install allowlist, 8.3 name restoration, and exact compatibility-executable hash gate.
+- `BlackKnightInstallPlanBuilder` owns the media-derived Black Knight payload plus an exact-hash internal compatibility bundle. It stages the untouched disc executable, required runtime files, project helper, source-built loader, and GPL notice; no replacement executable is accepted.
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.
 - `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.
@@ -37,7 +38,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `MechPakResourceOverlayPlanBuilder` owns only the exact 10-file resource allowlist for each retail pack and permits only documented Vengeance/Black Knight targets. It deliberately does not own official patch transforms, entitlement replacement, merge transactions, or Mercenaries behavior.
 - `OwnedInstallOverlayTransaction` adds non-colliding files to an already verified matching game tree, atomically replaces its ownership manifest, rolls payload back on manifest failure, preserves unowned user data, and leaves recovery state when rollback itself fails. It does not decide whether a pack is runtime-visible.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
-- `MW4Remastered.CompatLauncher` is a 32-bit, `asInvoker`, fail-closed launch helper constrained to the three adjacent MW4 executable names and the adjacent compatibility DLL. It is not yet packaged or wired into production launch orchestration.
+- `MW4Remastered.CompatLauncher` is a 32-bit, `asInvoker`, fail-closed launch helper constrained to the three adjacent MW4 executable names and the adjacent compatibility DLL. Black Knight launch selects it only when the ownership manifest verifies the helper and original game files; unowned dropped helpers are ignored.
 - `MW4Remastered.Installer` is the initial WinForms intake shell. It requests inspection through the application service, renders selection state, and can transactionally reopen/revalidate the current selection; its install action remains locked until the permanent patch/no-disc contract and install planning UX exist.
 
 ## Dependency direction

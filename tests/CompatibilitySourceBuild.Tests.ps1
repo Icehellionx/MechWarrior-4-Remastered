@@ -4,11 +4,13 @@ $lockPath = Join-Path $root 'third_party/SafeDiscLoader2.lock.json'
 $scriptPath = Join-Path $root 'tools/compatibility/build-safedisc-loader2.ps1'
 $helperScriptPath = Join-Path $root 'tools/compatibility/publish-launch-helper.ps1'
 $workflowPath = Join-Path $root '.github/workflows/compatibility-build.yml'
+$blackKnightBuilderPath = Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightInstallPlanBuilder.cs'
 
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $script = Get-Content -LiteralPath $scriptPath -Raw
 $helperScript = Get-Content -LiteralPath $helperScriptPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
+$blackKnightBuilder = Get-Content -LiteralPath $blackKnightBuilderPath -Raw
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -30,5 +32,13 @@ Assert-True ($helperScript -match "executionLevel\.level -ne 'asInvoker'") 'Laun
 Assert-True ($workflow -match [regex]::Escape($lock.commit)) 'CI workflow must check out the pinned upstream commit.'
 Assert-True ($workflow -match "dotnet-version: '10\.0\.300'") 'CI workflow must install the pinned .NET SDK used for the self-contained helper.'
 Assert-True ($workflow -notmatch 'VersionInjector') 'CI workflow must not build or package the elevated injector.'
+Assert-True ($lock.qualifiedSourceBuild.workflowRuns.Count -ge 2) 'A qualified compatibility payload requires at least two clean reproducibility runs.'
+Assert-True ($lock.qualifiedSourceBuild.reproducibility -match 'byte-identical') 'The lock must state the result of the reproducibility comparison.'
+Assert-True ($lock.qualifiedSourceBuild.sourceCommit -match '^[0-9a-f]{40}$') 'The qualifying project commit must be recorded.'
+Assert-True ($lock.qualifiedSourceBuild.versionDllSha256 -match '^[0-9a-f]{64}$') 'The qualified loader hash must be recorded.'
+Assert-True ($lock.qualifiedSourceBuild.launchHelperSha256 -match '^[0-9a-f]{64}$') 'The qualified helper hash must be recorded.'
+Assert-True ($lock.qualifiedSourceBuild.correspondingSourceArchiveSha256 -match '^[0-9a-f]{64}$') 'The corresponding GPL source archive hash must be recorded.'
+Assert-True ($blackKnightBuilder -match [regex]::Escape($lock.qualifiedSourceBuild.versionDllSha256)) 'Black Knight installation must require the qualified loader hash.'
+Assert-True ($blackKnightBuilder -match [regex]::Escape($lock.qualifiedSourceBuild.launchHelperSha256)) 'Black Knight installation must require the qualified helper hash.'
 
 Write-Host 'Compatibility source-build contract tests passed.'

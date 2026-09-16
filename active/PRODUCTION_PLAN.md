@@ -53,6 +53,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [ ] Evaluate maintained open-source wrappers/fixes with license and revision records.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process launch from the untouched ISO executable through a constrained project helper and pinned open-source loader release.
+- [x] Reproduce the Black Knight compatibility bundle across two clean Windows CI builds, exact-hash it into installation policy, and pass a fresh ISO-derived install/launch/Defender smoke.
 - [ ] Test representative Intel/AMD/NVIDIA systems and current supported Windows versions.
 
 ## 6. Release and operations
@@ -69,11 +70,11 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: require only Black Knight ISO/ISO-ZIP input and install a disc-free, non-elevating launch path.
-Owning boundary: compatibility payload, Black Knight install planning, and launch orchestration.
-Smallest verifiable slice: reproduce the pinned GPL loader DLL from source, stage the untouched media executable plus constrained helper/DLL as owned files, and launch via the helper from a fresh disposable install.
-Focused evidence: upstream revision/license, reproducible build command and hashes, original executable hash, ownership manifest, explicit `asInvoker` manifest, Defender scan, and bounded process/window result.
-Smoke/regression evidence: existing media/transaction/coordinator tests plus helper boundary test and a fresh Black Knight install/launch/uninstall smoke.
-Rollback or disable path: compatibility files are manifest-owned; uninstall removes them while preserving user data, and direct launch remains disabled if the bundle is missing or modified.
-Hardware coverage gap: menu presence is proven only on the current Windows device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.
+User-facing goal: require only Vengeance ISO/ISO-ZIP input and produce a disc-free executable from its original SafeDisc 1 loader/ICD pair.
+Owning boundary: deterministic executable transform, official patch chain, and Vengeance install planning.
+Smallest verifiable slice: implement or adopt suitably licensed source for a hash-gated ICD transform, compare it with known local evidence, and eliminate the extra replacement-executable input.
+Focused evidence: exact loader/ICD input hashes, documented transform stages, deterministic output hash, current Defender scan, and a bounded non-elevating launch.
+Smoke/regression evidence: transform unit vectors plus fresh Vengeance install/launch/repair/uninstall smoke from media alone.
+Rollback or disable path: transforms operate in staging; failed or unknown revisions never modify media or an existing install.
+Hardware coverage gap: Black Knight menu presence is proven only on the current Windows device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.
 ```

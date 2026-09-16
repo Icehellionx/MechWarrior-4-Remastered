@@ -100,6 +100,14 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added a payload-only overlay planner with exact per-pack resource allowlists and explicit Vengeance/Black Knight targeting; no legacy setup, protection, patch executable, or crack enters the plan.
 - Added a verified-install overlay transaction with collision refusal, atomic manifest replacement, rollback, save preservation, and uninstall ownership; production pack installation remains disabled pending patch/entitlement proof.
 
+## Media-only Black Knight compatibility — 2026-09-16
+
+- Rejected upstream `VersionInjector.exe` because its embedded privilege contract requires administrator elevation, then built a constrained project-owned x86 `asInvoker` helper for adjacent MW4 targets and `version.dll` only.
+- Pinned SafeDiscLoader2 v1.3 GPL source, built only its loader project, normalized non-semantic PE timestamps, packaged exact corresponding source, and proved byte-identical artifacts across two clean GitHub-hosted Windows builds.
+- Replaced Black Knight's opaque replacement-executable input with the untouched media executable plus exact-hash internal helper/DLL/license payload.
+- Installed and exactly verified a fresh 142-file Black Knight tree from media alone, launched a responsive game window with no mounted disc or UAC, and passed a current Defender scan.
+- Repeated uninstall on a disposable copy: all 143 owned entries were removed while the sole synthetic user configuration file was preserved.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

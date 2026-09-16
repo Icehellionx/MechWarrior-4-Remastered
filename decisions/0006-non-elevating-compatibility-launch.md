@@ -16,7 +16,7 @@ A project-owned 32-bit proof-of-contract helper was then built with an explicit 
 - The compatibility launch helper is constrained to the three adjacent product executable names and the adjacent `version.dll`; it does not accept arbitrary target processes or DLL paths.
 - The helper creates its child suspended, loads compatibility before original protection startup, terminates the child on any pre-resume failure, and closes every process/thread handle it owns.
 - The upstream `VersionInjector.exe` is evaluation evidence only and is excluded from product packages.
-- The compatibility DLL remains an unqualified external dependency until its pinned source, GPL obligations, reproducible build, title-specific configuration, Defender result, and disc-free smoke tests are all recorded.
+- The compatibility DLL is qualified for the recognized Black Knight revision under ADR 0007. Vengeance and Mercenaries remain outside that decision because their SafeDisc 1 loader/ICD design requires a different transform.
 - No release or support workflow may advise disabling antivirus, adding exclusions, or approving recurring UAC prompts.
 
 ## Alternatives considered
@@ -31,7 +31,7 @@ A project-owned 32-bit proof-of-contract helper was then built with an explicit 
 - Packaging must produce and retain a 32-bit helper even if the main launcher is 64-bit.
 - Launch orchestration will eventually target the helper rather than the protected game executable directly, while installation health continues to hash both original media-derived files and project compatibility files.
 - Injection-sensitive security products may still block the technique. That must be treated as a failed compatibility path with honest diagnostics, never as a request to weaken endpoint security.
-- The current helper is not wired into production installation or launch until the DLL boundary and remaining CD checks pass.
+- Black Knight installation and launch now use the helper through exact manifest ownership. Other titles remain disabled until their distinct compatibility paths pass.
 
 ## Rollback
 
@@ -43,3 +43,4 @@ Remove the helper from packaging and restore direct executable launch. Media-der
 - Embedded manifest extraction confirmed `requestedExecutionLevel level="asInvoker"`.
 - A bounded Vengeance smoke test returned helper exit code `0`, produced a responsive game process, and reached the expected CD-check dialog without an elevation request.
 - `tests/CompatLauncherBoundary.Tests.ps1` locks the architecture, privilege level, target/DLL constraints, least-access source rule, and failed-child cleanup contract.
+- A fresh media-only Black Knight install launched to a responsive game window through the manifest-owned helper without mounted media or UAC; ADR 0007 records the reproducible payload evidence.

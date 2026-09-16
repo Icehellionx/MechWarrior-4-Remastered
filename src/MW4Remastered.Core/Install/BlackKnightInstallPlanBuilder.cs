@@ -4,8 +4,8 @@ namespace MW4Remastered.Core.Install;
 
 public sealed class BlackKnightInstallPlanBuilder
 {
-    public const string QualifiedLoaderSha256 = "18f13072cf42fbacb5b228864bdb4a67fb1dff8c7ca7362054525816f8a4565a";
-    public const string QualifiedLaunchHelperSha256 = "2f15bf4b8f8ae5d20d74a6e7fa9dbee98cc52793e16a9f8e98e8333f20d7c25f";
+    public const string QualifiedLoaderSha256 = "f26710840b1b6b0537c05b3e97c63171708c129b76a77ec3191d5652ee024959";
+    public const string QualifiedLaunchHelperSha256 = "b80b440bf349438527e28547bf40276defc309c64b972400acf625a974eaab8d";
     public const string QualifiedLoaderLicenseSha256 = "81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8";
 
     private static readonly IReadOnlyDictionary<string, string> RootFiles =

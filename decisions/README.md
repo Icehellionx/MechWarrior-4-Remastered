@@ -8,3 +8,4 @@ Use one numbered Markdown file per durable decision. Include status, date, conte
 - [0004 — Owned read-only ISO sessions](0004-owned-read-only-iso-sessions.md)
 - [0005 — ISO-only ZIP extraction](0005-iso-only-zip-extraction.md)
 - [0006 — Non-elevating compatibility launch boundary](0006-non-elevating-compatibility-launch.md)
+- [0007 — Media-derived Black Knight compatibility bundle](0007-media-derived-black-knight-compatibility.md)
