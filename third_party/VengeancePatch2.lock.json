@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "product": "MechWarrior 4: Vengeance official Patch 2.0 (English)",
+  "classification": "local compatibility evidence; redistribution not authorized",
+  "sourceArchive": {
+    "name": "MechWarrior-4-Vengeance_Patch_Win_EN.zip",
+    "size": 13666173,
+    "sha256": "4c5b8250cdfc1b2208f14becde34ddcd4e8fc8a5e98ed4d147beb794f6313775"
+  },
+  "components": [
+    {
+      "path": "MW4 Update 2.0/English/MW4.RTP",
+      "size": 13526018,
+      "sha256": "924b143257907d630dcecf7a80accc2e4b4c2697eb8636cf42d5e79ff3431652"
+    },
+    {
+      "path": "MW4 Update 2.0/PatchApply.exe",
+      "size": 237568,
+      "sha256": "251b69b2ac571e9cc614189a1fc5efba62734e783cf1f2a8da11b26577c89243"
+    },
+    {
+      "path": "MW4 Update 2.0/Patchw.dll",
+      "size": 112464,
+      "sha256": "08c3e9684cb5f0eb533b5dd96d4b07a6235381b77b1d47ed0b7f2cd4bc879245"
+    },
+    {
+      "path": "MW4 Update 2.0/Patchw32.dll",
+      "size": 182272,
+      "sha256": "c4d41dffcd670d994762f9400ebfd91f29088b7d5626f1a708f221f338da99ac"
+    }
+  ],
+  "qualifiedExperiment": {
+    "date": "2026-09-16",
+    "method": "Called RTPatchApply32@12 from Patchw32.dll through a disposable x86 asInvoker wrapper against a clean media-derived Vengeance tree.",
+    "result": "RTPatch returned 0 and changed exactly 13 payload paths. This records an oracle for a future licensed parser; it does not approve shipping the legacy patch engine.",
+    "changedOutputs": [
+      { "path": "autoconfig.exe", "size": 438272, "sha256": "a0ea8513de7cf599fbf90d1406b6c41662164d02dbf08e6c8bae27dc60f20918" },
+      { "path": "CONTENT/GameTypes.h", "size": 990, "sha256": "56675ef8d39fe6ba151dc5c9d615664f990f1351429f537bff6a884467969b01" },
+      { "path": "MissionLang.dll", "size": 192512, "sha256": "cf0ddc69784f85f84c9f0666ed75c1df4f8e444c04d7f33e6e4058d4cf70e4c8" },
+      { "path": "MW4 Dedicated Server.bat", "size": 25, "sha256": "ff81e867d3fb7dc9fec4b65213a8ae3ba9800f5d0c2265ba508e5bef7f21aaa0" },
+      { "path": "MW4.exe", "size": 344863, "sha256": "c2bdbabd717c9e1b5f200f93254c0c4e05eba476260bd6b6e985b2af67b5dc45" },
+      { "path": "MW4.ICD", "size": 3616885, "sha256": "888ba214eb001ff8650364256b4f26a2ee698a94b3b35b45ae86de63ef9c4680" },
+      { "path": "NFOEditor.exe", "size": 454656, "sha256": "150159a7ebf00af28d2b1c0de1cc5d50eaa52f86a72494587fcda2693130f0bb" },
+      { "path": "RESOURCE/core.mw4", "size": 1016630, "sha256": "7da856b471dc6851b9f13d22b761fc31a09688d0a92ffd48ec508648b2c42b5a" },
+      { "path": "RESOURCE/MISSIONS/att.txt", "size": 611, "sha256": "ce04f0c9fe3799f12190d7134815a6b08cef5961984d8ec81e26e2f60f3af3fa" },
+      { "path": "RESOURCE/MISSIONS/koth.txt", "size": 483, "sha256": "e6c8dc7be11471b663c3c050b3e8d8ae126325f1b66c4d99b1ba8e24d8e48d75" },
+      { "path": "RESOURCE/props.mw4", "size": 122022441, "sha256": "51626e020a76800c1202fbad2bacaed3749b03ec7d280c9be1cbf6ba2d88bd32" },
+      { "path": "RESOURCE/textures.mw4", "size": 134061280, "sha256": "540f7c1b8100c694f45f1439affeae37ac2c278a820187250bd7d07abc3374e1" },
+      { "path": "ScriptStrings.dll", "size": 135168, "sha256": "2ea68bad4f54bbd91ed032176a3289707d2cc95bd92d269d517c2cab4e535e0f" }
+    ]
+  }
+}
