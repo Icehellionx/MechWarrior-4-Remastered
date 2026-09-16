@@ -60,7 +60,7 @@ public sealed class InstallStatusReader
             return new ProductStatus(product, ProductInstallState.Missing, null, manualPath, "Game files not found");
         }
 
-        var verification = verifier.Verify(productRoot);
+        var verification = verifier.Verify(productRoot, InstallVerificationScope.OwnedFiles);
         if (!verification.IsValid || !string.Equals(verification.Manifest?.ProductId, product.Id, StringComparison.OrdinalIgnoreCase))
         {
             var detail = verification.Issues.FirstOrDefault() ?? "Ownership manifest identifies a different product";

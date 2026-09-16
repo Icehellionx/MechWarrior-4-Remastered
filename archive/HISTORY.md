@@ -53,6 +53,11 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Replaced the initial generated concept at the user's direction with the supplied original Vengeance icon treatment.
 - Isolated the installed MW3 launcher's exact 6×7 silver/gray `R` glyph, composited it onto the MW4 artwork's native 32×32 grid without changing the remaining source cells, packaged a nearest-neighbor 256×256 Windows icon, and embedded it into the launcher build.
 
+## Manifest health scopes — 2026-09-15
+
+- Split manifest verification into exact-tree and owned-file scopes so staging/release gates remain strict while user-created saves/configuration do not incorrectly force launcher repair state.
+- Added regression coverage proving unowned user data is permitted for launch health but reported by exact-tree verification; owned-file tampering remains a failure.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

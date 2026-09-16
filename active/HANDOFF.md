@@ -24,6 +24,7 @@ Updated: 2026-09-15.
 - Mercenaries now uses a containment-first cabinet extractor plus the shared transaction. The extractor preflights all archive paths, accepts only `GAME/` payload entries, verifies the exact extracted inventory, and atomically commits the payload root. The install plan combines 85 cabinet files with allowlisted Disc 1 runtime files and Disc 2 content, restores installer-era names, and exact-hash gates the local version-`50.07.01.2105` executable. A real 209-file, 1,206,212,339-byte payload tree plus manifest exists under ignored `staging/mercenaries-baseline`; verification passes and it has not been launched.
 - Static pack evidence now shows a 32-bit setup/DRM stack that explicitly invokes `CDILLA16.EXE`; this supports a 16-bit-helper incompatibility on 64-bit Windows rather than “16-bit encrypted assets.”
 - The uninstaller core removes only manifest-owned files, preserves unowned saves/configuration, blocks before mutation on modified owned files, and rolls back move-phase failures. ADR 0003 records the policy.
+- Manifest verification has explicit scopes: exact-tree verification rejects all unexpected files for staging/release gates, while owned-file verification powers launcher health so user-created saves/configuration do not disable a valid install. Both scopes still reject missing or modified owned game files.
 
 ## Best resume path
 

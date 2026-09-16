@@ -99,6 +99,12 @@ try
     new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
 
+    WriteFixture(destination, "Saves/pilot.sav", "user-owned save");
+    Check(new InstallManifestVerifier().Verify(destination, InstallVerificationScope.OwnedFiles).IsValid, "owned-file verification permits unowned user data");
+    Check(!new InstallManifestVerifier().Verify(destination, InstallVerificationScope.ExactTree).IsValid, "exact-tree verification still reports unowned files for staging and release gates");
+    var statusWithSave = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().Single(item => item.Product.Id == "vengeance");
+    Check(statusWithSave.State == ProductInstallState.Ready, "user-owned save data does not disable a verified game");
+
     File.AppendAllText(Path.Combine(destination, "MW4.EXE"), "tampered");
     var tampered = new InstallManifestVerifier().Verify(destination);
     Check(!tampered.IsValid && tampered.Issues.Any(issue => issue.Contains("mismatch", StringComparison.OrdinalIgnoreCase)), "manifest verifier detects file tampering");

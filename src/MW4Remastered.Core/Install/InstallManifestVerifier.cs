@@ -9,6 +9,12 @@ public sealed record InstallVerificationResult(
     InstallManifest? Manifest,
     IReadOnlyList<string> Issues);
 
+public enum InstallVerificationScope
+{
+    ExactTree,
+    OwnedFiles,
+}
+
 public sealed class InstallManifestVerifier
 {
     private static readonly JsonSerializerOptions ManifestJson = new()
@@ -28,7 +34,7 @@ public sealed class InstallManifestVerifier
         this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
     }
 
-    public InstallVerificationResult Verify(string installRoot)
+    public InstallVerificationResult Verify(string installRoot, InstallVerificationScope scope = InstallVerificationScope.ExactTree)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(installRoot);
         var root = Path.GetFullPath(installRoot);
@@ -92,7 +98,10 @@ public sealed class InstallManifestVerifier
             .Where(path => !string.Equals(path, InstallManifest.RelativePath, StringComparison.OrdinalIgnoreCase))
             .ToHashSet(StringComparer.OrdinalIgnoreCase);
         foreach (var path in declared.Keys.Except(actual, StringComparer.OrdinalIgnoreCase)) issues.Add($"Missing installed file: {path}");
-        foreach (var path in actual.Except(declared.Keys, StringComparer.OrdinalIgnoreCase)) issues.Add($"Unexpected installed file: {path}");
+        if (scope == InstallVerificationScope.ExactTree)
+        {
+            foreach (var path in actual.Except(declared.Keys, StringComparer.OrdinalIgnoreCase)) issues.Add($"Unexpected installed file: {path}");
+        }
 
         foreach (var (path, expected) in declared)
         {
