@@ -2,6 +2,7 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $inno = Get-Content -LiteralPath (Join-Path $root 'packaging/MechWarrior4Remastered.iss') -Raw
 $build = Get-Content -LiteralPath (Join-Path $root 'tools/package/build-release.ps1') -Raw
+$innoWithoutExactLogDirectoryCleanup = $inno -replace '(?im)^\s*Type:\s*dirifempty;\s*Name:\s*"\{app\}\\Logs"\s*$', ''
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -12,12 +13,14 @@ Assert-True ($inno -match 'PrivilegesRequired=lowest') 'Package setup must remai
 Assert-True ($inno -match 'DefaultDirName=\{localappdata\}\\Programs\\MechWarrior 4 Remastered') 'Package root must remain in the current user profile.'
 Assert-True ($inno -match 'Uninstallable=yes') 'Package must retain the standard Inno uninstaller.'
 Assert-True ($inno -match 'Filename:\s*"\{uninstallexe\}"') 'Package must expose its standard uninstaller in the Start Menu.'
-Assert-True ($inno -notmatch '(?im)^\s*Type:\s*(filesandordirs|dirifempty)' -and $inno -notmatch '(?im)^\s*Type:\s*files;.*[*?]') 'Package cleanup must not broadly delete media-derived game or user directories.'
+Assert-True ($innoWithoutExactLogDirectoryCleanup -notmatch '(?im)^\s*Type:\s*(filesandordirs|dirifempty)' -and $inno -notmatch '(?im)^\s*Type:\s*files;.*[*?]') 'Package cleanup must not broadly delete media-derived game or user directories.'
 Assert-True (($inno | Select-String -Pattern 'Type:\s*files;\s*Name:\s*"\{group\}\\Install games from original media\.lnk"' -AllMatches).Matches.Count -eq 2) 'Install and uninstall must remove the one obsolete second-installer shortcut by exact path.'
 Assert-True ($inno -match 'Installing and verifying selected MechWarrior 4 games' -and $inno -match 'ewWaitUntilTerminated') 'Interactive setup must run original-media installation as a synchronous setup stage.'
 Assert-True ($inno -notmatch '(?im)^Filename:.*MW4RemasteredInstallWorker\.exe') 'The internal worker must never be exposed as a second Run-section installer.'
 Assert-True ($inno -match 'GetOpenFileNameMulti' -and $inno -match 'CreateCustomPage\(wpWelcome') 'Setup must collect any supported media through a neutral multi-file page before installation.'
 Assert-True ($inno -match '\{param:MEDIAFILES\|\}' -and $inno -match 'AddCommandLineMedia') 'The same media-first flow must support a bounded unattended package smoke without adding a second UI.'
+Assert-True ($inno -match '\{app\}\\Logs\\InstallWorker\.log' -and $inno -notmatch '\{tmp\}\\MW4RemasteredInstallWorker\.log') 'Worker failures must retain their diagnostic log outside Inno temporary cleanup.'
+Assert-True ($inno -match 'Type:\s*files;\s*Name:\s*"\{app\}\\Logs\\InstallWorker\.log"' -and $inno -match 'Type:\s*dirifempty;\s*Name:\s*"\{app\}\\Logs"') 'The standard uninstaller must remove only the exact project-owned worker log and its empty directory.'
 Assert-True ($inno -match 'GetMediaParameters' -and $inno -match '--install-worker' -and $inno -match '--media') 'Setup must forward every selected media path to its contained worker.'
 Assert-True (($inno | Select-String -Pattern 'Source:' -AllMatches).Matches.Count -eq ($inno | Select-String -Pattern 'notimestamp' -AllMatches).Matches.Count) 'Every packaged source must omit source timestamps for reproducibility.'
 Assert-True ($build -match '--self-contained true' -and $build -match 'PublishSingleFile=true') 'Installer and launcher publishes must remain self-contained single files.'

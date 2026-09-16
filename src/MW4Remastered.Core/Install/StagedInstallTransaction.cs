@@ -1,5 +1,6 @@
 using System.Security.Cryptography;
 using System.Text.Json;
+using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Core.Install;
 
@@ -18,10 +19,11 @@ public sealed class StagedInstallTransaction
         cancellationToken.ThrowIfCancellationRequested();
 
         var destination = Path.GetFullPath(destinationPath);
-        if (Directory.Exists(destination) || File.Exists(destination))
+        if (File.Exists(destination))
         {
-            throw new IOException($"Install destination already exists: {destination}");
+            throw new IOException($"Install destination is an existing file: {destination}");
         }
+        var preserveExisting = Directory.Exists(destination);
 
         var parent = Directory.GetParent(destination)
             ?? throw new InvalidDataException($"Install destination has no parent: {destination}");
@@ -29,6 +31,7 @@ public sealed class StagedInstallTransaction
         RejectDirectoryChain(parent.FullName, "destination parent");
 
         var staging = Path.Combine(parent.FullName, $".{Path.GetFileName(destination)}.staging-{Guid.NewGuid():N}");
+        string? backup = null;
         var committed = false;
         try
         {
@@ -72,13 +75,69 @@ public sealed class StagedInstallTransaction
             File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, ManifestJson) + Environment.NewLine);
 
             cancellationToken.ThrowIfCancellationRequested();
-            Directory.Move(staging, destination);
+            if (preserveExisting)
+            {
+                PreserveExistingFiles(destination, staging, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+                backup = Path.Combine(parent.FullName, $".{Path.GetFileName(destination)}.previous-{Guid.NewGuid():N}");
+                Directory.Move(destination, backup);
+                try
+                {
+                    Directory.Move(staging, destination);
+                }
+                catch
+                {
+                    Directory.Move(backup, destination);
+                    backup = null;
+                    throw;
+                }
+            }
+            else
+            {
+                Directory.Move(staging, destination);
+            }
             committed = true;
+            if (backup is not null)
+            {
+                try { Directory.Delete(backup, recursive: true); }
+                catch (Exception error) when (error is IOException or UnauthorizedAccessException)
+                {
+                    // The committed tree already contains verified copies of every
+                    // preserved file. A stale sibling backup is safer than turning a
+                    // successful atomic swap into a destructive rollback.
+                }
+            }
             return manifest;
         }
         finally
         {
             if (!committed && Directory.Exists(staging)) Directory.Delete(staging, recursive: true);
+        }
+    }
+
+    private static void PreserveExistingFiles(string existingRoot, string stagingRoot, CancellationToken cancellationToken)
+    {
+        var paths = new DirectoryMediaInventory().Read(existingRoot);
+        foreach (var relativePath in paths)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (string.Equals(relativePath, InstallManifest.RelativePath, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new IOException("An existing ownership manifest requires uninstall or repair before reinstalling this game.");
+            }
+
+            var source = ResolveContainedPath(existingRoot, relativePath);
+            RejectContainedFilePath(existingRoot, source);
+            var destination = ResolveContainedPath(stagingRoot, relativePath);
+            if (File.Exists(destination) || Directory.Exists(destination))
+            {
+                throw new IOException($"Preserved user file collides with the fresh game payload: {relativePath}");
+            }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+            CopyFile(source, destination, cancellationToken);
+            File.SetAttributes(destination, File.GetAttributes(source));
+            File.SetLastWriteTimeUtc(destination, File.GetLastWriteTimeUtc(source));
         }
     }
 

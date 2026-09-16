@@ -80,6 +80,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 - [x] Build a byte-reproducible per-user setup from declared application and exact Black Knight compatibility inputs.
 - [ ] Smoke every available game/pack/media combination.
 - [x] Preserve saves/configuration through both ownership-safe game removal and standard shell-package uninstall smoke paths.
+- [x] Permit reinstall over manifestless residue preserved by safe uninstall without deleting user data; reject owned-path collisions without mutation and retain setup failure logs after the wizard closes.
 - [x] Emit and verify the setup checksum while enforcing payload and release-tree allowlists.
 - [x] Scan the current setup and qualified Vengeance, Black Knight, and Mercenaries trees with current Defender intelligence.
 - [ ] Document signing, SmartScreen, rollback, support bundles, and coverage gaps.

@@ -341,6 +341,43 @@ try
     }
     Check(transactionCancellationObserved && !Directory.Exists(cancelledDestination), "cancelled transaction leaves no destination");
 
+    var reinstallDestination = Path.Combine(transactionRoot, "installed", "reinstall-with-user-data");
+    WriteFixture(reinstallDestination, "Mechwarrior4.txt", "preserved runtime log");
+    WriteFixture(reinstallDestination, "options.ini", "preserved configuration");
+    WriteFixture(reinstallDestination, "Saves/pilot.sav", "preserved pilot");
+    new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+    {
+        new InstallFile(disc1, "MW4.EXE", "MW4.EXE"),
+    }), reinstallDestination);
+    Check(File.Exists(Path.Combine(reinstallDestination, "MW4.EXE")),
+        "reinstall commits fresh owned payload into a directory containing preserved user data");
+    Check(File.ReadAllText(Path.Combine(reinstallDestination, "Mechwarrior4.txt")) == "preserved runtime log" &&
+          File.ReadAllText(Path.Combine(reinstallDestination, "options.ini")) == "preserved configuration" &&
+          File.ReadAllText(Path.Combine(reinstallDestination, "Saves", "pilot.sav")) == "preserved pilot",
+        "reinstall preserves existing logs, configuration, and saves byte-for-byte");
+    Check(new InstallManifestVerifier().Verify(reinstallDestination, InstallVerificationScope.OwnedFiles).IsValid,
+        "reinstalled owned payload verifies with preserved user data present");
+
+    var collisionDestination = Path.Combine(transactionRoot, "installed", "reinstall-collision");
+    WriteFixture(collisionDestination, "MW4.EXE", "user collision");
+    var collisionPreserved = false;
+    try
+    {
+        new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+        {
+            new InstallFile(disc1, "MW4.EXE", "MW4.EXE"),
+        }), collisionDestination);
+    }
+    catch (IOException error)
+    {
+        collisionPreserved = error.Message.Contains("collides", StringComparison.OrdinalIgnoreCase);
+    }
+    Check(collisionPreserved && File.ReadAllText(Path.Combine(collisionDestination, "MW4.EXE")) == "user collision",
+        "reinstall refuses owned-path collisions without modifying existing content");
+    Check(!Directory.EnumerateDirectories(Path.Combine(transactionRoot, "installed"), ".reinstall-collision.staging-*").Any() &&
+          !Directory.EnumerateDirectories(Path.Combine(transactionRoot, "installed"), ".reinstall-collision.previous-*").Any(),
+        "reinstall collision leaves no staging or previous-tree residue");
+
     var traversalRejected = false;
     try
     {

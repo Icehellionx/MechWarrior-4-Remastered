@@ -40,7 +40,7 @@ internal sealed class InstallWorker
     public int Run(InstallWorkerArguments args)
     {
         ArgumentNullException.ThrowIfNull(args);
-        TryAppendLog(args.LogPath, "Starting contained game installation.");
+        TryStartLog(args.LogPath, "Starting contained game installation.");
         var sourceSessions = new MediaSourceSessionFactory();
         var inspection = new MediaInspectionService();
         var inspector = new MediaSourceInspector(inspection, sourceSessions);
@@ -112,9 +112,18 @@ internal sealed class InstallWorker
         var vengeanceSelected = selection.Capabilities.Any(item => item.ProductId == "vengeance" && item.IsComplete);
         if (packSelected && !vengeanceSelected)
             throw new InvalidDataException("Mech Pak installation requires both Vengeance discs in the same setup run.");
-        var conflict = plan.Products.FirstOrDefault(item => !alreadyReady.Contains(item.ProductId) &&
-            (Directory.Exists(item.DestinationPath) || File.Exists(item.DestinationPath)));
-        if (conflict is not null) throw new IOException($"The game destination already exists and is not a verified installation: {conflict.DestinationPath}");
+        var conflict = plan.Products.FirstOrDefault(item => !alreadyReady.Contains(item.ProductId) && File.Exists(item.DestinationPath));
+        if (conflict is not null) throw new IOException($"The game destination is an existing file: {conflict.DestinationPath}");
+    }
+
+    private static void TryStartLog(string path, string message)
+    {
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(path))!);
+            File.WriteAllText(path, $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
     }
 
     private static GameInstallRequest CreateInstallRequest(string productId, IMediaSelectionSession media) => productId switch

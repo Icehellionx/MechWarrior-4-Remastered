@@ -49,6 +49,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
 - Cancellation is cooperative at bounded copy/mount/inspection boundaries and must release owned mounts and scratch before completion is reported.
 - Install commits atomically where practical and removes partial state after failure.
+- Reinstall after ownership-safe uninstall must preserve non-colliding logs, settings, saves, screenshots, and mods byte-for-byte while atomically committing a fresh owned payload. A preserved path that collides with an owned payload path must fail before mutation.
 - Install cancellation is accepted through bounded staging operations and immediately before commit; after atomic commit, exact-tree verification is non-cancellable and must finish.
 - Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
 - A Vengeance installation with one or both Mech Paks must exactly verify the combined ownership manifest, derive both launcher indicators from exact file evidence, launch without mounted media/elevation, and uninstall all owned pack files while preserving an unowned save.
@@ -63,6 +64,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Vengeance and Mercenaries package smokes must exercise the real launch orchestrator, verify the narrow per-user compatibility registration, and prove that uninstall removes only the matching project-owned records.
 - Unified uninstall must close the launcher and invoke the standard shell uninstaller in visible-progress silent mode after owned-game removal; field acceptance must confirm the launcher, manuals, shortcuts, and registration disappear after the asynchronous handoff.
 - Setup must remain the only visible installation UI. Contract tests reject `Application.Run`/`InstallerForm`, require a hidden synchronous worker invocation, and an unattended package smoke supplies media through the same Inno page state before verifying the installed shell and game manifest.
+- Setup errors must retain the worker log outside Inno's self-deleting temporary directory and display that durable path.
 - Diagnostics redact serials, credentials, private paths, and media content.
 - Release tests block ISOs, BIN/CUE/MDF/MDS, serial files, raw cracks, `.env`, dumps, and unintended executables.
 - Defender qualification scans every assembled package, extracted package tree, and representative installed tree with the current engine/intelligence. A clean exit alone is insufficient because exit `0` can also mean successful remediation; the scan gate also rejects new matching detection/remediation events.

@@ -61,6 +61,9 @@ Type: files; Name: "{group}\Install games from original media.lnk"
 ; Exact upgrade cleanup only. Media-derived game trees, saves, and configuration are
 ; managed by the launcher's ownership-safe per-game action.
 Type: files; Name: "{group}\Install games from original media.lnk"
+; The contained worker creates this exact project-owned diagnostic file at runtime.
+Type: files; Name: "{app}\Logs\InstallWorker.log"
+Type: dirifempty; Name: "{app}\Logs"
 
 [Code]
 var
@@ -181,7 +184,7 @@ var
   Index: Integer;
 begin
   Result := '--install-worker --destination "' + ExpandConstant('{app}') +
-    '" --log "' + ExpandConstant('{tmp}\MW4RemasteredInstallWorker.log') + '"';
+    '" --log "' + ExpandConstant('{app}\Logs\InstallWorker.log') + '"';
   for Index := 0 to MediaFiles.Count - 1 do
     Result := Result + ' --media "' + MediaFiles[Index] + '"';
 end;
@@ -194,11 +197,11 @@ begin
   if CurStep <> ssPostInstall then
     exit;
 
-  WorkerLog := ExpandConstant('{tmp}\MW4RemasteredInstallWorker.log');
+  WorkerLog := ExpandConstant('{app}\Logs\InstallWorker.log');
   WizardForm.StatusLabel.Caption := 'Installing and verifying selected MechWarrior 4 games...';
   if not Exec(ExpandConstant('{app}\MW4RemasteredInstallWorker.exe'), GetMediaParameters(''),
     ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     RaiseException('Setup could not start its contained game-installation worker.');
   if ResultCode <> 0 then
-    RaiseException('Selected game installation failed safely. Details are available during this setup run at: ' + WorkerLog);
+    RaiseException('Selected game installation failed safely. The retained diagnostic log is available at: ' + WorkerLog);
 end;
