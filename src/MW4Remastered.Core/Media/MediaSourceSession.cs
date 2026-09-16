@@ -25,8 +25,9 @@ public sealed class MediaSourceSessionFactory
         this.archives = archives ?? throw new ArgumentNullException(nameof(archives));
     }
 
-    public IMediaSourceSession Open(string sourcePath)
+    public IMediaSourceSession Open(string sourcePath, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
         var source = Path.GetFullPath(sourcePath);
         if (Directory.Exists(source))
@@ -42,7 +43,7 @@ public sealed class MediaSourceSessionFactory
 
         if (string.Equals(Path.GetExtension(source), ".iso", StringComparison.OrdinalIgnoreCase))
         {
-            var session = isoSessions.Open(source);
+            var session = isoSessions.Open(source, cancellationToken);
             return new MediaSourceSession(
                 MediaSourceKind.Iso,
                 new[] { new OpenMediaItem(null, session.RootPath) },
@@ -52,25 +53,27 @@ public sealed class MediaSourceSessionFactory
         }
         if (string.Equals(Path.GetExtension(source), ".zip", StringComparison.OrdinalIgnoreCase))
         {
-            return OpenArchive(source);
+            return OpenArchive(source, cancellationToken);
         }
         throw new InvalidDataException("Media source must be a directory, ISO, or ZIP containing ISO files.");
     }
 
-    private IMediaSourceSession OpenArchive(string archivePath)
+    private IMediaSourceSession OpenArchive(string archivePath, CancellationToken cancellationToken)
     {
         var scratch = Path.Combine(Path.GetTempPath(), "mw4-media-session-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(scratch);
         var owned = new List<IDisposable>();
         try
         {
-            var extraction = archives.Extract(archivePath, Path.Combine(scratch, "media"));
+            var extraction = archives.Extract(archivePath, Path.Combine(scratch, "media"), cancellationToken);
             var items = new List<OpenMediaItem>(extraction.IsoRelativePaths.Count);
             foreach (var relativePath in extraction.IsoRelativePaths)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var image = Path.Combine(extraction.DestinationRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
-                var session = isoSessions.Open(image);
+                var session = isoSessions.Open(image, cancellationToken);
                 owned.Add(session);
+                cancellationToken.ThrowIfCancellationRequested();
                 items.Add(new OpenMediaItem(relativePath, session.RootPath));
             }
             return new MediaSourceSession(MediaSourceKind.Zip, items, extraction.ExcludedEntries, owned, scratch);

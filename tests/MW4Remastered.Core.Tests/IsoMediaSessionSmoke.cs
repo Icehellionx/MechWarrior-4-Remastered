@@ -56,6 +56,20 @@ internal static class IsoMediaSessionSmoke
                 extensionRejected = true;
             }
             Check(extensionRejected, "ISO session rejects non-ISO paths before backend access", failures);
+
+            using var cancellation = new CancellationTokenSource();
+            var cancellingBackend = new CancellingDiskImageBackend(mountedRoot, cancellation);
+            var cancellationObserved = false;
+            try
+            {
+                new OwnedIsoMediaSessionFactory(cancellingBackend).Open(image, cancellation.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                cancellationObserved = true;
+            }
+            Check(cancellationObserved && cancellingBackend.DismountCount == 1,
+                "ISO session dismounts an image when cancellation arrives during mount", failures);
         }
         finally
         {
@@ -88,5 +102,19 @@ internal static class IsoMediaSessionSmoke
             DismountCount++;
             Attached = false;
         }
+    }
+
+    private sealed class CancellingDiskImageBackend(string rootPath, CancellationTokenSource cancellation) : IDiskImageBackend
+    {
+        public int DismountCount { get; private set; }
+        public bool IsAttached(string imagePath) => false;
+
+        public string Mount(string imagePath)
+        {
+            cancellation.Cancel();
+            return rootPath;
+        }
+
+        public void Dismount(string imagePath) => DismountCount++;
     }
 }

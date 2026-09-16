@@ -40,6 +40,20 @@ internal static class IsoArchiveExtractorSmoke
                 rejected = true;
             }
             Check(rejected && !Directory.Exists(Path.Combine(root, "unsafe-output")), "ISO archive extractor rejects traversal before extraction", failures);
+
+            using var cancelledSource = new CancellationTokenSource();
+            cancelledSource.Cancel();
+            var cancelledDestination = Path.Combine(root, "cancelled-output");
+            var cancelled = false;
+            try
+            {
+                new IsoArchiveExtractor().Extract(archive, cancelledDestination, cancelledSource.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                cancelled = true;
+            }
+            Check(cancelled && !Directory.Exists(cancelledDestination), "ISO archive extractor honors cancellation before mutation", failures);
         }
         finally
         {

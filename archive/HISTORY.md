@@ -127,6 +127,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added storage-capacity injection and focused tests for complete/incomplete selection, sufficient/insufficient space, containment, and rejection of relative or filesystem-root destinations.
 - Added installer destination selection and live required/available capacity status while keeping file installation locked behind the remaining compatibility gates.
 
+## Cancellable media intake — 2026-09-16
+
+- Added a visible Cancel action for installer inspection and revalidation, with cancellation propagated through source sessions, ISO mounting, selection reopen, and chunked ZIP extraction.
+- Preserved cleanup ownership on cancellation: a just-mounted image is dismounted, partial ZIP staging is removed, and the UI reports completion only after cleanup unwinds.
+- Added focused regressions for cancellation before archive mutation and cancellation arriving during ISO mount.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

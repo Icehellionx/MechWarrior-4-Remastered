@@ -24,6 +24,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Add a read-only installer intake shell with atomic multi-source readiness for all games and packs; keep mutation locked pending patch and source-lifetime qualification.
 - [x] Reopen and re-recognize selected directory/ISO/ZIP sources under one disposable transaction lifetime with success and failure cleanup.
 - [x] Add read-only destination planning with contained per-game folders, conservative space budgets, current-volume capacity, and unsafe-root rejection.
+- [x] Add cooperative cancellation for installer media inspection/revalidation with owned mount and ZIP scratch cleanup.
 
 ## 3. Launcher and user experience
 

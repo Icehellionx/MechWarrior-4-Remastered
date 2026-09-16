@@ -27,11 +27,13 @@ internal sealed class InstallerForm : Form
     private readonly ProgressBar progress = new();
     private readonly Button addFilesButton = new();
     private readonly Button addFolderButton = new();
+    private readonly Button cancelButton = new();
     private readonly Button revalidateButton = new();
     private readonly Button installButton = new();
     private readonly TextBox destinationText = new();
     private readonly Label destinationStatus = new();
     private readonly Button destinationButton = new();
+    private CancellationTokenSource? operationCancellation;
 
     public InstallerForm(
         MediaSourceInspector inspector,
@@ -87,7 +89,7 @@ internal sealed class InstallerForm : Form
         {
             AutoSize = true,
             Dock = DockStyle.Top,
-            ColumnCount = 3,
+            ColumnCount = 4,
             Margin = new Padding(0, 0, 0, 12),
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -185,12 +187,16 @@ internal sealed class InstallerForm : Form
         };
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        panel.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 
         ConfigureSourceButton(addFilesButton, "ADD ISO / ZIP");
         ConfigureSourceButton(addFolderButton, "ADD MOUNTED FOLDER");
         addFilesButton.Click += async (_, _) => await SelectFilesAsync();
         addFolderButton.Click += async (_, _) => await SelectFolderAsync();
+        ConfigureSourceButton(cancelButton, "CANCEL");
+        cancelButton.Enabled = false;
+        cancelButton.Click += (_, _) => CancelOperation();
 
         operationStatus.AutoSize = true;
         operationStatus.Anchor = AnchorStyles.Left;
@@ -199,7 +205,8 @@ internal sealed class InstallerForm : Form
         operationStatus.Text = "Waiting for original media.";
         panel.Controls.Add(addFilesButton, 0, 0);
         panel.Controls.Add(addFolderButton, 1, 0);
-        panel.Controls.Add(operationStatus, 2, 0);
+        panel.Controls.Add(cancelButton, 2, 0);
+        panel.Controls.Add(operationStatus, 3, 0);
         return panel;
     }
 
@@ -308,16 +315,28 @@ internal sealed class InstallerForm : Form
     private async Task InspectSourcesAsync(IReadOnlyList<string> paths)
     {
         SetBusy(true);
+        var cancellationToken = operationCancellation!.Token;
         var errors = new List<string>();
+        var cancelled = false;
         try
         {
             foreach (var path in paths)
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    cancelled = true;
+                    break;
+                }
                 operationStatus.Text = $"Inspecting {Path.GetFileName(path)}…";
                 try
                 {
-                    var inspection = await Task.Run(() => inspector.Inspect(path));
+                    var inspection = await Task.Run(() => inspector.Inspect(path, cancellationToken), cancellationToken);
                     RefreshSnapshot(selection.Add(path, inspection));
+                }
+                catch (OperationCanceledException)
+                {
+                    cancelled = true;
+                    break;
                 }
                 catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception or TimeoutException)
                 {
@@ -330,7 +349,8 @@ internal sealed class InstallerForm : Form
             SetBusy(false);
         }
 
-        operationStatus.Text = errors.Count == 0 ? "Media inspection complete." : $"Completed with {errors.Count} rejected source(s).";
+        operationStatus.Text = cancelled ? "Media inspection cancelled; owned temporary resources were released."
+            : errors.Count == 0 ? "Media inspection complete." : $"Completed with {errors.Count} rejected source(s).";
         if (errors.Count > 0)
         {
             MessageBox.Show(this, string.Join(Environment.NewLine + Environment.NewLine, errors), "Media not accepted", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -340,15 +360,20 @@ internal sealed class InstallerForm : Form
     private async Task RevalidateSelectionAsync()
     {
         SetBusy(true);
+        var cancellationToken = operationCancellation!.Token;
         operationStatus.Text = "Reopening and revalidating selected media…";
         try
         {
             var count = await Task.Run(() =>
             {
-                using var openSelection = selectionSessions.Open(selection.Current);
+                using var openSelection = selectionSessions.Open(selection.Current, cancellationToken);
                 return openSelection.Layouts.Count;
-            });
+            }, cancellationToken);
             operationStatus.Text = $"Revalidated {count} selected media layout(s); all owned resources were released.";
+        }
+        catch (OperationCanceledException)
+        {
+            operationStatus.Text = "Media revalidation cancelled; owned temporary resources were released.";
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException or Win32Exception or TimeoutException)
         {
@@ -407,13 +432,31 @@ internal sealed class InstallerForm : Form
 
     private void SetBusy(bool busy)
     {
+        if (busy)
+        {
+            operationCancellation?.Dispose();
+            operationCancellation = new CancellationTokenSource();
+        }
         addFilesButton.Enabled = !busy;
         addFolderButton.Enabled = !busy;
+        cancelButton.Enabled = busy;
         destinationText.Enabled = !busy;
         destinationButton.Enabled = !busy;
         revalidateButton.Enabled = !busy && selection.Current.Layouts.Count > 0;
         progress.Visible = busy;
         UseWaitCursor = busy;
+        if (!busy)
+        {
+            operationCancellation?.Dispose();
+            operationCancellation = null;
+        }
+    }
+
+    private void CancelOperation()
+    {
+        cancelButton.Enabled = false;
+        operationStatus.Text = "Cancelling after the current safe cleanup boundary…";
+        operationCancellation?.Cancel();
     }
 
     private static string FormatBytes(long bytes)

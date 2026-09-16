@@ -40,13 +40,18 @@ public sealed class MediaSourceInspector
         this.sessions = sessions ?? throw new ArgumentNullException(nameof(sessions));
     }
 
-    public MediaSourceInspection Inspect(string sourcePath)
+    public MediaSourceInspection Inspect(string sourcePath, CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sourcePath);
-        using var session = sessions.Open(sourcePath);
-        var items = session.Items
-            .Select(item => new InspectedMediaItem(item.ArchiveRelativePath, inspection.InspectDirectory(item.RootPath)))
-            .ToArray();
+        cancellationToken.ThrowIfCancellationRequested();
+        using var session = sessions.Open(sourcePath, cancellationToken);
+        var items = new List<InspectedMediaItem>(session.Items.Count);
+        foreach (var item in session.Items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            items.Add(new InspectedMediaItem(item.ArchiveRelativePath, inspection.InspectDirectory(item.RootPath)));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
         return new MediaSourceInspection(session.Kind, items, session.ExcludedArchiveEntries);
     }
 }

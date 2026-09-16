@@ -23,9 +23,10 @@ public sealed class MediaSelectionSessionFactory
         this.inspection = inspection ?? throw new ArgumentNullException(nameof(inspection));
     }
 
-    public IMediaSelectionSession Open(MediaSelectionSnapshot selection)
+    public IMediaSelectionSession Open(MediaSelectionSnapshot selection, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(selection);
+        cancellationToken.ThrowIfCancellationRequested();
         if (selection.Layouts.Count == 0) throw new InvalidOperationException("No recognized media has been selected.");
 
         var owned = new List<IMediaSourceSession>();
@@ -34,11 +35,14 @@ public sealed class MediaSelectionSessionFactory
         {
             foreach (var sourceGroup in selection.Layouts.GroupBy(item => item.SourcePath, StringComparer.OrdinalIgnoreCase))
             {
-                var sourceSession = sourceSessions.Open(sourceGroup.Key);
+                cancellationToken.ThrowIfCancellationRequested();
+                var sourceSession = sourceSessions.Open(sourceGroup.Key, cancellationToken);
                 owned.Add(sourceSession);
-                var available = InspectOpenItems(sourceSession);
+                cancellationToken.ThrowIfCancellationRequested();
+                var available = InspectOpenItems(sourceSession, cancellationToken);
                 foreach (var expected in sourceGroup)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     var matchingItem = available.SingleOrDefault(item =>
                         string.Equals(item.ArchiveRelativePath, expected.ArchiveRelativePath, StringComparison.OrdinalIgnoreCase));
                     if (matchingItem is null || !string.Equals(matchingItem.Recognition.Layout?.Id, expected.Layout.Id, StringComparison.OrdinalIgnoreCase))
@@ -61,12 +65,18 @@ public sealed class MediaSelectionSessionFactory
         }
     }
 
-    private IReadOnlyList<ReopenedItem> InspectOpenItems(IMediaSourceSession sourceSession)
+    private IReadOnlyList<ReopenedItem> InspectOpenItems(IMediaSourceSession sourceSession, CancellationToken cancellationToken)
     {
-        return sourceSession.Items.Select(item => new ReopenedItem(
-            item.ArchiveRelativePath,
-            item.RootPath,
-            inspection.InspectDirectory(item.RootPath))).ToArray();
+        var items = new List<ReopenedItem>(sourceSession.Items.Count);
+        foreach (var item in sourceSession.Items)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            items.Add(new ReopenedItem(
+                item.ArchiveRelativePath,
+                item.RootPath,
+                inspection.InspectDirectory(item.RootPath)));
+        }
+        return items;
     }
 
     private static void DisposeAll(IEnumerable<IMediaSourceSession> sessions)

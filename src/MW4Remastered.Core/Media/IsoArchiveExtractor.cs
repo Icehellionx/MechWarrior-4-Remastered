@@ -14,8 +14,9 @@ public sealed class IsoArchiveExtractor
     private const long MaximumIsoBytes = 4L * 1024 * 1024 * 1024;
     private const long MaximumTotalBytes = 8L * 1024 * 1024 * 1024;
 
-    public IsoArchiveExtractionResult Extract(string archivePath, string destinationRoot)
+    public IsoArchiveExtractionResult Extract(string archivePath, string destinationRoot, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         var archive = Path.GetFullPath(archivePath);
         if (!File.Exists(archive)) throw new FileNotFoundException("Media archive does not exist.", archive);
         if (!string.Equals(Path.GetExtension(archive), ".zip", StringComparison.OrdinalIgnoreCase))
@@ -40,6 +41,7 @@ public sealed class IsoArchiveExtractor
 
         foreach (var entry in zip.Entries)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             var portable = entry.FullName.Replace('\\', '/');
             var isDirectory = portable.EndsWith('/');
             if (!MediaRecognizer.TryNormalizeRelativePath(portable.TrimEnd('/'), out var normalized) || normalized.Length == 0)
@@ -73,11 +75,12 @@ public sealed class IsoArchiveExtractor
         {
             foreach (var (entry, relativePath) in isoEntries)
             {
+                cancellationToken.ThrowIfCancellationRequested();
                 var output = StagedInstallTransaction.ResolveContainedPath(staging, relativePath);
                 Directory.CreateDirectory(Path.GetDirectoryName(output)!);
                 using var source = entry.Open();
                 using var target = new FileStream(output, FileMode.CreateNew, FileAccess.Write, FileShare.None);
-                source.CopyTo(target);
+                CopyWithCancellation(source, target, cancellationToken);
                 if (target.Length != entry.Length) throw new InvalidDataException($"ZIP entry length mismatch after extraction: {relativePath}");
                 File.SetAttributes(output, FileAttributes.Normal);
             }
@@ -96,6 +99,18 @@ public sealed class IsoArchiveExtractor
         {
             if (Directory.Exists(staging)) Directory.Delete(staging, true);
         }
+    }
+
+    private static void CopyWithCancellation(Stream source, Stream target, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[1024 * 1024];
+        int bytesRead;
+        while ((bytesRead = source.Read(buffer, 0, buffer.Length)) > 0)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            target.Write(buffer, 0, bytesRead);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
     }
 
     private static bool IsUnixLink(ZipArchiveEntry entry)

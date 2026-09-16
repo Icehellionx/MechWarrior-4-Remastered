@@ -39,6 +39,7 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Binary transforms require exact input and output hashes and fail without mutation on mismatch.
 - Extraction prevents traversal, links/reparse escape, device paths, and writes outside staging.
 - Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
+- Cancellation is cooperative at bounded copy/mount/inspection boundaries and must release owned mounts and scratch before completion is reported.
 - Install commits atomically where practical and removes partial state after failure.
 - Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.

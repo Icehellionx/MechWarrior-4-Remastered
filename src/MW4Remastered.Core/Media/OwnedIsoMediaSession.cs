@@ -16,8 +16,9 @@ public sealed class OwnedIsoMediaSessionFactory
         this.backend = backend ?? throw new ArgumentNullException(nameof(backend));
     }
 
-    public OwnedIsoMediaSession Open(string imagePath)
+    public OwnedIsoMediaSession Open(string imagePath, CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         ArgumentException.ThrowIfNullOrWhiteSpace(imagePath);
         var image = Path.GetFullPath(imagePath);
         if (!File.Exists(image)) throw new FileNotFoundException("Disc image does not exist.", image);
@@ -37,6 +38,7 @@ public sealed class OwnedIsoMediaSessionFactory
         try
         {
             var root = Path.GetFullPath(backend.Mount(image));
+            cancellationToken.ThrowIfCancellationRequested();
             if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Mounted disc root does not exist: {root}");
             if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
             {
