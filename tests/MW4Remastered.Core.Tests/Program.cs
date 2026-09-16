@@ -136,6 +136,37 @@ Check(ProductDependencies.AreSatisfied("mercenaries", Array.Empty<string>()), "M
 Check(!ProductDependencies.AreSatisfied("inner-sphere", Array.Empty<string>()) &&
     !ProductDependencies.AreSatisfied("clan", Array.Empty<string>()), "both retail Mech Paks require the Vengeance base");
 
+var registrationRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-registration-contract");
+var vengeanceRegistration = LegacyGameRegistration.Describe(new ProductStatus(
+    ProductCatalog.All.Single(item => item.Id == "vengeance"), ProductInstallState.Ready,
+    Path.Combine(registrationRoot, "vengeance", "MW4.exe"), null, null,
+    Path.Combine(registrationRoot, "vengeance"), "synthetic"));
+Check(vengeanceRegistration is not null && !vengeanceRegistration.Use32BitView &&
+    vengeanceRegistration.KeyPath.EndsWith(
+        @"VirtualStore\MACHINE\SOFTWARE\WOW6432Node\Microsoft\Microsoft Games\MechWarrior Vengeance",
+        StringComparison.OrdinalIgnoreCase) && vengeanceRegistration.Version == 4,
+    "Vengeance registration targets the physical 32-bit VirtualStore product record");
+
+foreach (var (productId, executableName, productKey) in new[]
+{
+    ("black-knight", "MW4X.exe", "MechWarrior Black Knight"),
+    ("mercenaries", "MW4Mercs.exe", "MechWarrior Mercenaries"),
+})
+{
+    var installPath = Path.Combine(registrationRoot, productId);
+    var registration = LegacyGameRegistration.Describe(new ProductStatus(
+        ProductCatalog.All.Single(item => item.Id == productId), ProductInstallState.Ready,
+        Path.Combine(installPath, executableName), null, null, installPath, "synthetic"));
+    Check(registration is not null && registration.Use32BitView &&
+        registration.KeyPath.Equals($@"Software\Microsoft\Microsoft Games\{productKey}", StringComparison.OrdinalIgnoreCase) &&
+        registration.Version == 4,
+        $"{productKey} registration targets its direct 32-bit per-user product record");
+}
+Check(LegacyGameRegistration.Describe(new ProductStatus(
+    ProductCatalog.All.Single(item => item.Id == "inner-sphere"), ProductInstallState.Missing,
+    null, null, null, null, "synthetic")) is null,
+    "optional packs never create legacy game registration records");
+
 var root = Path.Combine(Path.GetTempPath(), "mw4-remastered-core-test-" + Guid.NewGuid().ToString("N"));
 try
 {
@@ -236,7 +267,8 @@ try
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastEnsured == installedStatuses["vengeance"], "launch orchestration prepares per-user legacy registration before starting Vengeance");
-    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "/gosnojoystick", "-window", "-noautoconfig" }) == true,
+    var modernArguments = new[] { "-32", "-window", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Vengeance launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
     var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
     var mercenaryExecutable = Path.Combine(mercenaryRoot, "MW4Mercs.exe");
@@ -244,7 +276,7 @@ try
     var mercenaryProduct = ProductCatalog.All.Single(item => item.Id == "mercenaries");
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
         mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic"));
-    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "/gosnojoystick", "-window", "-noautoconfig" }) == true,
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Mercenaries launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
 
     var applicationRoot = Path.Combine(transactionRoot, "application-shell");
@@ -293,6 +325,15 @@ try
           compatibleStart.ArgumentList.Count == 1 &&
           compatibleStart.ArgumentList[0].Equals("MW4.exe", StringComparison.OrdinalIgnoreCase),
         "launch orchestration routes a manifest-owned compatibility installation through its verified adjacent helper");
+
+    var blackKnightExecutable = Path.Combine(compatibilityDestination, "MW4X.exe");
+    File.WriteAllText(blackKnightExecutable, "synthetic executable");
+    var blackKnightProduct = ProductCatalog.All.Single(item => item.Id == "black-knight");
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
+        blackKnightProduct, ProductInstallState.Ready, blackKnightExecutable, compatibleStatus.CompatibilityLaunchPath,
+        null, compatibilityDestination, "synthetic"));
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "MW4X.exe" }) == true,
+        "Black Knight launches through its compatibility helper without title-specific command-line overrides");
 
     WriteFixture(destination, "Saves/pilot.sav", "user-owned save");
     Check(new InstallManifestVerifier().Verify(destination, InstallVerificationScope.OwnedFiles).IsValid, "owned-file verification permits unowned user data");

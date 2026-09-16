@@ -45,6 +45,7 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Show Vengeance, Black Knight, and Mercenaries launch actions only for manifest-verified installations; distinguish repair-required trees.
 - [x] Show Inner Sphere and Clan pack status from exact installed-file evidence with clear installed/missing states.
 - [ ] Complete settings, diagnostics, and repair actions. Manual opening is wired for packaged cleaned outputs.
+- [ ] Consolidate each game's first-run EULA into setup if the original terms permit one explicit installer acceptance to satisfy the retail runtimes; never silently mark acceptance without presenting the applicable terms.
 - [x] Expose one launcher uninstall action that removes verified owned game payloads, closes the launcher, and visibly hands off removal of the application shell, manuals, shortcuts, and registration.
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 - [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
@@ -70,6 +71,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process launch from the untouched ISO executable through a constrained project helper and pinned open-source loader release.
 - [x] Reproduce the Black Knight compatibility bundle across two clean Windows CI builds, exact-hash it into installation policy, and pass a fresh ISO-derived install/launch/Defender smoke.
+- [ ] Replace or harden Black Knight's nondeterministic protected-helper runtime: repeated clean packaged launches now alternate between a responsive process, a delayed DirectDraw exclusive-mode stop, and a pre-menu NTDLL exit. Any replacement must remain source-built/pinned, non-elevating, Defender-clean, and compatible with the Vengeance dependency record.
 - [x] Qualify fresh Vengeance and Mercenaries media-only coordinator installs through exact verification, bounded Defender scans, responsive disc-free launches, and ownership-safe uninstall.
 - [ ] Test representative Intel/AMD/NVIDIA systems and current supported Windows versions.
 
@@ -88,11 +90,11 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: qualify setup 0.5.3's single media-first wizard, corrected three-game runtime payloads, real manual-cover launcher grid, and unified uninstall while proving the installed Mech Pak content is visible in game.
-Owning boundary: package wizard handoff, installer progress/completion state, launcher capability status, and Vengeance content visibility.
-Smallest verifiable slice: exercise the packaged UI from ISO/ZIP selection through install and launcher handoff, then capture evidence that Inner Sphere and Clan chassis/variants are selectable.
-Focused evidence: selected-media summary, enabled install action, completed game/pack status, exact installed manifest, and visible in-game content.
-Smoke/regression evidence: both-pack launch/config/save/uninstall plus Vengeance-only, Black Knight, and Mercenaries package-flow regressions.
-Rollback or disable path: the last qualified 0.3.0 setup remains available locally; ownership manifests preserve unowned saves during removal.
-Hardware coverage gap: only responsive title windows are proven on the current device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.
+User-facing goal: make setup 0.5.5's clean three-game install launch reliably, with Black Knight no longer dependent on a nondeterministic protected-process helper.
+Owning boundary: Black Knight executable compatibility, Vengeance/expansion registration topology, renderer initialization, and exact release provenance.
+Smallest verifiable slice: reproduce the clean-package Black Knight failure under a debugger/trace, select a source-auditable transform or wrapper strategy, and hold the real child process responsive with an empty log for repeated 60-second launches.
+Focused evidence: exact media/helper hashes, crash or loader trace, deterministic output/bundle hashes, registry reads, process responsiveness, and clean game log.
+Smoke/regression evidence: three consecutive fresh Black Knight launches plus Vengeance, Mercenaries, both-pack, Defender, and unified-uninstall regressions.
+Rollback or disable path: retain the current untouched-media plus pinned helper bundle behind an explicit experimental gate until the replacement passes; never fall back to an opaque fixed executable.
+Hardware coverage gap: only this NVIDIA/Windows device is available; gameplay, input, audio, saves, multiplayer, and additional GPUs remain unqualified.
 ```

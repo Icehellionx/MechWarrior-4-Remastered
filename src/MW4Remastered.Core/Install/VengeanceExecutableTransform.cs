@@ -702,6 +702,23 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         var patchOffset = gate + 0x15;
         Convert.FromHexString("E946000000").CopyTo(image[patchOffset..]);
 
+        // The retail game performs a second setup check against a machine-wide
+        // product key even though its ordinary settings and EULA state live in
+        // HKCU. Redirect only the root-hive argument at both protected call
+        // sites, retaining the complete product-record validation without UAC.
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("8B44241C8B4C24145051E81DF7FFFF83C40884C0"),
+            Convert.FromHexString("8B44241C506801000080E81DF7FFFF83C40884C0"),
+            expectedCount: 1,
+            "Mercenaries primary setup-record root");
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("8B4424148B4C24185051E85659D2FF83C40884C0"),
+            Convert.FromHexString("8B442414506801000080E85659D2FF83C40884C0"),
+            expectedCount: 1,
+            "Mercenaries protected setup-record root");
+
         RemoveImportDescriptors(image, pe, "CdaC14BA.dll");
     }
 
@@ -739,22 +756,24 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
 
     private static void PatchVengeancePatch3LegacyClients(Span<byte> image, int rawEnd)
     {
-        // CdaSysUpgrade returns nonzero on success. Taking that existing success
-        // branch avoids the fallback GetLastError/CdaSysInstall calls.
+        // CdaSysUpgrade is stdcall with two arguments, so the callee used to
+        // remove eight bytes from the stack. Preserve that cleanup while
+        // returning its nonzero success result; omitting it corrupts ESP and
+        // eventually reaches the game's generic incorrect-install stop.
         ReplaceAllExact(
             image[..rawEnd],
             Convert.FromHexString("FF1544807300"),
-            Convert.FromHexString("B80100000090"),
+            Convert.FromHexString("83C4086A0158"),
             expectedCount: 2,
             "Patch 3 C-Dilla upgrade calls");
 
-        // AutoRTPatch32 returns zero on success. Patch 3 is already applied by
-        // the installer, so retain the game's success path without loading its
-        // obsolete client DLL.
+        // AutoRTPatch32 is stdcall with three arguments. Patch 3 is already
+        // applied by the installer, so clean its twelve argument bytes and
+        // return zero without loading the obsolete client DLL.
         ReplaceAllExact(
             image[..rawEnd],
             Convert.FromHexString("FF1538807300"),
-            Convert.FromHexString("33C090909090"),
+            Convert.FromHexString("83C40C33C090"),
             expectedCount: 2,
             "Patch 3 AutoRTPatch calls");
     }

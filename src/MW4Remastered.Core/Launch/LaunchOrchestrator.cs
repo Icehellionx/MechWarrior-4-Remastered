@@ -60,14 +60,24 @@ public sealed class LaunchOrchestrator
         }
         else if (status.Product.Id is "vengeance" or "mercenaries")
         {
-            // Retail DirectInput enumeration crashes before the menu on current
-            // Windows. Exclusive fullscreen initialization is also unreliable,
-            // so start in a stable window without rerunning obsolete AutoConfig.
-            startInfo.ArgumentList.Add("/gosnojoystick");
-            startInfo.ArgumentList.Add("-window");
-            startInfo.ArgumentList.Add("-noautoconfig");
+            AddModernWindowsArguments(startInfo);
         }
         processStarter.Start(startInfo);
+    }
+
+    private static void AddModernWindowsArguments(ProcessStartInfo startInfo)
+    {
+        // Keep the legacy renderer in its qualified 32-bit OpenGL/windowed path,
+        // skip startup movies, and avoid current DirectInput enumeration.
+        startInfo.ArgumentList.Add("-32");
+        startInfo.ArgumentList.Add("-window");
+        startInfo.ArgumentList.Add("-f");
+        startInfo.ArgumentList.Add("1024x768");
+        startInfo.ArgumentList.Add("-gl");
+        startInfo.ArgumentList.Add("-GameTime.MaxVariableFps");
+        startInfo.ArgumentList.Add("60");
+        startInfo.ArgumentList.Add("/gosnovideo");
+        startInfo.ArgumentList.Add("/gosNoJoystick");
     }
 }
 

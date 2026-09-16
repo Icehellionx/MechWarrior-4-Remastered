@@ -39,8 +39,8 @@
     ],
     "managedExecutable": {
       "size": 3698688,
-      "sha256": "d0e463d3494581ec6b8402dd77dd558ffb1714fc800306fa45f4e7b58653bfba",
-      "smoke": "The managed executable removes both legacy import descriptors and replaces two deferred C-Dilla plus two AutoRTPatch call sites with their existing success results. A complete two-pack coordinator tree opened a responsive MechWarrior Vengeance window without mounted media, elevation, C-Dilla, or ARTPCLNT; current Defender scan found no threats."
+      "sha256": "9ad88d307bf666c76ffd953aba3ebff6069a87e3c36b81d674f5668acb4dd7f3",
+      "smoke": "The managed executable removes both legacy import descriptors and replaces two deferred C-Dilla plus two AutoRTPatch call sites with call-convention-correct local results, including explicit stdcall argument cleanup. A packaged two-pack tree remained responsive for 35 seconds with an empty game log and without mounted media, elevation, C-Dilla, or ARTPCLNT."
     }
   }
 }
