@@ -16,6 +16,7 @@ internal static class Program
             new InstallStatusReader(root),
             new LaunchOrchestrator(processStarter),
             new DocumentOpener(processStarter),
-            new OwnedInstallUninstaller()));
+            new OwnedInstallUninstaller(),
+            new ApplicationUninstallOrchestrator(root, processStarter)));
     }
 }

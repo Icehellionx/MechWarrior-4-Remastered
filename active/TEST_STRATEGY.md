@@ -21,6 +21,7 @@ git status --short --ignored
 dotnet run --project tests/MW4Remastered.Core.Tests/MW4Remastered.Core.Tests.csproj --configuration Release
 dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release
 dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
+& tests/PackagingContract.Tests.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/ApplicationPrivilegeBoundary.Tests.ps1
 & tests/ReleaseTreePolicy.Tests.ps1
 & tools/security/scan-with-defender.ps1 -Path <assembled-release-tree>
@@ -45,7 +46,9 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Install cancellation is accepted through bounded staging operations and immediately before commit; after atomic commit, exact-tree verification is non-cancellable and must finish.
 - Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
-- Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal requires a separate package ownership manifest.
+- Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal is owned separately by the standard package uninstaller.
+- The package installs per user without elevation, contains no broad uninstall-delete rule, and must preserve unowned game/save/configuration files during shell uninstall.
+- Two clean release builds from identical declared inputs must produce byte-identical setup executables and checksum sidecars.
 - Launcher status is derived from verified files/configuration, not registry keys alone.
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.
 - Diagnostics redact serials, credentials, private paths, and media content.

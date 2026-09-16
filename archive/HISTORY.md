@@ -151,6 +151,14 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Exposed per-game ownership-safe removal for ready and repair-required directories, with confirmation, off-UI-thread hashing/removal, preserved-data reporting, and refreshed status.
 - Kept whole-application uninstall explicitly pending until packaging owns a complete shell-file manifest; the launcher does not broadly delete its own directory.
 
+## Reproducible per-user package — 2026-09-16
+
+- Added a pinned Inno Setup 7.1.0 package that installs the self-contained launcher/installer and exact Black Knight compatibility distribution per user without elevation.
+- Kept standard package uninstall ownership separate from manifest-aware game removal; no broad uninstall-delete rule can remove media-derived game files or unowned saves/configuration.
+- Produced byte-identical 72,276,429-byte setup executables across two clean builds, emitted the SHA-256 sidecar, and passed release-tree plus privilege-boundary contracts.
+- Completed a disposable package install/start/uninstall smoke: both apps were responsive, all package-owned shell files were removed, and a synthetic Black Knight save remained.
+- Scanned the final setup and representative installed trees with current Defender intelligence; no threat or matching remediation event was reported. Signing/SmartScreen reputation remains a separate release gap.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

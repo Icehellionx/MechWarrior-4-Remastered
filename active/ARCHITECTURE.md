@@ -36,7 +36,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.
 - `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.
-- Launcher game-removal actions call `OwnedInstallUninstaller` per product, including repair-required directories, and refresh status afterward. Whole-application uninstall remains a packaging owner because a running launcher cannot safely infer or delete package-owned shell files.
+- Launcher game-removal actions call `OwnedInstallUninstaller` per product, including repair-required directories, and refresh status afterward. The standard Inno package uninstaller separately owns only application-shell files and shortcuts; it never broadly deletes media-derived game trees or unowned saves/configuration.
 - `GameInstallationCoordinator` is the UI-independent application service for all three games. It reports common stages, delegates title policy to plan builders, owns Mercenaries cabinet scratch lifetime, commits through the shared transaction, and requires exact-tree verification before success.
 - `InstallDestinationPlanner` maps only media-complete games to contained per-title directories, applies conservative per-title byte budgets plus a fixed safety reserve, rejects filesystem roots/reparse traversal, and reports current-volume capacity without mutating the destination.
 - `MechPakResourceOverlayPlanBuilder` owns only the exact 10-file resource allowlist for each retail pack and permits only documented Vengeance/Black Knight targets. It deliberately does not own official patch transforms, entitlement replacement, merge transactions, or Mercenaries behavior.
@@ -44,6 +44,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
 - `MW4Remastered.CompatLauncher` is a 32-bit, `asInvoker`, fail-closed launch helper constrained to the three adjacent MW4 executable names and the adjacent compatibility DLL. Black Knight launch selects it only when the ownership manifest verifies the helper and original game files; unowned dropped helpers are ignored.
 - `MW4Remastered.Installer` requests inspection through the application service, renders selection state, transactionally reopens/revalidates selected media, and previews a contained destination/free-space plan. It enables only the qualified Black Knight install path when its exact internal bundle and media are ready; Vengeance and Mercenaries remain locked pending media-only compatibility transforms.
+- `tools/package/build-release.ps1` publishes self-contained installer/launcher executables, assembles the exact Black Knight distribution bundle, applies release-tree policy before and after packaging, compiles a per-user non-elevating Inno setup, and emits its SHA-256 sidecar. `packaging/MechWarrior4Remastered.iss` delegates shell removal to the standard registered uninstaller and contains no broad uninstall-delete rule.
 
 ## Dependency direction
 
@@ -64,7 +65,7 @@ Build and tests -> declared source/assets -> package manifest -> smoke-installed
 - No-disc support is reproducible, narrowly documented, hash-gated, and never sourced from an unverified opaque executable at release time.
 - Normal game launch never elevates. Privileged install/repair/uninstall work cannot make the launcher or game inherit administrator integrity.
 - Optional pack status reflects verified installed payloads, not only registry residue.
-- User saves/configuration are inventoried before uninstall policy is implemented.
+- Package uninstall owns only application-shell files. Per-game uninstall validates its ownership manifest and preserves unowned saves/configuration.
 - Build, smoke, antivirus, hardware, and legal/provenance claims remain separate.
 
 ## Decision rule

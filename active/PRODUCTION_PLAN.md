@@ -37,7 +37,7 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Show Vengeance, Black Knight, and Mercenaries launch actions only for manifest-verified installations; distinguish repair-required trees.
 - [ ] Show Inner Sphere and Clan pack status with clear installed/missing states.
 - [ ] Complete settings, diagnostics, repair, and uninstall actions. Manual opening is wired for installed cleaned outputs.
-- [x] Expose ownership-safe per-game removal in the launcher; whole-application uninstall remains tied to the future package manifest/bootstrapper.
+- [x] Expose ownership-safe per-game removal in the launcher and provide a separate standard package uninstaller for application-shell files.
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 
 ## 4. Manuals
@@ -65,11 +65,11 @@ Outcome: all installed titles and optional packs work on supported modern Window
 
 Outcome: a clean machine can install, launch, repair, and uninstall a trustworthy package.
 
-- [ ] Build reproducibly from declared inputs.
+- [x] Build a byte-reproducible per-user setup from declared application and exact Black Knight compatibility inputs.
 - [ ] Smoke every available game/pack/media combination.
-- [ ] Preserve saves/configuration through uninstall/reinstall according to documented policy.
-- [ ] Verify checksums and payload manifests.
-- [ ] Scan setup, extracted payload, and installed trees with current Defender intelligence.
+- [x] Preserve saves/configuration through both ownership-safe game removal and standard shell-package uninstall smoke paths.
+- [x] Emit and verify the setup checksum while enforcing payload and release-tree allowlists.
+- [x] Scan the current setup, extracted payload, installed shell, and qualified Black Knight tree with current Defender intelligence.
 - [ ] Document signing, SmartScreen, rollback, support bundles, and coverage gaps.
 
 ## Next slice

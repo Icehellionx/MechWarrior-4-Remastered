@@ -1,0 +1,15 @@
+{
+  "name": "Inno Setup",
+  "version": "7.1.0",
+  "packageId": "JRSoftware.InnoSetup.7",
+  "homepage": "https://jrsoftware.org/isinfo.php",
+  "sourceRepository": "https://github.com/jrsoftware/issrc",
+  "license": "Inno Setup License",
+  "licenseUrl": "https://github.com/jrsoftware/issrc/blob/main/license.txt",
+  "compiler": {
+    "fileName": "ISCC.exe",
+    "size": 2135968,
+    "sha256": "d06ebd38f38e3cee60a3c50cc45bd449d77e0bc6a5cabc607ea9886808e4de1a"
+  },
+  "notes": "Installed from the official winget package for local non-commercial development. Releases must record the exact compiler and applicable license terms."
+}

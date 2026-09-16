@@ -103,6 +103,19 @@ try
     new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
 
+    var applicationRoot = Path.Combine(transactionRoot, "application-shell");
+    Directory.CreateDirectory(applicationRoot);
+    var applicationUninstaller = new ApplicationUninstallOrchestrator(applicationRoot, processStarter);
+    Check(!applicationUninstaller.IsAvailable, "application uninstall action remains unavailable without the package-owned uninstaller");
+    var applicationUninstallerPath = Path.Combine(applicationRoot, "unins000.exe");
+    File.WriteAllText(applicationUninstallerPath, "synthetic standard uninstaller");
+    Check(applicationUninstaller.IsAvailable, "application uninstall action recognizes the adjacent standard uninstaller");
+    applicationUninstaller.Start();
+    Check(processStarter.LastStart?.FileName == applicationUninstallerPath &&
+          processStarter.LastStart.WorkingDirectory == applicationRoot &&
+          !processStarter.LastStart.UseShellExecute,
+        "application uninstall action launches only the adjacent standard uninstaller without shell indirection");
+
     var compatibilityLauncher = Path.Combine(destination, "MW4RemasteredCompatLauncher.exe");
     File.WriteAllText(compatibilityLauncher, "synthetic helper");
     var statusWithUnownedHelper = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().Single(item => item.Product.Id == "vengeance");

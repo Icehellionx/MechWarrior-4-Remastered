@@ -17,6 +17,7 @@ internal sealed class MainForm : Form
     private readonly DocumentOpener documentOpener;
     private readonly InstallStatusReader statusReader;
     private readonly OwnedInstallUninstaller uninstaller;
+    private readonly ApplicationUninstallOrchestrator applicationUninstaller;
     private readonly TableLayoutPanel gameGrid = new();
     private readonly FlowLayoutPanel packRow = new();
 
@@ -24,12 +25,14 @@ internal sealed class MainForm : Form
         InstallStatusReader statusReader,
         LaunchOrchestrator launchOrchestrator,
         DocumentOpener documentOpener,
-        OwnedInstallUninstaller uninstaller)
+        OwnedInstallUninstaller uninstaller,
+        ApplicationUninstallOrchestrator applicationUninstaller)
     {
         this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
         this.documentOpener = documentOpener ?? throw new ArgumentNullException(nameof(documentOpener));
         this.uninstaller = uninstaller ?? throw new ArgumentNullException(nameof(uninstaller));
+        this.applicationUninstaller = applicationUninstaller ?? throw new ArgumentNullException(nameof(applicationUninstaller));
         Text = "MechWarrior 4 Remastered";
         BackColor = Armor;
         ForeColor = TextColor;
@@ -66,7 +69,9 @@ internal sealed class MainForm : Form
             Dock = DockStyle.Bottom,
             FlowDirection = FlowDirection.RightToLeft,
         };
-        footer.Controls.Add(CreateFooterButton("APP UNINSTALL PENDING", enabled: false));
+        var uninstallApplication = CreateFooterButton("UNINSTALL APP", applicationUninstaller.IsAvailable);
+        uninstallApplication.Click += (_, _) => StartApplicationUninstall();
+        footer.Controls.Add(uninstallApplication);
         footer.Controls.Add(CreateFooterButton("DIAGNOSTICS", enabled: false));
         footer.Controls.Add(CreateFooterButton("SETTINGS", enabled: false));
 
@@ -215,15 +220,30 @@ internal sealed class MainForm : Form
         return new Button { AutoSize = true, Enabled = enabled, FlatStyle = FlatStyle.Flat, Margin = new Padding(8), Text = text, ForeColor = TextColor, BackColor = Panel };
     }
 
-    private void TryAction(Action action)
+    private void StartApplicationUninstall()
+    {
+        var choice = MessageBox.Show(
+            this,
+            "Remove the launcher and installer? Installed game files, saves, and configuration will remain. Use each game's REMOVE GAME FILES action first if you also want to remove verified game payloads.",
+            "Uninstall MechWarrior 4 Remastered",
+            MessageBoxButtons.OKCancel,
+            MessageBoxIcon.Warning);
+        if (choice != DialogResult.OK) return;
+
+        if (TryAction(applicationUninstaller.Start)) Close();
+    }
+
+    private bool TryAction(Action action)
     {
         try
         {
             action();
+            return true;
         }
         catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or Win32Exception)
         {
             MessageBox.Show(this, error.Message, "MechWarrior 4 Remastered", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            return false;
         }
     }
 }

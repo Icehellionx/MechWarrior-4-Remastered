@@ -81,3 +81,37 @@ public sealed class DocumentOpener
         });
     }
 }
+
+public sealed class ApplicationUninstallOrchestrator
+{
+    private const string UninstallerFileName = "unins000.exe";
+    private readonly string applicationRoot;
+    private readonly IProcessStarter processStarter;
+
+    public ApplicationUninstallOrchestrator(string applicationRoot, IProcessStarter processStarter)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(applicationRoot);
+        this.applicationRoot = Path.GetFullPath(applicationRoot);
+        this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
+    }
+
+    public bool IsAvailable => File.Exists(GetUninstallerPath());
+
+    public void Start()
+    {
+        var uninstaller = GetUninstallerPath();
+        if (!File.Exists(uninstaller))
+        {
+            throw new FileNotFoundException("The standard application uninstaller is not present. Use Windows Installed Apps to repair or remove the package.", uninstaller);
+        }
+
+        processStarter.Start(new ProcessStartInfo
+        {
+            FileName = uninstaller,
+            WorkingDirectory = applicationRoot,
+            UseShellExecute = false,
+        });
+    }
+
+    private string GetUninstallerPath() => Path.Combine(applicationRoot, UninstallerFileName);
+}
