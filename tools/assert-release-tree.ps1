@@ -26,7 +26,29 @@ $forbiddenExtensions = [Collections.Generic.HashSet[string]]::new([StringCompare
 $executableExtensions = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 @('.exe','.dll','.sys','.scr','.com','.bat','.cmd','.ps1') | ForEach-Object { [void]$executableExtensions.Add($_) }
 $forbiddenNames = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
-@('.env','secdrv.sys','cdac14ba.dll','cdac21ba.dll','scshd.csa','scshd.exe','versioninjector.exe','unsafedisc155.exe','unsafedisc155_version.exe') | ForEach-Object { [void]$forbiddenNames.Add($_) }
+@(
+    '.env',
+    'secdrv.sys',
+    'cdac14ba.dll',
+    'cdac21ba.dll',
+    'scshd.csa',
+    'scshd.exe',
+    'versioninjector.exe',
+    'unsafedisc155.exe',
+    'unsafedisc155_version.exe',
+    'sdloader.dll',
+    'secdrvemu.dll',
+    'compat-eval.exe',
+    'mw4-dump.exe',
+    'mw4-transform.exe',
+    'rtpatch-harness.exe',
+    'patchapply.exe',
+    'patchw.dll',
+    'patchw32.dll',
+    'safedisc2cleaner_version.exe',
+    'dceapihook.dll',
+    'dceloader.exe'
+) | ForEach-Object { [void]$forbiddenNames.Add($_) }
 $forbiddenSegments = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 @('crack','nocd','razor1911') | ForEach-Object { [void]$forbiddenSegments.Add($_) }
 

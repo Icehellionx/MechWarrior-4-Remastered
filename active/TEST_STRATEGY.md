@@ -23,6 +23,7 @@ dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --config
 dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/ApplicationPrivilegeBoundary.Tests.ps1
 & tests/ReleaseTreePolicy.Tests.ps1
+& tools/security/scan-with-defender.ps1 -Path <assembled-release-tree>
 # Elevated, local-media-only gate:
 & tests/MediaRecognitionSmoke.ps1 -Images $knownMediaImages
 # Local manuals stay ignored:
@@ -45,6 +46,7 @@ Native WinForms visual and interaction smoke remains a manual/automation coverag
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.
 - Diagnostics redact serials, credentials, private paths, and media content.
 - Release tests block ISOs, BIN/CUE/MDF/MDS, serial files, raw cracks, `.env`, dumps, and unintended executables.
+- Defender qualification scans every assembled package, extracted package tree, and representative installed tree with the current engine/intelligence. A clean exit alone is insufficient because exit `0` can also mean successful remediation; the scan gate also rejects new matching detection/remediation events.
 
 ## Behavioral slice record
 

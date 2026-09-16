@@ -114,6 +114,13 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added checked-in `asInvoker` manifests to the installer and launcher, complementing the existing non-elevating compatibility helper, and added a regression test that locks all three privilege contracts.
 - Applied official Vengeance Patch 2 through a disposable non-elevating wrapper around its 32-bit patch engine; the resulting SafeDisc 1 loader/ICD still performs raw-sector verification, so the ordinary ISO and volume-label emulation are not sufficient for disc-free launch.
 
+## Defender-clean release boundary — 2026-09-16
+
+- Traced the observed warning to Defender's `Program:Script/Wacapew.A!ml` detection of an ignored historical SafeDiscLoader 1 DLL and a disposable executable that embedded it; both were quarantined and neither was tracked or packaged.
+- Removed the exact opaque/generated evaluation binaries plus compiled dump/patch research outputs while retaining source evidence and all user media.
+- Expanded the release-tree denylist to reject known injectors, unwrappers, patch engines, dump tools, and opaque compatibility binaries even if explicitly executable-allowlisted.
+- Added a Defender scan gate that records engine/intelligence versions and checks new detection/remediation events as well as scan exit status, without exclusions or disabled remediation.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

@@ -30,13 +30,29 @@ try {
     Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe' } 'forbidden filename'
     Remove-Item -LiteralPath (Join-Path $root 'SECDRV.SYS') -Force
 
-    [IO.File]::WriteAllText((Join-Path $root 'VersionInjector.exe'), 'synthetic fixture')
-    Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe','VersionInjector.exe' } 'forbidden filename'
-    Remove-Item -LiteralPath (Join-Path $root 'VersionInjector.exe') -Force
-
-    [IO.File]::WriteAllText((Join-Path $root 'unSafedisc155_version.exe'), 'synthetic fixture')
-    Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe','unSafedisc155_version.exe' } 'forbidden filename'
-    Remove-Item -LiteralPath (Join-Path $root 'unSafedisc155_version.exe') -Force
+    @(
+        'VersionInjector.exe',
+        'unSafedisc155_version.exe',
+        'SDLoader.dll',
+        'secdrvemu.dll',
+        'compat-eval.exe',
+        'mw4-dump.exe',
+        'mw4-transform.exe',
+        'rtpatch-harness.exe',
+        'PatchApply.exe',
+        'Patchw.dll',
+        'Patchw32.dll',
+        'SafeDisc2Cleaner_version.exe',
+        'DCEAPIHook.dll',
+        'DCELoader.exe'
+    ) | ForEach-Object {
+        $forbiddenPath = Join-Path $root $_
+        [IO.File]::WriteAllText($forbiddenPath, 'synthetic fixture')
+        Assert-Rejected {
+            & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe',$_
+        } 'forbidden filename'
+        Remove-Item -LiteralPath $forbiddenPath -Force
+    }
 
     [IO.File]::WriteAllText((Join-Path $root '.env.production'), 'synthetic fixture')
     Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe' } 'environment/secret file'
