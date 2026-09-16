@@ -15,6 +15,7 @@ public sealed class MercenariesInstallPlanBuilder
             ["ARTPCLNT.DLL"] = "ArtpClnt.dll",
             ["AUTOCO_1.EXE"] = "AutoConfig.exe",
             ["BLADE.DLL"] = "Blade.dll",
+            ["DSETUP.DLL"] = "DSetup.dll",
             ["EBUEULA.DLL"] = "EBUEula.dll",
             ["EULA.RTF"] = "EULA.rtf",
             ["GUNDLL.DLL"] = "GunDll.dll",

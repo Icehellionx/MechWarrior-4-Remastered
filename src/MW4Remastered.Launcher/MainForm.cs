@@ -1,4 +1,6 @@
 using System.ComponentModel;
+using System.Drawing.Drawing2D;
+using System.Runtime.InteropServices;
 using MW4Remastered.Core;
 using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Launch;
@@ -246,9 +248,12 @@ internal sealed class MainForm : Form
             _ => "NOT INSTALLED",
         };
         var button = CreateTile(
-            $"{GameMark(status.Product.Id)}    {status.Product.DisplayName.ToUpperInvariant()}{Environment.NewLine}          {subtitle}",
+            $"{status.Product.DisplayName.ToUpperInvariant()}{Environment.NewLine}{subtitle}",
             status.State == ProductInstallState.Ready,
             large: true);
+        button.Image = LoadGameIcon(status);
+        button.ImageAlign = ContentAlignment.MiddleLeft;
+        button.TextImageRelation = TextImageRelation.ImageBeforeText;
         button.AccessibleName = $"{status.Product.DisplayName}: {subtitle}";
         if (status.State == ProductInstallState.Ready)
             button.Click += (_, _) => TryAction(() => launchOrchestrator.Launch(status));
@@ -259,9 +264,12 @@ internal sealed class MainForm : Form
     {
         var available = status.ManualPath is not null;
         var button = CreateTile(
-            $"▤    {status.Product.DisplayName.ToUpperInvariant()} MANUAL{Environment.NewLine}       {(available ? "OPEN PDF" : "NOT AVAILABLE")}",
+            $"{status.Product.DisplayName.ToUpperInvariant()} MANUAL{Environment.NewLine}{(available ? "OPEN PDF" : "NOT AVAILABLE")}",
             available,
             large: false);
+        button.Image = CreateBookImage(GameMark(status.Product.Id));
+        button.ImageAlign = ContentAlignment.MiddleLeft;
+        button.TextImageRelation = TextImageRelation.ImageBeforeText;
         button.AccessibleName = $"{status.Product.DisplayName} manual: {(available ? "Open PDF" : "Not available")}";
         if (available) button.Click += (_, _) => TryAction(() => documentOpener.Open(status.ManualPath!));
         return button;
@@ -340,8 +348,9 @@ internal sealed class MainForm : Form
                 return;
             }
 
+            statusLine.Text = "REMOVING LAUNCHER AND SHORTCUTS…";
             applicationUninstaller.Start();
-            Close();
+            Application.Exit();
         }
         catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException or Win32Exception)
         {
@@ -387,8 +396,62 @@ internal sealed class MainForm : Form
         _ => "M",
     };
 
+    private static Bitmap? LoadGameIcon(ProductStatus status)
+    {
+        var mediaIconName = status.Product.Id switch
+        {
+            "vengeance" => "Mech4.ico",
+            "black-knight" => "Mech4X.ico",
+            "mercenaries" => "Mech4Merc.ico",
+            _ => null,
+        };
+        var candidate = status.InstallPath is not null && mediaIconName is not null
+            ? Path.Combine(status.InstallPath, mediaIconName)
+            : status.LaunchPath;
+        if (string.IsNullOrWhiteSpace(candidate) || !File.Exists(candidate)) return null;
+        try
+        {
+            using var icon = mediaIconName is null ? Icon.ExtractAssociatedIcon(candidate) : new Icon(candidate);
+            if (icon is null) return null;
+            using var source = icon.ToBitmap();
+            var scaled = new Bitmap(58, 58);
+            using var graphics = Graphics.FromImage(scaled);
+            graphics.InterpolationMode = InterpolationMode.NearestNeighbor;
+            graphics.PixelOffsetMode = PixelOffsetMode.Half;
+            graphics.DrawImage(source, new Rectangle(0, 0, 58, 58));
+            return scaled;
+        }
+        catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or ExternalException)
+        {
+            return null;
+        }
+    }
+
+    private static Bitmap CreateBookImage(string label)
+    {
+        var image = new Bitmap(58, 58);
+        using var graphics = Graphics.FromImage(image);
+        using var edge = new Pen(Amber, 3F);
+        using var paper = new SolidBrush(Color.FromArgb(205, 211, 207));
+        using var labelFont = new Font("Segoe UI", label.Length > 1 ? 8F : 14F, FontStyle.Bold);
+        graphics.SmoothingMode = SmoothingMode.AntiAlias;
+        graphics.FillRectangle(paper, 11, 7, 36, 44);
+        graphics.DrawRectangle(edge, 11, 7, 36, 44);
+        graphics.DrawLine(edge, 19, 8, 19, 50);
+        var labelBounds = new RectangleF(20, 8, 26, 42);
+        using var format = new StringFormat { Alignment = StringAlignment.Center, LineAlignment = StringAlignment.Center };
+        graphics.DrawString(label, labelFont, Brushes.Black, labelBounds, format);
+        return image;
+    }
+
     private sealed class OperationButton : Button
     {
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing) Image?.Dispose();
+            base.Dispose(disposing);
+        }
+
         protected override void OnPaint(PaintEventArgs paintEvent)
         {
             if (Enabled)

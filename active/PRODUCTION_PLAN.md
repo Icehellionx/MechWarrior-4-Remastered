@@ -43,8 +43,8 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Create a compact MW4 visual direction using the user-approved icon and the proven MW3 launcher hierarchy without adding unlicensed web art.
 - [x] Show Vengeance, Black Knight, and Mercenaries launch actions only for manifest-verified installations; distinguish repair-required trees.
 - [x] Show Inner Sphere and Clan pack status from exact installed-file evidence with clear installed/missing states.
-- [ ] Complete settings, diagnostics, repair, and uninstall actions. Manual opening is wired for installed cleaned outputs.
-- [x] Expose ownership-safe per-game removal in the launcher and provide a separate standard package uninstaller for application-shell files.
+- [ ] Complete settings, diagnostics, and repair actions. Manual opening is wired for packaged cleaned outputs.
+- [x] Expose one launcher uninstall action that removes verified owned game payloads, closes the launcher, and visibly hands off removal of the application shell, manuals, shortcuts, and registration.
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 
 ## 4. Manuals
@@ -83,7 +83,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: make setup 0.4.0's media-first installation and the resulting three-game launcher immediately understandable, while proving the installed Mech Pak content is visible in game.
+User-facing goal: qualify setup 0.4.2's media-first installation, corrected three-game runtime payloads, MW3-style game/manual launcher grid, and unified uninstall while proving the installed Mech Pak content is visible in game.
 Owning boundary: package wizard handoff, installer progress/completion state, launcher capability status, and Vengeance content visibility.
 Smallest verifiable slice: exercise the packaged UI from ISO/ZIP selection through install and launcher handoff, then capture evidence that Inner Sphere and Clan chassis/variants are selectable.
 Focused evidence: selected-media summary, enabled install action, completed game/pack status, exact installed manifest, and visible in-game content.

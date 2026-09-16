@@ -142,6 +142,11 @@ try
     Directory.CreateDirectory(Path.Combine(root, "vengeance"));
     File.WriteAllText(Path.Combine(root, "vengeance", "MW4.exe"), "synthetic fixture");
     Directory.CreateDirectory(Path.Combine(root, "mercenaries"));
+    var manualRoot = Directory.CreateDirectory(Path.Combine(root, "Manuals")).FullName;
+    foreach (var game in ProductCatalog.All.Where(item => item.Kind == ProductKind.Game))
+    {
+        File.WriteAllText(Path.Combine(manualRoot, game.ManualFileName!), "synthetic manual");
+    }
     var statuses = new InstallStatusReader(root).Read().ToDictionary(item => item.Product.Id);
     Check(!statuses["vengeance"].IsInstalled && statuses["vengeance"].State == ProductInstallState.NeedsRepair, "unmanifested Vengeance executable requires repair");
     Check(!statuses["black-knight"].IsInstalled, "missing Black Knight executable stays absent");
@@ -149,6 +154,8 @@ try
         "an existing incomplete game directory remains removable as repair-required");
     Check(!statuses["clan"].IsInstalled, "Clan pack is not claimed without verified payload evidence");
     Check(!statuses["inner-sphere"].IsInstalled, "Inner Sphere pack is not claimed without verified payload evidence");
+    Check(statuses.Values.Where(item => item.Product.Kind == ProductKind.Game).All(item => item.ManualPath is not null),
+        "all three packaged manual paths are discovered independently of game installation health");
 }
 finally
 {
@@ -369,6 +376,7 @@ try
     CreateLayoutFixture("vengeance-disc-2", disc2);
     WriteFixture(disc1, "AUTOCO_1.EXE", "autoconfig");
     WriteFixture(disc1, "SCRIPT_1.DLL", "scripts");
+    WriteFixture(disc1, "DSETUP.DLL", "directx runtime query");
     WriteFixture(disc1, "CONTENT/SHELLS_1/FILES/STUTTE_1.WAV", "audio");
     WriteFixture(disc1, "CONTENT/TEXTURES/CUSTOM_1/CSTMDCAL.TXT", "decals");
     WriteFixture(disc1, "SECDRV.SYS", "must not copy");
@@ -382,6 +390,7 @@ try
     var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
     Check(destinations.Contains("MW4.exe"), "Vengeance plan supplies the qualified compatibility executable");
     Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Vengeance plan expands patch-relevant 8.3 root names");
+    Check(destinations.Contains("DSetup.dll"), "Vengeance plan retains the DirectX version-query runtime imported by the game executable");
     Check(destinations.Contains("Content/ShellScripts/FILES/STUTTE_1.WAV"), "Vengeance plan restores the ShellScripts directory name");
     Check(destinations.Contains("Content/Textures/customdecals/CSTMDCAL.TXT"), "Vengeance plan restores the custom decals directory name");
     Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE") &&
@@ -399,12 +408,18 @@ try
     var disc = Path.Combine(blackKnightPlanRoot, "disc");
     CreateLayoutFixture("black-knight-disc-1", disc);
     WriteFixture(disc, "AUTOCO_1.EXE", "autoconfig");
+    WriteFixture(disc, "MISSIO_1.DLL", "mission language");
     WriteFixture(disc, "SCRIPT_1.DLL", "scripts");
+    WriteFixture(disc, "SERVER_1.TXT", "server cycle");
     WriteFixture(disc, "FONTS/MECH.FNT", "font");
     WriteFixture(disc, "MW4X/LANGUAGE.DLL", "language");
     WriteFixture(disc, "MW4X/DRVMGT.DLL", "disc management");
     WriteFixture(disc, "MW4X/DSETUP.DLL", "directx setup");
     WriteFixture(disc, "MW4X/SECDRV.SYS", "safedisc driver");
+    WriteFixture(disc, "CONTENT/GAMETY_1.H", "game types");
+    WriteFixture(disc, "CONTENT/SHELLS_1/FILES/STUTTE_1.WAV", "audio");
+    WriteFixture(disc, "RESOURCE/MISSIONS/VOLCAN_1.MW4", "mission");
+    WriteFixture(disc, "RESOURCE/TEXTUR_1.MW4", "textures");
     WriteFixture(disc, "SETUP.EXE", "legacy setup");
     var compatibilityRoot = Path.Combine(blackKnightPlanRoot, "compatibility");
     WriteFixture(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "synthetic helper");
@@ -431,9 +446,15 @@ try
     Check(plan.Files.Single(file => file.DestinationRelativePath.Equals("MW4X.exe", StringComparison.OrdinalIgnoreCase)).SourceRelativePath.Equals("MW4X/MW4X.EXE", StringComparison.OrdinalIgnoreCase), "Black Knight executable comes from recognized media, not a user-supplied replacement");
     Check(destinations.Contains("MW4RemasteredCompatLauncher.exe") && destinations.Contains("version.dll") && destinations.Contains("Licenses/SafeDiscLoader2-GPL-3.0.txt"), "Black Knight plan owns the exact internal compatibility bundle");
     Check(!destinations.Contains("source.zip"), "Black Knight plan validates but does not install the corresponding-source archive");
-    Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Black Knight plan expands installed root names");
+    Check(destinations.Contains("AutoConfigx.exe") && destinations.Contains("MissionLangx.dll") &&
+        destinations.Contains("ScriptStringsx.dll") && destinations.Contains("servercyclex.txt"),
+        "Black Knight plan restores expansion-specific root names");
     Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("LANGUAGE.DLL") && destinations.Contains("DRVMGT.DLL"), "Black Knight plan copies game data and flattens required runtime files");
-    Check(!destinations.Contains("DSETUP.DLL") && !destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes setup and the obsolete SafeDisc driver");
+    Check(destinations.Contains("Content/GameTypesX.h") && destinations.Contains("Content/ShellScriptsX/Files/StutterShark_music.wav") &&
+        destinations.Contains("Resource/Missions/volcan01_holdout.mw4") && destinations.Contains("Resource/texturesx.mw4"),
+        "Black Knight plan restores long content and resource names from the original setup table");
+    Check(destinations.Contains("DSETUP.DLL"), "Black Knight plan retains the DirectX version-query runtime imported by the game executable");
+    Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes legacy setup and the obsolete SafeDisc driver");
 
     WriteFixture(compatibilityRoot, "unexpected.bin", "must not enter the bundle");
     var compatibilityExtraRejected = false;
@@ -538,6 +559,7 @@ try
     CreateLayoutFixture("mercenaries-disc-1", disc1);
     CreateLayoutFixture("mercenaries-disc-2", disc2);
     WriteFixture(disc1, "AUTOCO_1.EXE", "autoconfig");
+    WriteFixture(disc1, "DSETUP.DLL", "directx runtime query");
     WriteFixture(disc1, "GUNTIC_1.DLL", "gun ticket");
     WriteFixture(disc1, "CDAC14BA.DLL", "c-dilla");
     WriteFixture(disc1, "MW4MERCS.ICD", "safedisc game image");
@@ -555,6 +577,7 @@ try
     var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
     Check(plan.ProductId == "mercenaries" && destinations.Contains("MW4Mercs.exe"), "Mercenaries plan supplies the qualified compatibility executable");
     Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("GunTicket.dll"), "Mercenaries plan expands installed root names");
+    Check(destinations.Contains("DSetup.dll"), "Mercenaries plan retains the DirectX version-query runtime imported by the game executable");
     Check(destinations.Contains("Content/MercsShellScripts/FILES/NEXTMO_1.WAV"), "Mercenaries plan restores the MercsShellScripts directory name");
     Check(destinations.Contains("RESOURCE/CORE.MW4") && !destinations.Contains("MW4MERCS.ICD") && !destinations.Contains("CDAC14BA.DLL"), "Mercenaries plan combines cabinet data while excluding disc protection");
 }

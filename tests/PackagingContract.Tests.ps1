@@ -23,6 +23,9 @@ Assert-True ($build -match 'assert-release-tree\.ps1') 'Staged package payload m
 Assert-True ($build -match '\.sha256') 'Package build must emit a SHA-256 sidecar.'
 Assert-True ($build -match 'assemble-black-knight-bundle\.ps1') 'Package staging must consume the exact qualified Black Knight bundle.'
 Assert-True ($build -match 'MW4Remastered\.RtpPatchHost' -and $inno -match 'MW4RemasteredRtpPatchHost\.exe') 'Package must include the project-owned non-elevating Patch 3 host.'
+Assert-True ($build -match 'manuals\.lock\.json' -and $build -match 'output/pdf' -and $inno -match 'Manuals\\\*\.pdf') 'Package must exact-hash and install all three cleaned manuals.'
 Assert-True ($build -notmatch 'ExecutionPolicy\s+Bypass') 'Package build must not bypass PowerShell execution policy.'
+$launch = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
+Assert-True ($launch -match '/SILENT' -and $launch -notmatch '/VERYSILENT' -and $launch -match '/NORESTART') 'The already-confirmed unified uninstall must skip a second prompt while retaining visible shell-removal progress.'
 
 Write-Host 'Packaging contract tests passed.'

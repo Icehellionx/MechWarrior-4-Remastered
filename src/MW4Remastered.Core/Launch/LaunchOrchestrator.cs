@@ -105,12 +105,18 @@ public sealed class ApplicationUninstallOrchestrator
             throw new FileNotFoundException("The standard application uninstaller is not present. Use Windows Installed Apps to repair or remove the package.", uninstaller);
         }
 
-        processStarter.Start(new ProcessStartInfo
+        var startInfo = new ProcessStartInfo
         {
             FileName = uninstaller,
             WorkingDirectory = applicationRoot,
             UseShellExecute = false,
-        });
+        };
+        // The launcher already obtained explicit confirmation. Inno's silent mode
+        // skips a second prompt but retains its progress window while it removes
+        // the launcher, manuals, shortcuts, and registration from temporary storage.
+        startInfo.ArgumentList.Add("/SILENT");
+        startInfo.ArgumentList.Add("/NORESTART");
+        processStarter.Start(startInfo);
     }
 
     private string GetUninstallerPath() => Path.Combine(applicationRoot, UninstallerFileName);

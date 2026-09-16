@@ -12,6 +12,7 @@ public sealed class VengeanceInstallPlanBuilder
         {
             ["AUTOCO_1.EXE"] = "AutoConfig.exe",
             ["BLADE.DLL"] = "Blade.dll",
+            ["DSETUP.DLL"] = "DSetup.dll",
             ["EBUEULA.DLL"] = "EBUEula.dll",
             ["EULA.RTF"] = "EULA.rtf",
             ["LANGUAGE.DLL"] = "Language.dll",

@@ -13,21 +13,20 @@ public sealed class BlackKnightInstallPlanBuilder
     private static readonly IReadOnlyDictionary<string, string> RootFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["AUTOCO_1.EXE"] = "AutoConfig.exe",
+            ["AUTOCO_1.EXE"] = "AutoConfigx.exe",
             ["EULAX.RTF"] = "EulaX.rtf",
             ["MECH4X.ICO"] = "Mech4X.ico",
-            ["MISSIO_1.DLL"] = "MissionLang.dll",
+            ["MISSIO_1.DLL"] = "MissionLangx.dll",
             ["NFXEDI_1.EXE"] = "NFXEditor.exe",
             ["READMEX.RTF"] = "ReadmeX.rtf",
-            ["SCRIPT_1.DLL"] = "ScriptStrings.dll",
-            ["SERVER_1.TXT"] = "servercycle.txt",
+            ["SCRIPT_1.DLL"] = "ScriptStringsx.dll",
+            ["SERVER_1.TXT"] = "servercyclex.txt",
             ["WARRANTY.RTF"] = "Warranty.rtf",
         };
 
     private static readonly IReadOnlySet<string> ExcludedMw4XFiles =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "DSETUP.DLL",
             "SECDRV.SYS",
         };
 
@@ -65,7 +64,7 @@ public sealed class BlackKnightInstallPlanBuilder
                      path.StartsWith("FONTS/", StringComparison.OrdinalIgnoreCase) ||
                      path.StartsWith("RESOURCE/", StringComparison.OrdinalIgnoreCase))
             {
-                files.Add(new InstallFile(discRoot, path, MapDiscPath(path)));
+                files.Add(new InstallFile(discRoot, path, BlackKnightMediaPathMap.Map(path)));
             }
             else if (path.StartsWith("MW4X/", StringComparison.OrdinalIgnoreCase))
             {
@@ -111,16 +110,4 @@ public sealed class BlackKnightInstallPlanBuilder
             requireExactInventory: true);
     }
 
-    private static string MapDiscPath(string path)
-    {
-        if (path.StartsWith("CONTENT/SHELLS_1/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Content/ShellScripts/" + path["CONTENT/SHELLS_1/".Length..];
-        }
-        if (path.StartsWith("CONTENT/TEXTURES/CUSTOM_1/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Content/Textures/customdecals/" + path["CONTENT/TEXTURES/CUSTOM_1/".Length..];
-        }
-        return path;
-    }
 }

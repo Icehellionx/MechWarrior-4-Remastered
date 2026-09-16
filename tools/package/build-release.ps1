@@ -52,6 +52,23 @@ try {
     Copy-Item -LiteralPath $launcherFiles[0].FullName -Destination (Join-Path $payload $launcherFiles[0].Name)
     Copy-Item -LiteralPath $patchHostFiles[0].FullName -Destination (Join-Path $payload $patchHostFiles[0].Name)
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
+
+    $manualSource = Join-Path $projectRoot 'output/pdf'
+    $manualLockPath = Join-Path $projectRoot 'tools/manuals/manuals.lock.json'
+    $manualLock = Get-Content -LiteralPath $manualLockPath -Raw | ConvertFrom-Json
+    if ($manualLock.schemaVersion -ne 1 -or @($manualLock.manuals).Count -ne 3) {
+        throw 'Manual lock must declare exactly the three qualified version-1 outputs.'
+    }
+    $manualFiles = @(Get-ChildItem -LiteralPath $manualSource -File -Filter '*.pdf')
+    if ($manualFiles.Count -ne 3) { throw 'Manual output directory must contain exactly three PDFs.' }
+    $manualDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Manuals')
+    foreach ($manual in $manualLock.manuals) {
+        $source = Join-Path $manualSource $manual.name
+        if (-not (Test-Path -LiteralPath $source -PathType Leaf)) { throw "Qualified manual output is missing: $($manual.name)" }
+        $actualHash = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actualHash -ne $manual.outputSha256) { throw "Qualified manual output hash mismatch: $($manual.name)" }
+        Copy-Item -LiteralPath $source -Destination (Join-Path $manualDestination $manual.name)
+    }
     & (Join-Path $projectRoot 'tools/compatibility/assemble-black-knight-bundle.ps1') `
         -EvidenceDirectory $CompatibilityEvidenceDirectory `
         -OutputDirectory (Join-Path $payload 'Compatibility/BlackKnight')

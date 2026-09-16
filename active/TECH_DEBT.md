@@ -22,6 +22,7 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 4. Disc/readme/archived-support evidence separates plain Mech Pak resources, required official game patches, and C-Dilla/SafeCast entitlement with a 16-bit helper. Patch 3 and an Inner Sphere payload now launch without the obsolete components, but game-visible chassis/variant proof and any remaining entitlement marker are still required.
 5. Copying the mature MW3 launcher's structure wholesale would carry title-specific assumptions and historical complexity into a cleaner project.
 6. Manual cleanup can silently clip or reorder content without full-page render comparison.
+7. Corrected Black Knight and Mercenaries smokes log a legacy DirectInput first-chance exception even while their game windows remain responsive. Menu, mission, controller, and repeated-launch coverage is still required before deciding whether an open-source DirectInput compatibility layer is warranted.
 7. Uninstall is destructive and must be designed from a precise ownership/save inventory before implementation.
 8. The evaluated MIT RTPatch parser does not understand the supplied patch variants and its CLI lacks record-path containment. It is evaluation evidence only, not an accepted dependency.
 9. The current Vengeance 8.3 restoration map is sufficient for staging and Patch 2 naming, but every inferred name must be compared with a legacy-setup reference tree before release qualification.
