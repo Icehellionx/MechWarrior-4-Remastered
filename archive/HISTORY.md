@@ -48,6 +48,11 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Added a Mercenaries plan that combines the verified cabinet payload with allowlisted files from both recognized discs, restores setup-era names, exact-hash gates a local replacement executable, and excludes C-Dilla, SafeDisc, setup, and crack paths.
 - Extracted and verified all 85 real cabinet files, then staged a real 209-file, 1,206,212,339-byte payload tree; every owned hash verified, all files were writable, both images detached, and no forbidden component entered the tree.
 
+## Launcher remaster mark — 2026-09-15
+
+- Generated an original transparent gunmetal/amber heavy-mech and `4` emblem with a lower-right `R`, then simplified it for small-size legibility.
+- Preserved the selected RGBA master and prompt/provenance note, packaged a 256×256 Windows icon, and embedded it into the launcher build.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

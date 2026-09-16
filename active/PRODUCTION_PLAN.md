@@ -31,7 +31,7 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Show Vengeance, Black Knight, and Mercenaries launch actions only for manifest-verified installations; distinguish repair-required trees.
 - [ ] Show Inner Sphere and Clan pack status with clear installed/missing states.
 - [ ] Complete settings, diagnostics, repair, and uninstall actions. Manual opening is wired for installed cleaned outputs.
-- [ ] Create a project-owned Vengeance-inspired remaster icon with a distinct `R` mark.
+- [x] Create and wire a project-owned MW4-inspired remaster icon with a distinct lower-right `R` mark.
 
 ## 4. Manuals
 
