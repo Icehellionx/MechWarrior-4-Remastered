@@ -8,6 +8,10 @@ Both local Inner Sphere and Clan Mech Pak ISOs contain `CDAC14BA.DLL`/`CDAC21BA.
 
 Static inspection narrows that diagnosis: the pack setup engines and protected components are 32-bit x86 PE files, but the Clan `SCSHD.exe` explicitly references `CDILLA16.EXE`, the `\\.\pipe\C-Dilla\Srv` service endpoint, `\\.\C-Dilla`, and C-Dilla licence registry keys. The likely 64-bit break is therefore an obsolete C-Dilla/SafeCast activation stack containing a 16-bit helper, not 16-bit encryption of the game assets. This remains a static-evidence conclusion until reproduced in an isolated reference environment.
 
+The actual pack data is directly readable and not encrypted: Inner Sphere exposes 10 `RESOURCE` files totaling 34,434,947 bytes, and Clan exposes 10 totaling 20,285,495 bytes. Each contains two maps plus mission metadata/assets. Neither pack payload collides with the staged Vengeance or Black Knight trees. Six names collide with Mercenaries, but four of those Mercenaries files differ by hash; blindly overlaying the retail pack payload onto Mercenaries would therefore overwrite later/different content and is not acceptable.
+
+Both on-disc readmes say the packs add content to Vengeance and Black Knight, require Vengeance, must be reinstalled after Black Knight to become visible there, and automatically apply Vengeance Patch 3 or Black Knight Patch 1. The setup DLLs look up `HKLM\SOFTWARE\Microsoft\Microsoft Games\MechWarrior Vengeance\Exe Path`, while the disc-protection layer separately requests a product key and SafeCast/C-Dilla licensing. This establishes three distinct contracts: plain resource overlay, correct official game patch level, and entitlement/visibility.
+
 The Inner Sphere image also contains a `Razor1911` directory. That directory is third-party crack material and is excluded from any automatic or release input. Its presence means the image cannot be treated as pristine retail media solely by filename.
 
 Black Knight contains a conventional game payload (`MW4X`, `RESOURCE`, movies), `SECDRV.SYS`, and an official Vengeance Patch 2 payload. Its disc `MW4X.EXE` and supplied local replacement both report version `45.05.10.0701` and have the same length but different hashes. The replacement is accepted only by exact SHA-256 (`2a5b7f2f…`) and is not a project asset.
@@ -22,18 +26,18 @@ The supplied Mercenaries Disc 2 is UDF media that `bsdtar` did not enumerate but
 
 Mercenaries Disc 1 stores 85 `GAME/RESOURCE/...` payload entries in `MSGAME.CAB`; a containment-first extraction reproduced exactly those 85 files (615,038,509 bytes) without running setup. The disc SafeDisc image reports version `50.06.09.3002`; the exact-hash local replacement reports `50.07.01.2105` (`eff39b2f…`). Combining the verified cabinet root, allowlisted loose Disc 1 runtime files, and Disc 2 content produced a 209-file, 1,206,212,339-byte payload tree. C-Dilla, SafeDisc, setup, and Disc 2 crack files are absent; runtime behavior remains unqualified.
 
-## External evidence to verify further
+## External evidence
 
-- Microsoft archived support article 325999 describes pack visibility as dependent on install order, game presence, and registry/install state.
+- [Archived Microsoft support article 325999](https://www.betaarchive.com/wiki/index.php/Microsoft_KB_Archive/325999) describes missing pack logos/content, install-order interactions, and an official CD-dependent SafeCast Repair Utility. It corroborates that payload presence and SafeCast entitlement are separate conditions.
+- [Microsoft's surviving disc-check support article](https://support.microsoft.com/en-us/topic/error-message-or-the-game-stops-responding-on-the-loading-screen-when-you-start-a-microsoft-game-please-insert-the-correct-cd-rom-c9eb279d-e016-c079-6afa-5bb37dfc1018) names the Inner Sphere pack among protected products and directs users to launch it with Vengeance Disc 1 or Black Knight media.
 - Microsoft community reports show Vengeance failing after pack installation on 64-bit Windows and recovering when packs are removed; these are useful reports, not root-cause proof.
 - The 2010 free release was specifically a Microsoft-cleared MekTek distribution of MechWarrior 4: Mercenaries. That does not by itself prove the original Vengeance, Black Knight, retail Mercenaries, packs, or arbitrary mirrors remain freely redistributable today.
 
 ## Working hypotheses
 
-1. Pack setup/activation fails because obsolete C-Dilla/SafeCast components are incompatible with or blocked on 64-bit/current Windows.
-2. A safe path may extract only validated Microsoft pack payloads, apply the matching official patch resources, and reproduce necessary registry/configuration state without installing DRM drivers.
-3. Exact per-game core/resource differences and install-order effects must be derived from clean before/after trees, not assumed from community replacement files.
-4. The official Patch 3 RTP payload may contain the shared mech assets while pack-specific registry/licence state controls visibility. This must be proven from transformed trees; filenames and patch size are not enough.
+1. A safe path may extract only validated Microsoft pack payloads, apply the matching official patch resources, and replace the obsolete entitlement check reproducibly without installing DRM drivers.
+2. Exact per-game core/resource differences and install-order effects must be derived from clean before/after trees, not assumed from community replacement files.
+3. The official Patch 3 RTP payload may contain shared support for the new assets while SafeCast licence state controls visibility. This must be proven from transformed trees; filenames and patch size are not enough.
 
 ## Open-source patch-tool evaluation
 
@@ -41,8 +45,6 @@ Mercenaries Disc 1 stores 85 `GAME/RESOURCE/...` payload entries in `MSGAME.CAB`
 
 ## Falsifying checks
 
-- Inventory and hash both pack images and compare their non-DRM payloads.
-- Inspect executable architecture/imports and installer metadata in disposable extraction.
 - Diff clean Vengeance and Black Knight trees before/after each pack on a controlled 32-bit reference environment if needed.
 - Trace registry/file writes from the original pack setup in an isolated VM.
 - Prove each direct-extraction candidate produces the same owned files and game-visible pack markers without loading/installing legacy drivers.

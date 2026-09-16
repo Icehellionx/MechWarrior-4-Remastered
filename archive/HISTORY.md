@@ -91,6 +91,14 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Wired installer-side revalidation without enabling file installation.
 - Proved lifetime and cleanup synthetically, then recognized the real Black Knight archival ZIP with no residual scratch or attached image.
 
+## Mech Pak 64-bit failure boundary — 2026-09-15
+
+- Inventoried both pack discs read-only and established that their game data is 20 ordinary resource files, not 16-bit-encrypted assets.
+- Correlated on-disc setup/readme evidence with archived Microsoft support: installation combines resource overlay, Vengeance 3 or Black Knight 1 patching, and a distinct SafeCast/C-Dilla entitlement required for pack logos/content.
+- Confirmed the protection stack references a 16-bit helper while the setup engines and payload are 32-bit; this explains the 64-bit boundary more precisely without running legacy DRM.
+- Rejected a generic Mercenaries overlay because four same-named staged files differ from the older pack media; the clean entitlement replacement and game-visible proof remain open.
+- Added a payload-only overlay planner with exact per-pack resource allowlists and explicit Vengeance/Black Knight targeting; no legacy setup, protection, patch executable, or crack enters the plan.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

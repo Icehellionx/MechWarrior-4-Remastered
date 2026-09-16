@@ -19,7 +19,7 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 1. The legal history of “freeware” MW4 releases is easy to overstate; media must remain user-supplied until rights are documented.
 2. The local input set contains opaque no-CD/fix archives and a serial-key file. They are evidence only, never automatic release inputs.
 3. Multi-disc and archive variants may differ in executable revision or modifications despite similar names.
-4. Static evidence identifies a C-Dilla 16-bit helper in the pack activation path, but the exact failure and clean replacement contract still need controlled before/after proof.
+4. Disc/readme/archived-support evidence separates plain Mech Pak resources, required official game patches, and C-Dilla/SafeCast entitlement with a 16-bit helper. The clean entitlement replacement still needs controlled before/after and game-visible proof; copying resources alone is not qualified.
 5. Copying the mature MW3 launcher's structure wholesale would carry title-specific assumptions and historical complexity into a cleaner project.
 6. Manual cleanup can silently clip or reorder content without full-page render comparison.
 7. Uninstall is destructive and must be designed from a precise ownership/save inventory before implementation.
