@@ -1,0 +1,21 @@
+{
+  "name": "SafeDiscLoader2",
+  "repository": "https://github.com/nckstwrt/SafeDiscLoader2.git",
+  "commit": "f27286a363aa675a0422141cb96fc8619cf8b9d8",
+  "release": "v1.3",
+  "license": "GPL-3.0-only",
+  "licenseSha256": "81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8",
+  "projectSha256": "0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13",
+  "evaluatedRelease": {
+    "archiveSha256": "dd36f3b7c4eeaa022f6728f0f69feec09d76c8b892db1c614c8ff02d269d09a7",
+    "versionDllSha256": "2e9ca4bb2c650dafe2556176aeeef2fb5c4d733e398b45e467fae10c3195035b",
+    "versionDllSize": 79872
+  },
+  "includedProjects": [
+    "version-proxy.vcxproj"
+  ],
+  "excludedProjects": [
+    "VersionInjector/VersionInjector.vcxproj"
+  ],
+  "notes": "Source is fetched only for the compatibility build. The elevated upstream injector is neither built nor packaged. GPL source and notices must accompany any distributed DLL."
+}

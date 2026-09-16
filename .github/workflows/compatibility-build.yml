@@ -1,0 +1,41 @@
+name: Compatibility source build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/compatibility-build.yml'
+      - 'third_party/SafeDiscLoader2.lock.json'
+      - 'tools/compatibility/build-safedisc-loader2.ps1'
+      - 'tests/CompatibilitySourceBuild.Tests.ps1'
+
+permissions:
+  contents: read
+
+jobs:
+  safedisc-loader2:
+    runs-on: windows-2022
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v4
+
+      - name: Validate source-build contract
+        shell: pwsh
+        run: ./tests/CompatibilitySourceBuild.Tests.ps1
+
+      - name: Fetch pinned GPL source
+        shell: pwsh
+        run: |
+          git -c core.autocrlf=false clone --no-checkout https://github.com/nckstwrt/SafeDiscLoader2.git vendor/SafeDiscLoader2
+          git -C vendor/SafeDiscLoader2 checkout --detach f27286a363aa675a0422141cb96fc8619cf8b9d8
+
+      - name: Build x86 compatibility DLL only
+        shell: pwsh
+        run: ./tools/compatibility/build-safedisc-loader2.ps1 -SourceRoot vendor/SafeDiscLoader2 -OutputDirectory artifacts/SafeDiscLoader2
+
+      - name: Upload evidence artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SafeDiscLoader2-v1.3-source-build
+          path: artifacts/SafeDiscLoader2
+          if-no-files-found: error
