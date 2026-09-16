@@ -6,7 +6,7 @@ function Assert-True {
     if (-not $Condition) { throw $Message }
 }
 
-foreach ($component in @('MW4Remastered.Installer', 'MW4Remastered.Launcher')) {
+foreach ($component in @('MW4Remastered.Installer', 'MW4Remastered.Launcher', 'MW4Remastered.RtpPatchHost')) {
     $componentRoot = Join-Path $root "src/$component"
     $projectPath = Join-Path $componentRoot "$component.csproj"
     $manifestPath = Join-Path $componentRoot 'app.manifest'

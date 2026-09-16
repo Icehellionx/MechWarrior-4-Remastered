@@ -16,7 +16,7 @@
   ],
   "qualifiedExperiment": {
     "date": "2026-09-16",
-    "method": "Applied the official RTP payload to disposable retail and Patch-2 trees through an ignored x86 asInvoker harness. The historical engine was used only as a local oracle and is not a product dependency. SafeDisc player routines were emulated, never executed natively.",
+    "method": "Applied the official RTP payload to disposable retail and Patch-2 trees through a source-owned x86 asInvoker host. Product setup may load only these exact user-media engine/payload inputs inside coordinator-owned scratch; neither proprietary component is distributed or retained. SafeDisc player routines were emulated, never executed natively.",
     "result": "Patch 3 applies directly to original retail Vengeance. Its output matches the Patch-2-then-Patch-3 path except for Patch-2-only drvmgt.dll, so Patch 2 is not a prerequisite. The source-owned exact-input transform emits a disc-free executable and removes the CdaC14BA.dll and ARTPCLNT.dll import descriptors.",
     "rawPatchedInputs": [
       { "path": "MW4.EXE", "size": 344863, "sha256": "578800c3f3d8d74c366a7229240c34850a85379573059fc8b7e7dc5603563e80" },
@@ -39,8 +39,8 @@
     ],
     "managedExecutable": {
       "size": 3698688,
-      "sha256": "25b921583ee8114a34f35e83bf5f78bb48cb71086ea39e12d7a386e9fddd019e",
-      "smoke": "Opened a responsive MechWarrior Vengeance window from a clean Inner Sphere resource tree without mounted media, elevation, C-Dilla, or ARTPCLNT; current Defender scan found no threats."
+      "sha256": "d0e463d3494581ec6b8402dd77dd558ffb1714fc800306fa45f4e7b58653bfba",
+      "smoke": "The managed executable removes both legacy import descriptors and replaces two deferred C-Dilla plus two AutoRTPatch call sites with their existing success results. A complete two-pack coordinator tree opened a responsive MechWarrior Vengeance window without mounted media, elevation, C-Dilla, or ARTPCLNT; current Defender scan found no threats."
     }
   }
 }

@@ -22,6 +22,7 @@ Assert-True ($build -match '--self-contained true' -and $build -match 'PublishSi
 Assert-True ($build -match 'assert-release-tree\.ps1') 'Staged package payload must pass the release-tree allowlist gate.'
 Assert-True ($build -match '\.sha256') 'Package build must emit a SHA-256 sidecar.'
 Assert-True ($build -match 'assemble-black-knight-bundle\.ps1') 'Package staging must consume the exact qualified Black Knight bundle.'
+Assert-True ($build -match 'MW4Remastered\.RtpPatchHost' -and $inno -match 'MW4RemasteredRtpPatchHost\.exe') 'Package must include the project-owned non-elevating Patch 3 host.'
 Assert-True ($build -notmatch 'ExecutionPolicy\s+Bypass') 'Package build must not bypass PowerShell execution policy.'
 
 Write-Host 'Packaging contract tests passed.'

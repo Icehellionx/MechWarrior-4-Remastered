@@ -2,7 +2,10 @@ namespace MW4Remastered.Core.Install;
 
 public abstract record GameInstallRequest(string ProductId);
 
-public sealed record VengeanceInstallRequest(string DiscOneRoot, string DiscTwoRoot)
+public sealed record VengeanceInstallRequest(
+    string DiscOneRoot,
+    string DiscTwoRoot,
+    IReadOnlyList<string>? MechPakRoots = null)
     : GameInstallRequest("vengeance");
 
 public sealed record BlackKnightInstallRequest(string DiscRoot)
@@ -28,6 +31,7 @@ public sealed record GameInstallationResult(string ProductId, string Destination
 
 public sealed record PreparedInstallInputs(
     string? VengeanceExecutablePath = null,
+    string? VengeancePatch3PayloadRoot = null,
     string? MercenariesCabinetPayloadRoot = null,
     string? MercenariesExecutablePath = null);
 
@@ -41,20 +45,24 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
     private readonly VengeanceInstallPlanBuilder vengeance;
     private readonly BlackKnightInstallPlanBuilder blackKnight;
     private readonly MercenariesInstallPlanBuilder mercenaries;
+    private readonly MechPakResourceOverlayPlanBuilder mechPaks;
 
     public GameInstallPlanFactory()
-        : this(new VengeanceInstallPlanBuilder(), new BlackKnightInstallPlanBuilder(), new MercenariesInstallPlanBuilder())
+        : this(new VengeanceInstallPlanBuilder(), new BlackKnightInstallPlanBuilder(), new MercenariesInstallPlanBuilder(),
+            new MechPakResourceOverlayPlanBuilder())
     {
     }
 
     public GameInstallPlanFactory(
         VengeanceInstallPlanBuilder vengeance,
         BlackKnightInstallPlanBuilder blackKnight,
-        MercenariesInstallPlanBuilder mercenaries)
+        MercenariesInstallPlanBuilder mercenaries,
+        MechPakResourceOverlayPlanBuilder? mechPaks = null)
     {
         this.vengeance = vengeance ?? throw new ArgumentNullException(nameof(vengeance));
         this.blackKnight = blackKnight ?? throw new ArgumentNullException(nameof(blackKnight));
         this.mercenaries = mercenaries ?? throw new ArgumentNullException(nameof(mercenaries));
+        this.mechPaks = mechPaks ?? new MechPakResourceOverlayPlanBuilder();
     }
 
     public InstallPlan Build(GameInstallRequest request, PreparedInstallInputs? preparedInputs = null)
@@ -63,7 +71,7 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
         return request switch
         {
             VengeanceInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.VengeanceExecutablePath) =>
-                vengeance.Build(input.DiscOneRoot, input.DiscTwoRoot, preparedInputs.VengeanceExecutablePath),
+                BuildVengeance(input, preparedInputs),
             VengeanceInstallRequest => throw new ArgumentException("Vengeance installation requires an internally prepared executable.", nameof(preparedInputs)),
             BlackKnightInstallRequest input => blackKnight.Build(input.DiscRoot),
             MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.MercenariesCabinetPayloadRoot) &&
@@ -79,6 +87,45 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             _ => throw new ArgumentException($"Unsupported game install request: {request.GetType().Name}", nameof(request)),
         };
     }
+
+    private InstallPlan BuildVengeance(VengeanceInstallRequest input, PreparedInstallInputs preparedInputs)
+    {
+        var basePlan = vengeance.Build(input.DiscOneRoot, input.DiscTwoRoot, preparedInputs.VengeanceExecutablePath!);
+        var packRoots = input.MechPakRoots?.Where(root => !string.IsNullOrWhiteSpace(root)).ToArray() ?? [];
+        if (packRoots.Length == 0)
+        {
+            return basePlan;
+        }
+        if (string.IsNullOrWhiteSpace(preparedInputs.VengeancePatch3PayloadRoot))
+        {
+            throw new ArgumentException("Vengeance Mech Paks require an internally prepared Patch 3 payload.", nameof(preparedInputs));
+        }
+
+        var patchFiles = OfficialVengeancePatch3Transform.CreateInstallFiles(preparedInputs.VengeancePatch3PayloadRoot);
+        var patchDestinations = patchFiles.Select(file => file.DestinationRelativePath)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var files = basePlan.Files.Where(file => !patchDestinations.Contains(file.DestinationRelativePath)).ToList();
+        files.AddRange(patchFiles);
+
+        var installedPacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var packRoot in packRoots)
+        {
+            var overlay = mechPaks.Build(packRoot, "vengeance");
+            if (!installedPacks.Add(overlay.PackProductId))
+            {
+                throw new InvalidDataException($"Mech Pak '{overlay.PackProductId}' was selected more than once.");
+            }
+            var collision = overlay.Files.FirstOrDefault(candidate => files.Any(existing =>
+                existing.DestinationRelativePath.Equals(candidate.DestinationRelativePath, StringComparison.OrdinalIgnoreCase)));
+            if (collision is not null)
+            {
+                throw new InvalidDataException($"Mech Pak payload collides with the patched Vengeance tree: {collision.DestinationRelativePath}");
+            }
+            files.AddRange(overlay.Files);
+        }
+
+        return new InstallPlan("vengeance", files);
+    }
 }
 
 public sealed class GameInstallationCoordinator
@@ -89,10 +136,14 @@ public sealed class GameInstallationCoordinator
     private readonly InstallManifestVerifier verifier;
     private readonly IVengeanceExecutableTransform vengeanceTransform;
     private readonly IMercenariesExecutableTransform mercenariesTransform;
+    private readonly OfficialVengeancePatch3Transform vengeancePatch3Transform;
+    private readonly VengeancePatch3RetailInputBuilder vengeancePatch3Inputs;
+    private readonly string patchHostPath;
 
     public GameInstallationCoordinator()
         : this(new GameInstallPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
-            new VengeanceRetailExecutableTransform(), new MercenariesRetailExecutableTransform())
+            new VengeanceRetailExecutableTransform(), new MercenariesRetailExecutableTransform(),
+            new OfficialVengeancePatch3Transform(), new VengeancePatch3RetailInputBuilder())
     {
     }
 
@@ -102,7 +153,10 @@ public sealed class GameInstallationCoordinator
         StagedInstallTransaction transaction,
         InstallManifestVerifier verifier,
         IVengeanceExecutableTransform? vengeanceTransform = null,
-        IMercenariesExecutableTransform? mercenariesTransform = null)
+        IMercenariesExecutableTransform? mercenariesTransform = null,
+        OfficialVengeancePatch3Transform? vengeancePatch3Transform = null,
+        VengeancePatch3RetailInputBuilder? vengeancePatch3Inputs = null,
+        string? patchHostPath = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
@@ -110,6 +164,9 @@ public sealed class GameInstallationCoordinator
         this.verifier = verifier ?? throw new ArgumentNullException(nameof(verifier));
         this.vengeanceTransform = vengeanceTransform ?? new VengeanceRetailExecutableTransform();
         this.mercenariesTransform = mercenariesTransform ?? new MercenariesRetailExecutableTransform();
+        this.vengeancePatch3Transform = vengeancePatch3Transform ?? new OfficialVengeancePatch3Transform();
+        this.vengeancePatch3Inputs = vengeancePatch3Inputs ?? new VengeancePatch3RetailInputBuilder();
+        this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
     }
 
     public GameInstallationResult Install(
@@ -127,6 +184,8 @@ public sealed class GameInstallationCoordinator
         string? cabinetPayload = null;
         string? vengeanceTransformScratch = null;
         string? vengeanceExecutable = null;
+        string? vengeancePatch3Scratch = null;
+        string? vengeancePatch3Payload = null;
         string? mercenariesTransformScratch = null;
         string? mercenariesExecutable = null;
         try
@@ -139,6 +198,31 @@ public sealed class GameInstallationCoordinator
                 vengeanceTransformScratch = Path.Combine(parent, $".vengeance-transform-{Guid.NewGuid():N}");
                 var prepared = vengeanceTransform.Transform(vengeance.DiscOneRoot, vengeanceTransformScratch, cancellationToken);
                 vengeanceExecutable = ValidatePreparedVengeanceExecutable(prepared, vengeanceTransformScratch);
+
+                var packRoots = vengeance.MechPakRoots?.Where(root => !string.IsNullOrWhiteSpace(root)).ToArray() ?? [];
+                if (packRoots.Length > 0)
+                {
+                    var patchMediaRoot = packRoots.FirstOrDefault(vengeancePatch3Transform.IsQualifiedPatchMedia)
+                        ?? throw new InvalidDataException(
+                            "Selected Mech Pak media does not contain the qualified official Patch 3 payload. Add complete Inner Sphere media or another supported pack disc containing Patch 3.");
+                    Report(GameInstallationStage.Transforming, "Applying official Vengeance Patch 3 in contained scratch for the selected Mech Pak payload.");
+                    vengeancePatch3Scratch = Path.Combine(parent, $".vengeance-patch3-{Guid.NewGuid():N}");
+                    var retailPlan = plans.Build(
+                        vengeance with { MechPakRoots = null },
+                        new PreparedInstallInputs(VengeanceExecutablePath: vengeanceExecutable));
+                    var retailInputs = vengeancePatch3Inputs.Build(
+                        retailPlan,
+                        vengeance.DiscOneRoot,
+                        Path.Combine(vengeancePatch3Scratch, "retail"),
+                        cancellationToken);
+                    var patchResult = vengeancePatch3Transform.Transform(
+                        retailInputs,
+                        patchMediaRoot,
+                        patchHostPath,
+                        Path.Combine(vengeancePatch3Scratch, "transform"),
+                        cancellationToken);
+                    vengeancePatch3Payload = patchResult.PayloadRoot;
+                }
             }
 
             if (request is MercenariesInstallRequest mercenaries)
@@ -167,6 +251,7 @@ public sealed class GameInstallationCoordinator
             Report(GameInstallationStage.Planning, "Building the exact game payload plan.");
             var plan = plans.Build(request, new PreparedInstallInputs(
                 vengeanceExecutable,
+                vengeancePatch3Payload,
                 cabinetPayload,
                 mercenariesExecutable));
             if (!string.Equals(plan.ProductId, request.ProductId, StringComparison.OrdinalIgnoreCase))
@@ -190,6 +275,7 @@ public sealed class GameInstallationCoordinator
         {
             if (cabinetPayload is not null) RemoveScratchTree(cabinetPayload);
             if (mercenariesTransformScratch is not null) RemoveScratchTree(mercenariesTransformScratch);
+            if (vengeancePatch3Scratch is not null) RemoveScratchTree(vengeancePatch3Scratch);
             if (vengeanceTransformScratch is not null) RemoveScratchTree(vengeanceTransformScratch);
         }
 

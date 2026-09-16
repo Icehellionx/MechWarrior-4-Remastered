@@ -21,7 +21,21 @@ internal static class MechPakResourceOverlayPlanSmoke
             Write(innerSphere, "CDSET/SCSHD.EXE", "excluded DRM");
             Write(innerSphere, "GOODIES/PATCH3/MW4P3/ENGLISH/MW4.RTP", "separate patch contract");
 
-            var builder = new MechPakResourceOverlayPlanBuilder();
+            var unqualifiedRejected = false;
+            try
+            {
+                new MechPakResourceOverlayPlanBuilder().Build(innerSphere, "vengeance");
+            }
+            catch (InvalidDataException)
+            {
+                unqualifiedRejected = true;
+            }
+            Check(unqualifiedRejected, "pack overlay rejects structurally valid but unknown resource hashes", failures);
+
+            var builder = new MechPakResourceOverlayPlanBuilder(
+                new MediaInspectionService(),
+                new DirectoryMediaInventory(),
+                requireQualifiedHashes: false);
             var plan = builder.Build(innerSphere, "vengeance");
             Check(plan.PackProductId == "inner-sphere" && plan.TargetProductId == "vengeance", "pack overlay identifies pack and target", failures);
             Check(plan.Files.Count == 10 && plan.Files.All(file => file.DestinationRelativePath.StartsWith("RESOURCE/", StringComparison.OrdinalIgnoreCase)),

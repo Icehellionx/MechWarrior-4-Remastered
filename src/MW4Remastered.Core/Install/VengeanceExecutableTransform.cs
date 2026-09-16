@@ -662,6 +662,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                 PatchDiscCheck(image, pe.RawEnd);
                 break;
             case SafeDisc15020TitlePatch.VengeancePatch3:
+                PatchVengeancePatch3LegacyClients(image, pe.RawEnd);
                 RemoveImportDescriptors(image, pe, "CdaC14BA.dll", "ARTPCLNT.dll");
                 break;
             case SafeDisc15020TitlePatch.Mercenaries:
@@ -733,6 +734,57 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             var descriptorOffset = descriptors[descriptorIndex].HeaderOffset;
             var bytesToMove = checked((descriptors.Count - descriptorIndex) * 20);
             image.Slice(descriptorOffset + 20, bytesToMove).CopyTo(image[descriptorOffset..]);
+        }
+    }
+
+    private static void PatchVengeancePatch3LegacyClients(Span<byte> image, int rawEnd)
+    {
+        // CdaSysUpgrade returns nonzero on success. Taking that existing success
+        // branch avoids the fallback GetLastError/CdaSysInstall calls.
+        ReplaceAllExact(
+            image[..rawEnd],
+            Convert.FromHexString("FF1544807300"),
+            Convert.FromHexString("B80100000090"),
+            expectedCount: 2,
+            "Patch 3 C-Dilla upgrade calls");
+
+        // AutoRTPatch32 returns zero on success. Patch 3 is already applied by
+        // the installer, so retain the game's success path without loading its
+        // obsolete client DLL.
+        ReplaceAllExact(
+            image[..rawEnd],
+            Convert.FromHexString("FF1538807300"),
+            Convert.FromHexString("33C090909090"),
+            expectedCount: 2,
+            "Patch 3 AutoRTPatch calls");
+    }
+
+    private static void ReplaceAllExact(
+        Span<byte> image,
+        ReadOnlySpan<byte> pattern,
+        ReadOnlySpan<byte> replacement,
+        int expectedCount,
+        string description)
+    {
+        if (pattern.Length == 0 || pattern.Length != replacement.Length)
+        {
+            throw new ArgumentException("Binary patch patterns must be nonempty and equal length.");
+        }
+
+        var count = 0;
+        var offset = 0;
+        while (offset <= image.Length - pattern.Length)
+        {
+            var match = image[offset..].IndexOf(pattern);
+            if (match < 0) break;
+            offset += match;
+            replacement.CopyTo(image[offset..]);
+            count++;
+            offset += pattern.Length;
+        }
+        if (count != expectedCount)
+        {
+            throw new InvalidDataException($"Expected {expectedCount} {description}, but found {count}.");
         }
     }
 

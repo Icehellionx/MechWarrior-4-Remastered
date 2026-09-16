@@ -11,7 +11,7 @@ public sealed class VengeancePatch3ExecutableTransform : IVengeanceExecutableTra
     public const string EncryptedImageSha256 = "9e13cfda761d655222da523f4c603ea91f46c1669341fe82d8b6630ccbe3ecf6";
     public const string PlayerSha256 = "eb751d527e8c9b893ae0f5dd6ade3e15bbce468c5b0331afc87d0a23ba621ff7";
 
-    public const string OutputSha256 = "25b921583ee8114a34f35e83bf5f78bb48cb71086ea39e12d7a386e9fddd019e";
+    public const string OutputSha256 = "d0e463d3494581ec6b8402dd77dd558ffb1714fc800306fa45f4e7b58653bfba";
 
     private static readonly uint[] CipherKey = [0xf3a5e812, 0xe7937512, 0x865ad10a, 0x9b72167a];
     private static readonly uint[] MissingThunkSeeds = [0xf3927c72, 0xf392771a];

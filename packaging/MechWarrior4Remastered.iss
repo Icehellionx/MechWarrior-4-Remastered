@@ -36,6 +36,7 @@ VersionInfoVersion={#AppVersion}
 [Files]
 Source: "{#PayloadRoot}\MW4RemasteredInstaller.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\MW4RemasteredRtpPatchHost.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Compatibility\BlackKnight\*"; DestDir: "{app}\Compatibility\BlackKnight"; Flags: ignoreversion notimestamp recursesubdirs createallsubdirs
 

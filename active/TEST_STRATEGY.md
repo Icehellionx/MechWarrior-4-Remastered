@@ -41,6 +41,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Input fixtures use synthetic trees or hashes/metadata; tests never copy proprietary game payloads into source.
 - Media matching rejects unknown or partially matching revisions safely.
 - Binary transforms require exact input and output hashes and fail without mutation on mismatch.
+- Official Patch 3 application accepts only the locked user-media engine/payload hashes, runs in contained scratch through the source-owned `asInvoker` x86 host, exact-validates every result, and excludes the engine, RTP payload, raw ICD, C-Dilla, ARTP client, and patch utilities from the installed tree.
 - Internal compatibility bundles require exact inventory and hashes for installed binaries/notices plus any distribution-only corresponding source; extra files fail even when installed destinations are otherwise allowlisted.
 - Extraction prevents traversal, links/reparse escape, device paths, and writes outside staging.
 - Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
@@ -48,6 +49,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Install commits atomically where practical and removes partial state after failure.
 - Install cancellation is accepted through bounded staging operations and immediately before commit; after atomic commit, exact-tree verification is non-cancellable and must finish.
 - Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
+- A Vengeance installation with one or both Mech Paks must exactly verify the combined ownership manifest, derive both launcher indicators from exact file evidence, launch without mounted media/elevation, and uninstall all owned pack files while preserving an unowned save.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
 - Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal is owned separately by the standard package uninstaller.
 - The package installs per user without elevation, contains no broad uninstall-delete rule, and must preserve unowned game/save/configuration files during shell uninstall.

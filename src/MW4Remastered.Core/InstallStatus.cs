@@ -48,9 +48,14 @@ public sealed class InstallStatusReader
         var manualPath = FindManual(product);
         if (product.Kind == ProductKind.OptionalPack)
         {
-            // Pack status remains missing until pack-specific payload evidence is defined.
-            // A registry value or marker file alone must never claim installed content.
-            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null, "Pack payload not installed");
+            var vengeanceRoot = Path.Combine(installationRoot, "vengeance");
+            var packVerification = verifier.Verify(vengeanceRoot, InstallVerificationScope.OwnedFiles);
+            var installed = packVerification.IsValid && packVerification.Manifest is not null &&
+                packVerification.Manifest.ProductId.Equals("vengeance", StringComparison.OrdinalIgnoreCase) &&
+                MechPakInstalledEvidence.IsPresent(packVerification.Manifest, product.Id);
+            return installed
+                ? new ProductStatus(product, ProductInstallState.Ready, null, null, manualPath, vengeanceRoot, "Verified pack payload")
+                : new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null, "Pack payload not installed");
         }
 
         var productRoot = Path.Combine(installationRoot, product.Id);

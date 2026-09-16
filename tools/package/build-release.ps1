@@ -19,6 +19,7 @@ $scratch = Join-Path ([IO.Path]::GetTempPath()) ('mw4-release-build-' + [Guid]::
 $payload = Join-Path $scratch 'payload'
 $publishInstaller = Join-Path $scratch 'installer'
 $publishLauncher = Join-Path $scratch 'launcher'
+$publishPatchHost = Join-Path $scratch 'patch-host'
 try {
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
     & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.Installer/MW4Remastered.Installer.csproj') `
@@ -29,18 +30,27 @@ try {
         --configuration Release --runtime win-x64 --self-contained true `
         -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishLauncher
     if ($LASTEXITCODE -ne 0) { throw "Launcher publish failed with exit code $LASTEXITCODE." }
+    & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.RtpPatchHost/MW4Remastered.RtpPatchHost.csproj') `
+        --configuration Release --runtime win-x86 --self-contained true `
+        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishPatchHost
+    if ($LASTEXITCODE -ne 0) { throw "Patch host publish failed with exit code $LASTEXITCODE." }
 
     $installerFiles = @(Get-ChildItem -LiteralPath $publishInstaller -File)
     $launcherFiles = @(Get-ChildItem -LiteralPath $publishLauncher -File)
+    $patchHostFiles = @(Get-ChildItem -LiteralPath $publishPatchHost -File)
     if ($installerFiles.Count -ne 1 -or $installerFiles[0].Name -ne 'MW4RemasteredInstaller.exe') {
         throw 'Installer publish must produce exactly one self-contained executable.'
     }
     if ($launcherFiles.Count -ne 1 -or $launcherFiles[0].Name -ne 'MW4RemasteredLauncher.exe') {
         throw 'Launcher publish must produce exactly one self-contained executable.'
     }
+    if ($patchHostFiles.Count -ne 1 -or $patchHostFiles[0].Name -ne 'MW4RemasteredRtpPatchHost.exe') {
+        throw 'Patch host publish must produce exactly one self-contained executable.'
+    }
 
     Copy-Item -LiteralPath $installerFiles[0].FullName -Destination (Join-Path $payload $installerFiles[0].Name)
     Copy-Item -LiteralPath $launcherFiles[0].FullName -Destination (Join-Path $payload $launcherFiles[0].Name)
+    Copy-Item -LiteralPath $patchHostFiles[0].FullName -Destination (Join-Path $payload $patchHostFiles[0].Name)
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
     & (Join-Path $projectRoot 'tools/compatibility/assemble-black-knight-bundle.ps1') `
         -EvidenceDirectory $CompatibilityEvidenceDirectory `
@@ -49,6 +59,7 @@ try {
     & (Join-Path $projectRoot 'tools/assert-release-tree.ps1') -Root $payload -AllowedExecutablePaths @(
         'MW4RemasteredInstaller.exe',
         'MW4RemasteredLauncher.exe',
+        'MW4RemasteredRtpPatchHost.exe',
         'Compatibility/BlackKnight/MW4RemasteredCompatLauncher.exe',
         'Compatibility/BlackKnight/version.dll'
     )

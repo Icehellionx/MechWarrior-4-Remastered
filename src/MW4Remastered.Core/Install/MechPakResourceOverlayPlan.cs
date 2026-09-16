@@ -45,16 +45,21 @@ public sealed class MechPakResourceOverlayPlanBuilder
 
     private readonly MediaInspectionService inspection;
     private readonly DirectoryMediaInventory inventory;
+    private readonly bool requireQualifiedHashes;
 
     public MechPakResourceOverlayPlanBuilder()
-        : this(new MediaInspectionService(), new DirectoryMediaInventory())
+        : this(new MediaInspectionService(), new DirectoryMediaInventory(), requireQualifiedHashes: true)
     {
     }
 
-    public MechPakResourceOverlayPlanBuilder(MediaInspectionService inspection, DirectoryMediaInventory inventory)
+    public MechPakResourceOverlayPlanBuilder(
+        MediaInspectionService inspection,
+        DirectoryMediaInventory inventory,
+        bool requireQualifiedHashes = true)
     {
         this.inspection = inspection ?? throw new ArgumentNullException(nameof(inspection));
         this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
+        this.requireQualifiedHashes = requireQualifiedHashes;
     }
 
     public MechPakResourceOverlayPlan Build(string mediaRoot, string targetProductId)
@@ -80,6 +85,10 @@ public sealed class MechPakResourceOverlayPlanBuilder
         if (missing.Length > 0)
         {
             throw new InvalidDataException("Mech Pak media is missing allowlisted resources: " + string.Join(", ", missing));
+        }
+        if (requireQualifiedHashes)
+        {
+            MechPakInstalledEvidence.ValidateSource(root, pack.ProductId);
         }
 
         var files = pack.ResourcePaths

@@ -391,7 +391,11 @@ internal sealed class InstallerForm : Form
     {
         "vengeance" => new VengeanceInstallRequest(
             media.GetRoot("vengeance-disc-1"),
-            media.GetRoot("vengeance-disc-2")),
+            media.GetRoot("vengeance-disc-2"),
+            new[] { "inner-sphere-mech-pak", "clan-mech-pak" }
+                .Where(media.Layouts.ContainsKey)
+                .Select(media.GetRoot)
+                .ToArray()),
         "black-knight" => new BlackKnightInstallRequest(media.GetRoot("black-knight-disc-1")),
         "mercenaries" => new MercenariesInstallRequest(
             media.GetRoot("mercenaries-disc-1"),
@@ -628,9 +632,10 @@ internal sealed class InstallerForm : Form
     {
         if (!plan.HasSelectedGames || plan.BlockedProducts.Count > 0) return false;
         if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "black-knight" or "mercenaries"))) return false;
-        var unsupportedPackSelected = selection.Current.Capabilities.Any(item =>
+        var packSelected = selection.Current.Capabilities.Any(item =>
             item.Kind == ProductKind.OptionalPack && item.IsComplete);
-        return !unsupportedPackSelected;
+        return !packSelected || selection.Current.Capabilities.Any(item =>
+            item.ProductId.Equals("vengeance", StringComparison.OrdinalIgnoreCase) && item.IsComplete);
     }
 
     private string GetNextStepText()
@@ -644,7 +649,7 @@ internal sealed class InstallerForm : Form
         if (currentDestinationPlan is { } plan && CanInstallPlan(plan))
             return "Media validated. Click INSTALL SELECTED GAMES to continue.";
         if (selection.Current.Capabilities.Any(item => item.Kind == ProductKind.OptionalPack && item.IsComplete))
-            return "Mech Pak media was validated, but pack entitlement installation is not enabled in this build.";
+            return "Mech Pak media is ready; add both Vengeance discs so Setup can apply the required official Patch 3 safely.";
         if (selection.Current.Layouts.Count > 0) return "Add both discs for Vengeance or Mercenaries; Black Knight also requires Vengeance.";
         return "Choose one or more ISO or ZIP files to begin.";
     }
@@ -739,7 +744,7 @@ internal sealed class InstallerForm : Form
             if (capability.Kind == ProductKind.OptionalPack)
             {
                 status.Text = "✓  PACK MEDIA ADDED";
-                detail.Text = "Detected; pack installation support is still in progress";
+                detail.Text = "Installs with Vengeance after exact Patch 3 validation";
                 return;
             }
 
