@@ -10,6 +10,12 @@ Check(ProductCatalog.All.Count == 5, "catalog contains exactly three games and t
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.Game) == 3, "catalog contains three games");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.OptionalPack) == 2, "catalog contains two optional packs");
 Check(MediaCatalog.Layouts.Count == 7, "media catalog contains seven disc/pack layouts");
+Check(ProductDependencies.AreSatisfied("vengeance", Array.Empty<string>()), "Vengeance has no base-game dependency");
+Check(!ProductDependencies.AreSatisfied("black-knight", Array.Empty<string>()) &&
+    ProductDependencies.AreSatisfied("black-knight", new[] { "vengeance" }), "Black Knight requires Vengeance");
+Check(ProductDependencies.AreSatisfied("mercenaries", Array.Empty<string>()), "Mercenaries remains independently selectable");
+Check(!ProductDependencies.AreSatisfied("inner-sphere", Array.Empty<string>()) &&
+    !ProductDependencies.AreSatisfied("clan", Array.Empty<string>()), "both retail Mech Paks require the Vengeance base");
 
 var root = Path.Combine(Path.GetTempPath(), "mw4-remastered-core-test-" + Guid.NewGuid().ToString("N"));
 try

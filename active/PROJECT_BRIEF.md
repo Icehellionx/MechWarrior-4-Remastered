@@ -2,6 +2,8 @@
 
 Build an all-in-one Windows installer and launcher modeled on the successful operating approach of MechWarrior 3 Remastered, while designing MW4-specific boundaries from scratch.
 
+Model the original product topology explicitly: Vengeance is the base game; Black Knight is its dependent expansion; Mercenaries is independently installable; and the retail Mech Paks require the Vengeance base. A successful standalone compatibility experiment must not redefine those user-facing dependencies.
+
 The product should install from user-selected Vengeance, Black Knight, and Mercenaries ISOs or recognized archival ZIP layouts; optionally install Inner Sphere and Clan Mech Paks; integrate required official patches, no-disc behavior, and modern-Windows fixes reproducibly; show game launch icons and pack status; list cleaned manuals; provide an MW4-appropriate visual identity and remaster icon; and include repair and safe uninstall.
 
 Raw media and source scans remain local. The release must not include ISOs, serials, opaque cracks, or proprietary extracted trees without independently documented redistribution rights.

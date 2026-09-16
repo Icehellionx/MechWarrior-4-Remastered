@@ -29,3 +29,31 @@ public static class ProductCatalog
             Array.Empty<string>(), null),
     };
 }
+
+public static class ProductDependencies
+{
+    private static readonly IReadOnlyDictionary<string, string[]> RequiredBaseProducts =
+        new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["vengeance"] = Array.Empty<string>(),
+            ["black-knight"] = new[] { "vengeance" },
+            ["mercenaries"] = Array.Empty<string>(),
+            ["inner-sphere"] = new[] { "vengeance" },
+            ["clan"] = new[] { "vengeance" },
+        };
+
+    public static IReadOnlyList<string> GetRequiredBaseProducts(string productId)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(productId);
+        return RequiredBaseProducts.TryGetValue(productId, out var required)
+            ? required
+            : throw new ArgumentOutOfRangeException(nameof(productId), productId, "Unknown product.");
+    }
+
+    public static bool AreSatisfied(string productId, IEnumerable<string> installedProductIds)
+    {
+        ArgumentNullException.ThrowIfNull(installedProductIds);
+        var installed = installedProductIds.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        return GetRequiredBaseProducts(productId).All(installed.Contains);
+    }
+}

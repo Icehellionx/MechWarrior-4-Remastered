@@ -13,6 +13,7 @@ This workspace builds a preservation-oriented, all-in-one Windows installer and 
 ## Product scope
 
 - One installer discovers or asks for supported Vengeance, Black Knight, and Mercenaries media.
+- Preserve the original dependency topology: Vengeance is the base for Black Knight and the retail Mech Paks; Mercenaries is independent. A standalone compatibility experiment does not override this product contract.
 - Inner Sphere and Clan Mech Paks are optional capabilities detected during setup and shown clearly in the launcher.
 - One MW4-styled launcher exposes only installed games, displays pack status, links cleaned manuals, and provides repair/configuration/uninstall entry points.
 - Uninstall removes project-owned files and settings while preserving user saves/configuration according to a tested, documented policy.

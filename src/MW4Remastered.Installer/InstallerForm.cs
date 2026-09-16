@@ -170,7 +170,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             ForeColor = Warning,
             Font = new Font("Segoe UI Semibold", 9F),
-            Text = "CURRENT BUILD INSTALLS BLACK KNIGHT ONLY  •  OTHER MEDIA IS CHECKED BUT NOT INSTALLED",
+            Text = "DEVELOPMENT MEDIA CHECK  •  INSTALLATION RETURNS AFTER THE VENGEANCE BASE PATH IS QUALIFIED",
             Margin = new Padding(3, 5, 0, 0),
         });
         return panel;
@@ -292,7 +292,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             Anchor = AnchorStyles.Left,
             ForeColor = Muted,
-            Text = "Black Knight installs now. Vengeance, Mercenaries, and Mech Paks are detection-only in this build.",
+            Text = "Validate any game media here. This development build does not install a partial title set.",
         }, 0, 0);
 
         ConfigureSourceButton(revalidateButton, "REVALIDATE MEDIA");
@@ -309,21 +309,17 @@ internal sealed class InstallerForm : Form
         installButton.FlatAppearance.BorderSize = 0;
         installButton.Padding = new Padding(16, 7, 16, 7);
         installButton.Text = "ADD MEDIA TO BEGIN";
-        installButton.Click += async (_, _) => await RunPrimaryActionAsync();
+        installButton.Click += (_, _) => OpenInstalledLauncher();
         footer.Controls.Add(installButton, 2, 0);
         return footer;
     }
 
-    private async Task RunPrimaryActionAsync()
+    private void OpenInstalledLauncher()
     {
         var destination = GetBlackKnightDestination();
         var alreadyInstalled = destination is not null &&
             (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath));
-        if (!alreadyInstalled)
-        {
-            await InstallBlackKnightAsync();
-            return;
-        }
+        if (!alreadyInstalled) return;
 
         try
         {
@@ -573,23 +569,18 @@ internal sealed class InstallerForm : Form
         var destination = GetBlackKnightDestination();
         var alreadyInstalled = destination is not null &&
             (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath));
-        var installAvailable = blackKnightInstaller is not null && currentDestinationPlan?.HasEnoughSpace == true &&
-            destination is not null && !alreadyInstalled && !UseWaitCursor;
         var launcherAvailable = alreadyInstalled && installedLauncher.IsAvailable && !UseWaitCursor;
 
         cards[blackKnight.ProductId].Update(blackKnight);
         if (alreadyInstalled) cards[blackKnight.ProductId].ShowInstalled();
 
-        installButton.Enabled = installAvailable || launcherAvailable;
-        installButton.Text = installAvailable ? "2. INSTALL BLACK KNIGHT NOW"
-            : launcherAvailable ? "2. DONE — OPEN LAUNCHER"
+        installButton.Enabled = launcherAvailable;
+        installButton.Text = launcherAvailable ? "DONE — OPEN LAUNCHER"
             : UseWaitCursor ? "WORKING…"
-            : !blackKnight.IsComplete ? (snapshot.Layouts.Count == 0 ? "ADD MEDIA TO BEGIN" : "ADD BLACK KNIGHT MEDIA TO INSTALL")
-            : blackKnightInstaller is null ? "BLACK KNIGHT INSTALLER UNAVAILABLE"
             : alreadyInstalled ? "INSTALLED — LAUNCHER UNAVAILABLE"
-            : currentDestinationPlan?.HasEnoughSpace != true ? "CHOOSE A VALID INSTALL LOCATION"
-            : "CHECK INSTALL REQUIREMENTS";
-        installButton.AccessibleDescription = blackKnightInstaller is null ? compatibilityStatus : null;
+            : snapshot.Layouts.Count == 0 ? "ADD MEDIA TO VALIDATE"
+            : "MEDIA VALIDATED — INSTALL BUILD NOT READY";
+        installButton.AccessibleDescription = "Installation remains disabled until the shared Vengeance-first product path is qualified.";
     }
 
     private InstallDestinationProduct? GetBlackKnightDestination()
@@ -614,18 +605,14 @@ internal sealed class InstallerForm : Form
 
     private string GetNextStepText()
     {
-        var blackKnight = selection.Current.Capabilities.Single(item =>
-            item.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase));
         var destination = GetBlackKnightDestination();
         if (destination is not null && (Directory.Exists(destination.DestinationPath) || File.Exists(destination.DestinationPath)))
         {
             return installedLauncher.IsAvailable
-                ? "Black Knight is already installed. Click 2. DONE — OPEN LAUNCHER. Other detected titles are not installed by this development build."
+                ? "An earlier Black Knight test installation exists. Open the launcher to use or remove it."
                 : "Black Knight is already installed, but the launcher is missing. Repair the application shell before continuing.";
         }
-        if (blackKnight.IsComplete && installButton.Enabled) return "Media ready. Click 2. INSTALL BLACK KNIGHT NOW.";
-        if (blackKnight.IsComplete) return "Black Knight media is valid; review the install-location message below.";
-        if (selection.Current.Layouts.Count > 0) return "Media added. Add Black Knight media to enable the currently qualified install path.";
+        if (selection.Current.Layouts.Count > 0) return "Media validated. Installation is disabled while the Vengeance-first shared path is being qualified.";
         return "Choose one or more ISO or ZIP files to begin.";
     }
 
@@ -710,9 +697,10 @@ internal sealed class InstallerForm : Form
                 return;
             }
 
-            var installable = capability.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase);
-            status.Text = installable ? "✓  READY TO INSTALL" : "✓  MEDIA ADDED";
-            detail.Text = installable ? "Click the large install button below" : "Installation support is still in progress";
+            status.Text = "✓  MEDIA VALIDATED";
+            detail.Text = capability.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase)
+                ? "Requires the Vengeance base installation path"
+                : "Installation support is still in progress";
         }
 
         public void ShowInstalled()

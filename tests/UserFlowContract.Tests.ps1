@@ -16,9 +16,9 @@ Assert-True ($launcher -notmatch 'DIAGNOSTICS|SETTINGS|REMOVE GAME FILES') 'Laun
 Assert-True ($launcher -match 'CHECKING INSTALLED GAMES' -and $launcher -match 'Task\.Run\(statusReader\.Read\)') 'Launcher must become visible before hashing installed game trees.'
 
 Assert-True ($installer -match 'STEP 1 OF 2' -and $installer -match '1\. CHOOSE ISO / ZIP FILES') 'Installer must lead with an explicit media-selection step.'
-Assert-True ($installer -match 'CURRENT BUILD INSTALLS BLACK KNIGHT ONLY' -and $installer -match 'detection-only in this build') 'Installer must state its current installation scope before the user selects media.'
-Assert-True ($installer -match '2\. INSTALL BLACK KNIGHT NOW') 'Installer must provide an explicit primary install action when qualified media is ready.'
-Assert-True ($installer -match '2\. DONE — OPEN LAUNCHER' -and $installer -match 'RunPrimaryActionAsync') 'An existing install must end with an explicit launcher handoff instead of a disabled dead end.'
+Assert-True ($installer -match 'VENGEANCE BASE PATH' -and $installer -match 'does not install a partial title set') 'Development intake must preserve the Vengeance-first dependency instead of advertising a Black Knight-only product.'
+Assert-True ($installer -notmatch 'INSTALL BLACK KNIGHT NOW') 'The product installer must not expose the expansion as a standalone primary install path.'
+Assert-True ($installer -match 'DONE — OPEN LAUNCHER' -and $installer -match 'OpenInstalledLauncher') 'An existing test install may still hand off explicitly to the launcher.'
 Assert-True ($installer -notmatch 'BLACK KNIGHT ALREADY INSTALLED') 'Installer must not strand an existing install behind a disabled status-only button.'
 Assert-True ($installer -notmatch 'INSTALLATION LOCKED') 'Installer must explain the next action instead of showing an unexplained locked state.'
 Assert-True ($installer -match 'InstalledLauncherOrchestrator' -and $installer -match 'installedLauncher\.Start') 'Successful game installation must hand off to the simple launcher.'
