@@ -4,6 +4,7 @@ $launcher = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Launche
 $worker = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/InstallWorker.cs') -Raw
 $installerProgram = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/Program.cs') -Raw
 $setup = Get-Content -LiteralPath (Join-Path $root 'packaging/MechWarrior4Remastered.iss') -Raw
+$launch = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -25,6 +26,8 @@ Assert-True ($setup -notmatch 'Black Knight ISO or ZIP \(required\)') 'The packa
 Assert-True ($worker -match 'VengeanceInstallRequest' -and $worker -match 'BlackKnightInstallRequest' -and $worker -match 'MercenariesInstallRequest') 'The contained worker must retain all three qualified media installation paths.'
 Assert-True ($worker -match 'inner-sphere-mech-pak' -and $worker -match 'clan-mech-pak' -and $worker -match 'GameInstallationCoordinator') 'Qualified Mech Paks must flow into the shared coordinator with their Vengeance gate.'
 Assert-True ($worker -match 'RollBack' -and $worker -match 'OwnedInstallUninstaller') 'A failed unified setup run must roll back games newly committed by that run.'
+Assert-True ($worker -match 'LegacyGameRegistration' -and $worker -match 'registration\.Ensure') 'Setup must own legacy game registration before the launcher is offered.'
+Assert-True ($launch -match 'ValidateOwned' -and $launch -notmatch 'gameRegistration\.Ensure') 'Normal game launch must validate setup state without performing installation writes.'
 Assert-True ($installerProgram -notmatch 'Application\.Run|InstallerForm' -and $installerProgram -match 'InstallWorkerArguments') 'The package must not launch a second visible installer UI.'
 Assert-True ($setup -match 'CurStepChanged' -and $setup -match 'SW_HIDE' -and $setup -match 'ewWaitUntilTerminated') 'The sole visible setup wizard must invoke its contained worker synchronously and hidden.'
 Assert-True ($setup -match '--install-worker' -and $setup -match '--destination' -and $setup -match '--media') 'The sole setup wizard must forward its destination and every selected media path to the contained worker.'

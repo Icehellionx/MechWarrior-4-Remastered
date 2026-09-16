@@ -12,21 +12,18 @@
     "versionDllSize": 79872
   },
   "qualifiedSourceBuild": {
-    "workflowRuns": [
-      "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35048315727",
-      "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35048453580"
-    ],
-    "sourceCommit": "01ec0ec713f24d8f4e93761bec36427cec493383",
-    "msbuildVersion": "17.14.51.32402",
+    "workflowRuns": [],
+    "upstreamSourceCommit": "f27286a363aa675a0422141cb96fc8619cf8b9d8",
+    "qualification": "two clean local precommit builds on 2026-09-16; hosted CI rerun pending",
+    "msbuildVersion": "17.12.6",
     "platformToolset": "v143",
-    "versionDllSha256": "f26710840b1b6b0537c05b3e97c63171708c129b76a77ec3191d5652ee024959",
-    "versionDllSize": 91136,
-    "launchHelperSha256": "b80b440bf349438527e28547bf40276defc309c64b972400acf625a974eaab8d",
-    "launchHelperSize": 11491351,
-    "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
-    "reproducibility": "all packaged files are byte-identical across both clean runs",
-    "defenderResult": "no threats",
-    "blackKnightSmoke": "helper exit 0; responsive window titled MechWarrior Black Knight after 10 seconds; no mounted media"
+    "versionDllSha256": "ff530c8144ebf82b3f32951c8cd3b1085b6527b46d55348bb1c7f8ef7f83296a",
+    "versionDllSize": 82944,
+    "localPatchSha256": "286de58683edd45065f884b201109815b7252a6d8b3baf896e0a4ea68b03dadb",
+    "correspondingSourceArchiveSha256": "e96558eee5570e4085fcb9b36cbc3c30ae3ff3b2e2c02a67d54c008c920f0490",
+    "reproducibility": "all packaged files are byte-identical across two clean local builds from the pinned upstream commit plus the recorded local patch",
+    "defenderResult": "pending final packaged-payload scan",
+    "blackKnightSmoke": "normally loaded app-local DLL; responsive window titled MechWarrior Black Knight; zero-length game error log; no mounted media and no launch helper"
   },
   "includedProjects": [
     "version-proxy.vcxproj"
@@ -34,5 +31,5 @@
   "excludedProjects": [
     "VersionInjector/VersionInjector.vcxproj"
   ],
-  "notes": "Source is fetched only for the compatibility build. The elevated upstream injector is neither built nor packaged. GPL source and notices must accompany any distributed DLL."
+  "notes": "Source is fetched only for the compatibility build. The elevated upstream injector and all runtime launch helpers are neither built nor packaged. GPL source, the exact local patch, and notices accompany the distributed DLL."
 }

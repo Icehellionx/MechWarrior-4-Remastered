@@ -56,7 +56,7 @@ public sealed class InstallDestinationPlanner
         new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase)
         {
             ["vengeance"] = 1280L * 1024 * 1024,
-            ["black-knight"] = 768L * 1024 * 1024,
+            ["black-knight"] = 2048L * 1024 * 1024,
             ["mercenaries"] = 1536L * 1024 * 1024,
         };
 

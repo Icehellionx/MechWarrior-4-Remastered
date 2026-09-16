@@ -7,9 +7,8 @@ on:
       - '.github/workflows/compatibility-build.yml'
       - 'global.json'
       - 'third_party/SafeDiscLoader2.lock.json'
+      - 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
       - 'tools/compatibility/build-safedisc-loader2.ps1'
-      - 'tools/compatibility/publish-launch-helper.ps1'
-      - 'src/MW4Remastered.CompatLauncher/**'
       - 'tests/CompatibilitySourceBuild.Tests.ps1'
 
 permissions:
@@ -26,11 +25,6 @@ jobs:
         shell: pwsh
         run: ./tests/CompatibilitySourceBuild.Tests.ps1
 
-      - name: Install pinned .NET SDK
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '10.0.300'
-
       - name: Fetch pinned GPL source
         shell: pwsh
         run: |
@@ -40,10 +34,6 @@ jobs:
       - name: Build x86 compatibility DLL only
         shell: pwsh
         run: ./tools/compatibility/build-safedisc-loader2.ps1 -SourceRoot vendor/SafeDiscLoader2 -OutputDirectory artifacts/SafeDiscLoader2
-
-      - name: Publish non-elevating launch helper
-        shell: pwsh
-        run: ./tools/compatibility/publish-launch-helper.ps1 -OutputDirectory artifacts/SafeDiscLoader2
 
       - name: Upload evidence artifact
         uses: actions/upload-artifact@v6

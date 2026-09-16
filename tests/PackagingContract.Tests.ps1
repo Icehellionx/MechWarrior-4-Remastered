@@ -9,7 +9,8 @@ function Assert-True {
     if (-not $Condition) { throw $Message }
 }
 
-Assert-True ($inno -match 'PrivilegesRequired=lowest') 'Package setup must remain non-elevating and per-user.'
+Assert-True ($inno -match 'PrivilegesRequired=admin') 'Package setup must own the single elevation boundary required for ISO mounting.'
+Assert-True ($inno -match 'Flags:\s*postinstall nowait skipifsilent runasoriginaluser') 'Post-install launcher must return to the original non-elevated user token.'
 Assert-True ($inno -match 'DefaultDirName=\{localappdata\}\\Programs\\MechWarrior 4 Remastered') 'Package root must remain in the current user profile.'
 Assert-True ($inno -match 'Uninstallable=yes') 'Package must retain the standard Inno uninstaller.'
 Assert-True ($inno -match 'Filename:\s*"\{uninstallexe\}"') 'Package must expose its standard uninstaller in the Start Menu.'
@@ -18,6 +19,7 @@ Assert-True (($inno | Select-String -Pattern 'Type:\s*files;\s*Name:\s*"\{group\
 Assert-True ($inno -match 'Installing and verifying selected MechWarrior 4 games' -and $inno -match 'ewWaitUntilTerminated') 'Interactive setup must run original-media installation as a synchronous setup stage.'
 Assert-True ($inno -notmatch '(?im)^Filename:.*MW4RemasteredInstallWorker\.exe') 'The internal worker must never be exposed as a second Run-section installer.'
 Assert-True ($inno -match 'GetOpenFileNameMulti' -and $inno -match 'CreateCustomPage\(wpWelcome') 'Setup must collect any supported media through a neutral multi-file page before installation.'
+Assert-True ($inno -match 'CreateInputOptionPage\(MediaPage\.ID' -and $inno -match 'I accept the original Microsoft license terms') 'Setup must obtain original-game license acceptance before recording first-run completion.'
 Assert-True ($inno -match '\{param:MEDIAFILES\|\}' -and $inno -match 'AddCommandLineMedia') 'The same media-first flow must support a bounded unattended package smoke without adding a second UI.'
 Assert-True ($inno -match '\{app\}\\Logs\\InstallWorker\.log' -and $inno -notmatch '\{tmp\}\\MW4RemasteredInstallWorker\.log') 'Worker failures must retain their diagnostic log outside Inno temporary cleanup.'
 Assert-True ($inno -match 'Type:\s*files;\s*Name:\s*"\{app\}\\Logs\\InstallWorker\.log"' -and $inno -match 'Type:\s*dirifempty;\s*Name:\s*"\{app\}\\Logs"') 'The standard uninstaller must remove only the exact project-owned worker log and its empty directory.'
@@ -27,6 +29,7 @@ Assert-True ($build -match '--self-contained true' -and $build -match 'PublishSi
 Assert-True ($build -match 'assert-release-tree\.ps1') 'Staged package payload must pass the release-tree allowlist gate.'
 Assert-True ($build -match '\.sha256') 'Package build must emit a SHA-256 sidecar.'
 Assert-True ($build -match 'assemble-black-knight-bundle\.ps1') 'Package staging must consume the exact qualified Black Knight bundle.'
+Assert-True ($build -notmatch "Compatibility/BlackKnight/MW4RemasteredCompatLauncher\.exe") 'Package staging must not allow the runtime process-injection helper.'
 Assert-True ($build -match 'MW4Remastered\.RtpPatchHost' -and $inno -match 'MW4RemasteredRtpPatchHost\.exe') 'Package must include the project-owned non-elevating Patch 3 host.'
 Assert-True ($build -match 'manuals\.lock\.json' -and $build -match 'output/pdf' -and $inno -match 'Manuals\\\*\.pdf') 'Package must exact-hash and install all three cleaned manuals.'
 Assert-True ($build -match 'output/manual-covers' -and $build -match 'coverSha256' -and $inno -match 'Manuals\\\*\.cover\.png') 'Package must exact-hash and install all three rendered manual covers.'

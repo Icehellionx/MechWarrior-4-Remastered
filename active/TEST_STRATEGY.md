@@ -55,7 +55,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - A Vengeance installation with one or both Mech Paks must exactly verify the combined ownership manifest, derive both launcher indicators from exact file evidence, launch without mounted media/elevation, and uninstall all owned pack files while preserving an unowned save.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
 - Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal is owned separately by the standard package uninstaller.
-- The package installs per user without elevation, contains no broad uninstall-delete rule, and must preserve unowned game/save/configuration files during shell uninstall.
+- The package requests one setup elevation for ISO access and all install-time mutation, starts the post-install launcher with the original user token, contains no broad uninstall-delete rule, and must preserve unowned game/save/configuration files during shell uninstall.
 - Two clean release builds from identical declared inputs must produce byte-identical setup executables and checksum sidecars.
 - Launcher status is derived from verified files/configuration, not registry keys alone.
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.
@@ -64,6 +64,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Vengeance and Mercenaries package smokes must exercise the real launch orchestrator, verify the narrow per-user compatibility registration, and prove that uninstall removes only the matching project-owned records.
 - Unified uninstall must close the launcher and invoke the standard shell uninstaller in visible-progress silent mode after owned-game removal; field acceptance must confirm the launcher, manuals, shortcuts, and registration disappear after the asynchronous handoff.
 - Setup must remain the only visible installation UI. Contract tests reject `Application.Run`/`InstallerForm`, require a hidden synchronous worker invocation, and an unattended package smoke supplies media through the same Inno page state before verifying the installed shell and game manifest.
+- Normal launch must call only read-only setup-registration validation, start the game executable directly, and never package or select a process-injection helper.
 - Setup errors must retain the worker log outside Inno's self-deleting temporary directory and display that durable path.
 - Diagnostics redact serials, credentials, private paths, and media content.
 - Release tests block ISOs, BIN/CUE/MDF/MDS, serial files, raw cracks, `.env`, dumps, and unintended executables.

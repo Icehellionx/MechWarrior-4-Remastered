@@ -11,6 +11,9 @@ $ErrorActionPreference = 'Stop'
 $expectedCommit = 'f27286a363aa675a0422141cb96fc8619cf8b9d8'
 $expectedLicenseHash = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
 $expectedProjectHash = '0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13'
+$expectedPatchHash = '286de58683edd45065f884b201109815b7252a6d8b3baf896e0a4ea68b03dadb'
+$projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
+$patch = Join-Path $projectRoot 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
 
 $source = (Resolve-Path -LiteralPath $SourceRoot -ErrorAction Stop).Path
 $project = Join-Path $source 'version-proxy.vcxproj'
@@ -34,6 +37,7 @@ function Assert-Hash {
 
 Assert-Hash $license $expectedLicenseHash 'SafeDiscLoader2 license'
 Assert-Hash $project $expectedProjectHash 'SafeDiscLoader2 project'
+Assert-Hash $patch $expectedPatchHash 'SafeDiscLoader2 MW4 patch'
 
 if ([string]::IsNullOrWhiteSpace($MSBuildPath)) {
     $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
@@ -44,10 +48,18 @@ if ([string]::IsNullOrWhiteSpace($MSBuildPath) -or -not (Test-Path -LiteralPath 
     throw 'MSBuild with the Visual C++ x86/x64 workload is required.'
 }
 
+$buildScratch = Join-Path ([IO.Path]::GetTempPath()) ('mw4-safedisc-loader2-' + [Guid]::NewGuid().ToString('N'))
+& git -C $source worktree add --detach $buildScratch $expectedCommit
+if ($LASTEXITCODE -ne 0) { throw 'Could not create an isolated SafeDiscLoader2 build worktree.' }
+try {
+& git -C $buildScratch apply $patch
+if ($LASTEXITCODE -ne 0) { throw 'Could not apply the pinned MW4 Black Knight source patch.' }
+$project = Join-Path $buildScratch 'version-proxy.vcxproj'
+
 & $MSBuildPath $project /m /t:Rebuild /p:Configuration=Release /p:Platform=Win32 /p:PlatformToolset=v143 /p:Deterministic=true /verbosity:minimal
 if ($LASTEXITCODE -ne 0) { throw "SafeDiscLoader2 build failed with exit code $LASTEXITCODE." }
 
-$builtDll = Join-Path $source 'Release/version.dll'
+$builtDll = Join-Path $buildScratch 'Release/version.dll'
 if (-not (Test-Path -LiteralPath $builtDll -PathType Leaf)) { throw "Build did not produce the expected DLL: $builtDll" }
 
 function Clear-PeTimestamps {
@@ -110,6 +122,7 @@ New-Item -ItemType Directory -Path $output -Force | Out-Null
 $outputDll = Join-Path $output 'version.dll'
 Copy-Item -LiteralPath $builtDll -Destination $outputDll -Force
 Copy-Item -LiteralPath $license -Destination (Join-Path $output 'SafeDiscLoader2-LICENSE.txt') -Force
+Copy-Item -LiteralPath $patch -Destination (Join-Path $output 'SafeDiscLoader2-MW4-BlackKnight.patch') -Force
 $sourceArchive = Join-Path $output "SafeDiscLoader2-source-$expectedCommit.zip"
 & git -C $source archive --format=zip --output=$sourceArchive $expectedCommit
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) {
@@ -121,6 +134,7 @@ $metadata = [ordered]@{
     name = 'SafeDiscLoader2'
     sourceRepository = 'https://github.com/nckstwrt/SafeDiscLoader2.git'
     sourceCommit = $expectedCommit
+    localPatchSha256 = $expectedPatchHash
     license = 'GPL-3.0-only'
     platform = 'Win32'
     configuration = 'Release'
@@ -135,3 +149,15 @@ $metadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $outpu
 
 Write-Host "Built pinned SafeDiscLoader2 x86 DLL: $outputDll"
 Write-Host "SHA-256: $($metadata.versionDllSha256)"
+}
+finally {
+    & git -C $source worktree remove --force $buildScratch 2>$null
+    if (Test-Path -LiteralPath $buildScratch) {
+        $resolvedScratch = [IO.Path]::GetFullPath($buildScratch)
+        $tempRoot = [IO.Path]::GetFullPath([IO.Path]::GetTempPath())
+        if (-not $resolvedScratch.StartsWith($tempRoot, [StringComparison]::OrdinalIgnoreCase)) {
+            throw "Refusing unsafe compatibility-build cleanup: $resolvedScratch"
+        }
+        Remove-Item -LiteralPath $resolvedScratch -Recurse -Force
+    }
+}

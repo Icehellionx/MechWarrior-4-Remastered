@@ -7,6 +7,43 @@ public interface IProcessStarter
     void Start(ProcessStartInfo startInfo);
 }
 
+public interface IGameProcessState
+{
+    bool IsRunning(string executablePath);
+}
+
+public sealed class SystemGameProcessState : IGameProcessState
+{
+    public bool IsRunning(string executablePath)
+    {
+        var fullPath = Path.GetFullPath(executablePath);
+        var processName = Path.GetFileNameWithoutExtension(fullPath);
+        foreach (var process in Process.GetProcessesByName(processName))
+        {
+            using (process)
+            {
+                try
+                {
+                    if (!process.HasExited && string.Equals(
+                            process.MainModule?.FileName,
+                            fullPath,
+                            StringComparison.OrdinalIgnoreCase))
+                    {
+                        return true;
+                    }
+                }
+                catch (Exception error) when (error is InvalidOperationException or System.ComponentModel.Win32Exception)
+                {
+                    // A process that exits during inspection or belongs to a
+                    // different security boundary cannot prove this exact game
+                    // tree is already running.
+                }
+            }
+        }
+        return false;
+    }
+}
+
 public sealed class SystemProcessStarter : IProcessStarter
 {
     public void Start(ProcessStartInfo startInfo)
@@ -19,11 +56,16 @@ public sealed class LaunchOrchestrator
 {
     private readonly IProcessStarter processStarter;
     private readonly ILegacyGameRegistration gameRegistration;
+    private readonly IGameProcessState gameProcessState;
 
-    public LaunchOrchestrator(IProcessStarter processStarter, ILegacyGameRegistration gameRegistration)
+    public LaunchOrchestrator(
+        IProcessStarter processStarter,
+        ILegacyGameRegistration gameRegistration,
+        IGameProcessState? gameProcessState = null)
     {
         this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
+        this.gameProcessState = gameProcessState ?? new SystemGameProcessState();
     }
 
     public void Launch(ProductStatus status)
@@ -36,29 +78,21 @@ public sealed class LaunchOrchestrator
 
         var executable = Path.GetFullPath(status.LaunchPath);
         if (!File.Exists(executable)) throw new FileNotFoundException("Verified game executable is no longer present.", executable);
-        gameRegistration.Ensure(status);
+        if (gameProcessState.IsRunning(executable))
+        {
+            throw new InvalidOperationException($"{status.Product.DisplayName} is already running.");
+        }
+        // Setup owns registry mutation. Normal launch only validates the record,
+        // keeping first play free of elevation and other installation work.
+        gameRegistration.ValidateOwned(status);
         var workingDirectory = Path.GetDirectoryName(executable)!;
         var startInfo = new ProcessStartInfo
         {
-            FileName = status.CompatibilityLaunchPath ?? executable,
+            FileName = executable,
             WorkingDirectory = workingDirectory,
             UseShellExecute = false,
         };
-        if (status.CompatibilityLaunchPath is not null)
-        {
-            var compatibilityLauncher = Path.GetFullPath(status.CompatibilityLaunchPath);
-            if (!File.Exists(compatibilityLauncher))
-            {
-                throw new FileNotFoundException("Verified compatibility launcher is no longer present.", compatibilityLauncher);
-            }
-            if (!string.Equals(Path.GetDirectoryName(compatibilityLauncher), workingDirectory, StringComparison.OrdinalIgnoreCase))
-            {
-                throw new InvalidDataException("Verified compatibility launcher is not adjacent to the game executable.");
-            }
-            startInfo.FileName = compatibilityLauncher;
-            startInfo.ArgumentList.Add(Path.GetFileName(executable));
-        }
-        else if (status.Product.Id is "vengeance" or "mercenaries")
+        if (status.Product.Id is "vengeance" or "black-knight" or "mercenaries")
         {
             AddModernWindowsArguments(startInfo);
         }
@@ -71,6 +105,7 @@ public sealed class LaunchOrchestrator
         // skip startup movies, and avoid current DirectInput enumeration.
         startInfo.ArgumentList.Add("-32");
         startInfo.ArgumentList.Add("-window");
+        startInfo.ArgumentList.Add("-noautoconfig");
         startInfo.ArgumentList.Add("-f");
         startInfo.ArgumentList.Add("1024x768");
         startInfo.ArgumentList.Add("-gl");

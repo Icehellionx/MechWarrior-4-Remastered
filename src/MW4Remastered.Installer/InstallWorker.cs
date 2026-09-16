@@ -1,5 +1,6 @@
 using MW4Remastered.Core;
 using MW4Remastered.Core.Install;
+using MW4Remastered.Core.Launch;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Installer;
@@ -68,7 +69,7 @@ internal sealed class InstallWorker
                 TryAppendLog(args.LogPath, $"Installing {product.DisplayName}.");
                 var progress = new Progress<GameInstallationProgress>(value =>
                     TryAppendLog(args.LogPath, $"{value.ProductId}: {value.Stage} - {value.Message}"));
-                coordinator.Install(CreateInstallRequest(product.ProductId, media), product.DestinationPath, progress);
+                coordinator.Install(CreateInstallRequest(product.ProductId, media, plan.RootPath), product.DestinationPath, progress);
                 installedThisRun.Add(product.DestinationPath);
             }
         }
@@ -83,6 +84,27 @@ internal sealed class InstallWorker
         {
             RollBack(installedThisRun, args.LogPath);
             throw new InvalidDataException("One or more selected games failed final ownership verification.");
+        }
+        var statuses = new InstallStatusReader(plan.RootPath).Read()
+            .Where(item => item.Product.Kind == ProductKind.Game && finalReady.Contains(item.Product.Id))
+            .ToDictionary(item => item.Product.Id, StringComparer.OrdinalIgnoreCase);
+        var registration = new LegacyGameRegistration();
+        var registeredThisRun = new List<ProductStatus>();
+        try
+        {
+            foreach (var product in plan.Products)
+            {
+                var status = statuses[product.ProductId];
+                registration.Ensure(status);
+                registeredThisRun.Add(status);
+                TryAppendLog(args.LogPath, $"Registered {product.DisplayName} for non-elevated launch.");
+            }
+        }
+        catch
+        {
+            foreach (var status in registeredThisRun.AsEnumerable().Reverse()) registration.RemoveOwned(status);
+            RollBack(installedThisRun, args.LogPath);
+            throw;
         }
         TryAppendLog(args.LogPath, "All selected games installed and verified.");
         return 0;
@@ -126,11 +148,13 @@ internal sealed class InstallWorker
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
     }
 
-    private static GameInstallRequest CreateInstallRequest(string productId, IMediaSelectionSession media) => productId switch
+    private static GameInstallRequest CreateInstallRequest(string productId, IMediaSelectionSession media, string installRoot) => productId switch
     {
         "vengeance" => new VengeanceInstallRequest(media.GetRoot("vengeance-disc-1"), media.GetRoot("vengeance-disc-2"),
             new[] { "inner-sphere-mech-pak", "clan-mech-pak" }.Where(media.Layouts.ContainsKey).Select(media.GetRoot).ToArray()),
-        "black-knight" => new BlackKnightInstallRequest(media.GetRoot("black-knight-disc-1")),
+        "black-knight" => new BlackKnightInstallRequest(
+            media.GetRoot("black-knight-disc-1"),
+            Path.Combine(Path.GetFullPath(installRoot), "vengeance")),
         "mercenaries" => new MercenariesInstallRequest(media.GetRoot("mercenaries-disc-1"), media.GetRoot("mercenaries-disc-2")),
         _ => throw new InvalidOperationException($"Unsupported product: {productId}"),
     };

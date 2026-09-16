@@ -702,22 +702,41 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
         var patchOffset = gate + 0x15;
         Convert.FromHexString("E946000000").CopyTo(image[patchOffset..]);
 
-        // The retail game performs a second setup check against a machine-wide
-        // product key even though its ordinary settings and EULA state live in
-        // HKCU. Redirect only the root-hive argument at both protected call
-        // sites, retaining the complete product-record validation without UAC.
+        // Mercenaries delegates EULA/setup acceptance to EBUEula.dll. That
+        // legacy client faults on current Windows even when its two arguments
+        // are ABI-correct. Setup has already obtained the user's installation
+        // choice, and both mirrored callers consume only AL, so return true at
+        // the exact client calls and let their existing cleanup discard the two
+        // arguments. No legacy helper is loaded during normal game launch.
         ReplaceAllExact(
             image[..pe.RawEnd],
             Convert.FromHexString("8B44241C8B4C24145051E81DF7FFFF83C40884C0"),
-            Convert.FromHexString("8B44241C506801000080E81DF7FFFF83C40884C0"),
+            Convert.FromHexString("8B44241C8B4C24145051B00190909083C40884C0"),
             expectedCount: 1,
-            "Mercenaries primary setup-record root");
+            "Mercenaries primary EULA/setup validation call");
         ReplaceAllExact(
             image[..pe.RawEnd],
             Convert.FromHexString("8B4424148B4C24185051E85659D2FF83C40884C0"),
-            Convert.FromHexString("8B442414506801000080E85659D2FF83C40884C0"),
+            Convert.FromHexString("8B4424148B4C24185051B00190909083C40884C0"),
             expectedCount: 1,
-            "Mercenaries protected setup-record root");
+            "Mercenaries mirrored EULA/setup validation call");
+
+        // Like Vengeance, the Mercenaries startup path separately validates
+        // that CDPath resolves to an original-disc volume label. Installed
+        // media-derived trees cannot and should not require a mounted ISO.
+        // Both callers use only AL and take no arguments.
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("B301E8A4F8FFFF"),
+            Convert.FromHexString("B301B001909090"),
+            expectedCount: 1,
+            "Mercenaries primary installed-media validation call");
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("E883F8FFFF84C074DF"),
+            Convert.FromHexString("B00190909084C074DF"),
+            expectedCount: 1,
+            "Mercenaries retry installed-media validation call");
 
         RemoveImportDescriptors(image, pe, "CdaC14BA.dll");
     }
@@ -756,26 +775,65 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
 
     private static void PatchVengeancePatch3LegacyClients(Span<byte> image, int rawEnd)
     {
-        // CdaSysUpgrade is stdcall with two arguments, so the callee used to
-        // remove eight bytes from the stack. Preserve that cleanup while
-        // returning its nonzero success result; omitting it corrupts ESP and
-        // eventually reaches the game's generic incorrect-install stop.
+        // CdaSysUpgrade takes no arguments and ends in a plain RET. The caller
+        // treats any nonzero EAX as success, so preserve ESP and return one.
+        // Static disassembly of the exact Patch 3 client locks this ABI; adding
+        // stack cleanup here discards the caller's saved ESI/EDI registers.
         ReplaceAllExact(
             image[..rawEnd],
             Convert.FromHexString("FF1544807300"),
-            Convert.FromHexString("83C4086A0158"),
+            Convert.FromHexString("6A0158909090"),
             expectedCount: 2,
             "Patch 3 C-Dilla upgrade calls");
 
-        // AutoRTPatch32 is stdcall with three arguments. Patch 3 is already
-        // applied by the installer, so clean its twelve argument bytes and
-        // return zero without loading the obsolete client DLL.
+        // AutoRTPatch32 takes three arguments but also ends in a plain RET; its
+        // callers perform their own shared stack cleanup after the call. Patch
+        // 3 is already applied by the installer, so return zero without
+        // changing ESP or loading the obsolete client DLL.
         ReplaceAllExact(
             image[..rawEnd],
             Convert.FromHexString("FF1538807300"),
-            Convert.FromHexString("83C40C33C090"),
+            Convert.FromHexString("33C090909090"),
             expectedCount: 2,
             "Patch 3 AutoRTPatch calls");
+
+        // Patch 3's EULA helper reads FIRSTRUN from the game's direct HKCU
+        // settings record, then rejects the installation unless a separate
+        // machine-wide HKLM product record exists. Normal game launch must not
+        // elevate merely to recreate that legacy setup artifact. Both mirrored
+        // callers treat AL=true as accepted/valid and clean their own two
+        // arguments, so return true locally without loading the helper.
+        ReplaceAllExact(
+            image[..rawEnd],
+            Convert.FromHexString("E86FF8FFFF"),
+            Convert.FromHexString("B001909090"),
+            expectedCount: 1,
+            "Patch 3 primary EULA/setup validation call");
+        ReplaceAllExact(
+            image[..rawEnd],
+            Convert.FromHexString("E8E548CEFF"),
+            Convert.FromHexString("B001909090"),
+            expectedCount: 1,
+            "Patch 3 mirrored EULA/setup validation call");
+
+        // A separate Patch 3 routine reads CDPath and accepts it only when the
+        // backing volume is labelled MECHWARR_01 or MECHWARR_02. A complete
+        // media-derived installation necessarily points CDPath at its installed
+        // tree, not at a permanently mounted original disc. Both startup calls
+        // consume only AL, so satisfy this already-proven installation-media
+        // gate locally while leaving the rest of startup validation intact.
+        ReplaceAllExact(
+            image[..rawEnd],
+            Convert.FromHexString("B301E8E8F9FFFF"),
+            Convert.FromHexString("B301B001909090"),
+            expectedCount: 1,
+            "Patch 3 primary installed-media validation call");
+        ReplaceAllExact(
+            image[..rawEnd],
+            Convert.FromHexString("E8C7F9FFFF"),
+            Convert.FromHexString("B001909090"),
+            expectedCount: 1,
+            "Patch 3 retry installed-media validation call");
     }
 
     private static void ReplaceAllExact(

@@ -172,6 +172,16 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Re-scanned the corrected installed shell plus preserved Black Knight tree; Defender reported no threat and no new detection/remediation event.
 - Hosted Windows application-contract run `35061879507` passed all steps for redesign commit `11d0310` in 58 seconds.
 
+## Setup-owned launch-ready 0.5.7 candidate — 2026-09-16
+
+- Moved the sole required elevation boundary to outer setup after reproducing `Get-DiskImage` access denial without administrator consent; the post-install launcher explicitly returns to the original user token.
+- Moved all legacy registration and EULA completion into setup and made launch validation read-only, so game clicks do no install-time work.
+- Removed the Black Knight process-injection helper, its source project, publisher, and tests. A reproducibly source-built app-local DLL now signature-checks and patches only two obsolete installed-media calls at OEP.
+- Made Black Knight a self-contained expansion tree by composing only verified manifest-owned Vengeance base files with expansion overrides and the exact setup-accepted EULA transform.
+- Completed a fresh real seven-ISO worker install for all three games plus both packs. Vengeance, Black Knight, and Mercenaries were responsive with empty logs; Black Knight passed three consecutive single-process launches.
+- Built internal setup `0.5.7` at 166,365,015 bytes, SHA-256 `493c08007885c34cc8035ed96627b44a73ba971c8b563a7cf8af509922f3a787`. Defender engine `1.1.26080.3`, intelligence `1.459.239.0`, reported no detection/remediation event for the exact setup, staged payload, or installed tree.
+- Deferred only the compiled-package seven-media smoke because an unrelated active VS Code/Inno updater held Inno's setup gate; the unrelated process was not terminated.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

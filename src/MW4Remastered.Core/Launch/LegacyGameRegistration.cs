@@ -5,14 +5,12 @@ namespace MW4Remastered.Core.Launch;
 public interface ILegacyGameRegistration
 {
     void Ensure(ProductStatus status);
+    void ValidateOwned(ProductStatus status);
     void RemoveOwned(ProductStatus status);
 }
 
 public sealed class LegacyGameRegistration : ILegacyGameRegistration
 {
-    private const string VirtualStorePrefix =
-        @"Software\Classes\VirtualStore\MACHINE\SOFTWARE\WOW6432Node\Microsoft\Microsoft Games";
-
     public void Ensure(ProductStatus status)
     {
         var registration = Describe(status);
@@ -20,30 +18,43 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
         if (!OperatingSystem.IsWindows())
             throw new PlatformNotSupportedException("Legacy MechWarrior 4 registration is supported only on Windows.");
 
-        // The retail games query a virtualized 32-bit HKLM path. VirtualStore's
-        // physical HKCU fallback includes WOW6432Node; selecting Registry32 on
-        // HKCU alone does not add that segment.
         var view = registration.Use32BitView ? RegistryView.Registry32 : RegistryView.Default;
         using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
         using var key = currentUser.CreateSubKey(registration.KeyPath, writable: true) ??
             throw new UnauthorizedAccessException("Windows did not permit the per-user MechWarrior 4 compatibility registration.");
-        var existingPath = key.GetValue("CDPath") as string;
-        if (!string.IsNullOrWhiteSpace(existingPath) &&
-            !PathsEqual(existingPath, registration.InstallPath))
+        var existingExecutable = key.GetValue("EXE Path") as string;
+        if (!string.IsNullOrWhiteSpace(existingExecutable) &&
+            !PathsEqual(existingExecutable, registration.ExecutablePath))
         {
             throw new InvalidOperationException(
-                $"A different {status.Product.DisplayName} installation already owns the per-user compatibility registration: {existingPath}");
+                $"A different {status.Product.DisplayName} installation already owns the per-user compatibility registration: {existingExecutable}");
         }
 
-        key.SetValue("CDPath", registration.InstallPath, RegistryValueKind.String);
+        key.SetValue("CDPath", registration.CdPath, RegistryValueKind.String);
         key.SetValue("EXE Path", registration.ExecutablePath, RegistryValueKind.String);
         key.SetValue("Version", registration.Version, RegistryValueKind.DWord);
-        // Zero asks the original game to present its EULA. Preserve a value the
-        // game has already written so accepting it once is not undone on every
-        // subsequent launch.
-        if (key.GetValue("FIRSTRUN") is null)
+        // Setup obtains explicit acceptance before this registration is created.
+        // Recording it here keeps the original first-run dialog out of gameplay.
+        key.SetValue("FIRSTRUN", 1, RegistryValueKind.DWord);
+    }
+
+    public void ValidateOwned(ProductStatus status)
+    {
+        var registration = Describe(status);
+        if (registration is null) return;
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Legacy MechWarrior 4 registration is supported only on Windows.");
+
+        var view = registration.Use32BitView ? RegistryView.Registry32 : RegistryView.Default;
+        using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
+        using var key = currentUser.OpenSubKey(registration.KeyPath, writable: false);
+        if (key is null ||
+            !PathsEqual(key.GetValue("CDPath") as string, registration.CdPath) ||
+            !PathsEqual(key.GetValue("EXE Path") as string, registration.ExecutablePath) ||
+            Convert.ToInt32(key.GetValue("Version", 0)) != registration.Version)
         {
-            key.SetValue("FIRSTRUN", 0, RegistryValueKind.DWord);
+            throw new InvalidOperationException(
+                $"{status.Product.DisplayName} setup registration is missing or belongs to another installation. Run Setup again to repair it.");
         }
     }
 
@@ -54,11 +65,13 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
 
         var view = registration.Use32BitView ? RegistryView.Registry32 : RegistryView.Default;
         using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
-        using (var key = currentUser.OpenSubKey(registration.KeyPath, writable: false))
+        using (var key = currentUser.OpenSubKey(registration.KeyPath, writable: true))
         {
-            if (key is null || !PathsEqual(key.GetValue("CDPath") as string, registration.InstallPath)) return;
+            if (key is null || !PathsEqual(key.GetValue("EXE Path") as string, registration.ExecutablePath)) return;
+            key.DeleteValue("CDPath", throwOnMissingValue: false);
+            key.DeleteValue("EXE Path", throwOnMissingValue: false);
+            key.DeleteValue("Version", throwOnMissingValue: false);
         }
-        currentUser.DeleteSubKeyTree(registration.KeyPath, throwOnMissingSubKey: false);
     }
 
     internal static LegacyRegistrationDescription? Describe(ProductStatus status)
@@ -70,14 +83,15 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
 
         var (keyPath, use32BitView) = status.Product.Id switch
         {
-            "vengeance" => ($@"{VirtualStorePrefix}\MechWarrior Vengeance", false),
+            "vengeance" => (@"Software\Microsoft\Microsoft Games\MechWarrior Vengeance", true),
             "black-knight" => (@"Software\Microsoft\Microsoft Games\MechWarrior Black Knight", true),
             _ => (@"Software\Microsoft\Microsoft Games\MechWarrior Mercenaries", true),
         };
+        var installPath = Path.GetFullPath(status.InstallPath);
         return new LegacyRegistrationDescription(
             keyPath,
             use32BitView,
-            Path.GetFullPath(status.InstallPath),
+            status.Product.Id == "black-knight" ? @"L:\" : installPath,
             Path.GetFullPath(status.LaunchPath),
             4);
     }
@@ -102,6 +116,6 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
 internal sealed record LegacyRegistrationDescription(
     string KeyPath,
     bool Use32BitView,
-    string InstallPath,
+    string CdPath,
     string ExecutablePath,
     int Version);

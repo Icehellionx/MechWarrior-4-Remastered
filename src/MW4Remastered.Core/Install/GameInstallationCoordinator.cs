@@ -8,7 +8,7 @@ public sealed record VengeanceInstallRequest(
     IReadOnlyList<string>? MechPakRoots = null)
     : GameInstallRequest("vengeance");
 
-public sealed record BlackKnightInstallRequest(string DiscRoot)
+public sealed record BlackKnightInstallRequest(string DiscRoot, string BaseVengeanceRoot)
     : GameInstallRequest("black-knight");
 
 public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot)
@@ -33,7 +33,8 @@ public sealed record PreparedInstallInputs(
     string? VengeanceExecutablePath = null,
     string? VengeancePatch3PayloadRoot = null,
     string? MercenariesCabinetPayloadRoot = null,
-    string? MercenariesExecutablePath = null);
+    string? MercenariesExecutablePath = null,
+    string? BlackKnightEulaPath = null);
 
 public interface IGameInstallPlanFactory
 {
@@ -73,7 +74,10 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             VengeanceInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.VengeanceExecutablePath) =>
                 BuildVengeance(input, preparedInputs),
             VengeanceInstallRequest => throw new ArgumentException("Vengeance installation requires an internally prepared executable.", nameof(preparedInputs)),
-            BlackKnightInstallRequest input => blackKnight.Build(input.DiscRoot),
+            BlackKnightInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.BlackKnightEulaPath) =>
+                blackKnight.Build(input.DiscRoot, input.BaseVengeanceRoot, preparedInputs.BlackKnightEulaPath),
+            BlackKnightInstallRequest => throw new ArgumentException(
+                "Black Knight installation requires an internally prepared EULA module.", nameof(preparedInputs)),
             MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.MercenariesCabinetPayloadRoot) &&
                 !string.IsNullOrWhiteSpace(preparedInputs.MercenariesExecutablePath) =>
                 mercenaries.Build(
@@ -138,6 +142,7 @@ public sealed class GameInstallationCoordinator
     private readonly IMercenariesExecutableTransform mercenariesTransform;
     private readonly OfficialVengeancePatch3Transform vengeancePatch3Transform;
     private readonly VengeancePatch3RetailInputBuilder vengeancePatch3Inputs;
+    private readonly IBlackKnightEulaTransform blackKnightEulaTransform;
     private readonly string patchHostPath;
 
     public GameInstallationCoordinator()
@@ -156,7 +161,8 @@ public sealed class GameInstallationCoordinator
         IMercenariesExecutableTransform? mercenariesTransform = null,
         OfficialVengeancePatch3Transform? vengeancePatch3Transform = null,
         VengeancePatch3RetailInputBuilder? vengeancePatch3Inputs = null,
-        string? patchHostPath = null)
+        string? patchHostPath = null,
+        IBlackKnightEulaTransform? blackKnightEulaTransform = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
@@ -166,6 +172,7 @@ public sealed class GameInstallationCoordinator
         this.mercenariesTransform = mercenariesTransform ?? new MercenariesRetailExecutableTransform();
         this.vengeancePatch3Transform = vengeancePatch3Transform ?? new OfficialVengeancePatch3Transform();
         this.vengeancePatch3Inputs = vengeancePatch3Inputs ?? new VengeancePatch3RetailInputBuilder();
+        this.blackKnightEulaTransform = blackKnightEulaTransform ?? new BlackKnightEulaTransform();
         this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
     }
 
@@ -188,6 +195,8 @@ public sealed class GameInstallationCoordinator
         string? vengeancePatch3Payload = null;
         string? mercenariesTransformScratch = null;
         string? mercenariesExecutable = null;
+        string? blackKnightTransformScratch = null;
+        string? blackKnightEula = null;
         try
         {
             if (request is VengeanceInstallRequest vengeance)
@@ -225,6 +234,15 @@ public sealed class GameInstallationCoordinator
                 }
             }
 
+            if (request is BlackKnightInstallRequest blackKnight)
+            {
+                Report(GameInstallationStage.Transforming, "Recording setup-time license acceptance for Black Knight.");
+                var parent = Directory.GetParent(destination)?.FullName
+                    ?? throw new InvalidDataException("Install destination must have a parent directory.");
+                blackKnightTransformScratch = Path.Combine(parent, $".black-knight-transform-{Guid.NewGuid():N}");
+                blackKnightEula = blackKnightEulaTransform.Transform(blackKnight.DiscRoot, blackKnightTransformScratch);
+            }
+
             if (request is MercenariesInstallRequest mercenaries)
             {
                 var parent = Directory.GetParent(destination)?.FullName
@@ -253,7 +271,8 @@ public sealed class GameInstallationCoordinator
                 vengeanceExecutable,
                 vengeancePatch3Payload,
                 cabinetPayload,
-                mercenariesExecutable));
+                mercenariesExecutable,
+                blackKnightEula));
             if (!string.Equals(plan.ProductId, request.ProductId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException($"Install plan product '{plan.ProductId}' does not match request '{request.ProductId}'.");
@@ -280,6 +299,7 @@ public sealed class GameInstallationCoordinator
             if (mercenariesTransformScratch is not null) RemoveScratchTree(mercenariesTransformScratch);
             if (vengeancePatch3Scratch is not null) RemoveScratchTree(vengeancePatch3Scratch);
             if (vengeanceTransformScratch is not null) RemoveScratchTree(vengeanceTransformScratch);
+            if (blackKnightTransformScratch is not null) RemoveScratchTree(blackKnightTransformScratch);
         }
 
         void Report(GameInstallationStage stage, string message) =>

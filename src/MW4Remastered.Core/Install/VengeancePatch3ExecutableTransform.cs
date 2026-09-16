@@ -6,12 +6,12 @@ namespace MW4Remastered.Core.Install;
 /// </summary>
 public sealed class VengeancePatch3ExecutableTransform : IVengeanceExecutableTransform
 {
-    public const string TransformId = "vengeance-patch3-01.30.04.1908-sd15020-v2";
+    public const string TransformId = "vengeance-patch3-01.30.04.1908-sd15020-v5";
     public const string LoaderSha256 = "578800c3f3d8d74c366a7229240c34850a85379573059fc8b7e7dc5603563e80";
     public const string EncryptedImageSha256 = "9e13cfda761d655222da523f4c603ea91f46c1669341fe82d8b6630ccbe3ecf6";
     public const string PlayerSha256 = "eb751d527e8c9b893ae0f5dd6ade3e15bbce468c5b0331afc87d0a23ba621ff7";
 
-    public const string OutputSha256 = "9ad88d307bf666c76ffd953aba3ebff6069a87e3c36b81d674f5668acb4dd7f3";
+    public const string OutputSha256 = "9f0b9cabd8625cfb580a5b6ca756be9c0d9adf4e7ffd9667e2f3450b09e0e521";
 
     private static readonly uint[] CipherKey = [0xf3a5e812, 0xe7937512, 0x865ad10a, 0x9b72167a];
     private static readonly uint[] MissingThunkSeeds = [0xf3927c72, 0xf392771a];

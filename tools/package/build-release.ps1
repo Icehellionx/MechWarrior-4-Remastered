@@ -86,7 +86,6 @@ try {
         'MW4RemasteredInstallWorker.exe',
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
-        'Compatibility/BlackKnight/MW4RemasteredCompatLauncher.exe',
         'Compatibility/BlackKnight/version.dll'
     )
 

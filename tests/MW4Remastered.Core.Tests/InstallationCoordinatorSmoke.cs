@@ -22,7 +22,7 @@ internal static class InstallationCoordinatorSmoke
                 "coordinator removes Vengeance transform scratch after success", failures);
 
             var blackKnight = coordinator.Install(
-                new BlackKnightInstallRequest(inputs.BlackKnightDisc),
+                new BlackKnightInstallRequest(inputs.BlackKnightDisc, vengeance.DestinationPath),
                 Path.Combine(root, "installed", "black-knight"), progress);
             Check(blackKnight.Manifest.ProductId == "black-knight" && blackKnight.Manifest.Files.Count > 0, "coordinator installs and verifies Black Knight", failures);
 
@@ -40,7 +40,7 @@ internal static class InstallationCoordinatorSmoke
             var cancellationObserved = false;
             try
             {
-                coordinator.Install(new BlackKnightInstallRequest(inputs.BlackKnightDisc), cancelledDestination,
+                coordinator.Install(new BlackKnightInstallRequest(inputs.BlackKnightDisc, vengeance.DestinationPath), cancelledDestination,
                     cancellationToken: cancelledSource.Token);
             }
             catch (OperationCanceledException)
@@ -118,7 +118,8 @@ internal static class InstallationCoordinatorSmoke
             new BlackKnightInstallPlanBuilder(CreateBlackKnightCompatibility(inputs.BlackKnightCompatibilityRoot), inspection, inventory),
             new MercenariesInstallPlanBuilder(Hash(inputs.MercenariesExecutable), inspection, inventory));
         return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
-            new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable));
+            new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable),
+            blackKnightEulaTransform: new FixtureBlackKnightEulaTransform());
     }
 
     private static FixtureInputs PrepareInputs(string root)
@@ -144,8 +145,8 @@ internal static class InstallationCoordinatorSmoke
 
         var vengeanceExecutable = Write(root, "replacements/vengeance/MW4.exe", "vengeance executable");
         var blackKnightCompatibility = Path.Combine(root, "compatibility", "black-knight");
-        Write(blackKnightCompatibility, "MW4RemasteredCompatLauncher.exe", "black knight helper");
         Write(blackKnightCompatibility, "version.dll", "black knight loader");
+        Write(blackKnightCompatibility, "version.json", "black knight loader configuration");
         Write(blackKnightCompatibility, "SafeDiscLoader2-LICENSE.txt", "black knight loader license");
         var mercenariesExecutable = Write(root, "replacements/mercenaries/MW4Mercs.exe", "mercenaries executable");
         return new FixtureInputs(
@@ -172,8 +173,8 @@ internal static class InstallationCoordinatorSmoke
     private static QualifiedCompatibilityPayload CreateBlackKnightCompatibility(string root) =>
         new(root, new[]
         {
-            Qualified(root, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
             Qualified(root, "version.dll", "version.dll"),
+            Qualified(root, "version.json", "version.json"),
             Qualified(root, "SafeDiscLoader2-LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
         });
 
@@ -242,5 +243,16 @@ internal static class InstallationCoordinatorSmoke
             Directory.CreateDirectory(scratchDirectory);
             return new PreparedMercenariesExecutable(fixtureExecutable, "synthetic-escape-transform");
         }
+    }
+}
+
+sealed class FixtureBlackKnightEulaTransform : IBlackKnightEulaTransform
+{
+    public string Transform(string discRoot, string outputDirectory)
+    {
+        Directory.CreateDirectory(outputDirectory);
+        var output = Path.Combine(outputDirectory, "EBUEULA.DLL");
+        File.WriteAllText(output, "setup-accepted synthetic EULA module");
+        return output;
     }
 }

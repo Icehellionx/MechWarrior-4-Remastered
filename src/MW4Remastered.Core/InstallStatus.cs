@@ -75,12 +75,9 @@ public sealed class InstallStatusReader
             return new ProductStatus(product, ProductInstallState.NeedsRepair, null, null, manualPath, productRoot, detail);
         }
 
-        const string compatibilityRelativePath = "MW4RemasteredCompatLauncher.exe";
-        var compatibilityLaunchPath = verification.Manifest!.Files.Any(file =>
-            file.Path.Equals(compatibilityRelativePath, StringComparison.OrdinalIgnoreCase))
-            ? Path.Combine(productRoot, compatibilityRelativePath)
-            : null;
-        return new ProductStatus(product, ProductInstallState.Ready, executable, compatibilityLaunchPath, manualPath, productRoot, "Verified installation");
+        // Runtime helpers are intentionally unsupported. Setup prepares every
+        // compatibility artifact up front and normal launch executes the game directly.
+        return new ProductStatus(product, ProductInstallState.Ready, executable, null, manualPath, productRoot, "Verified installation");
     }
 
     private string? FindManual(ProductDefinition product)

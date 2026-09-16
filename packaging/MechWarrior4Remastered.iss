@@ -19,7 +19,9 @@ AppPublisher=MechWarrior 4 Remastered Project
 DefaultDirName={localappdata}\Programs\MechWarrior 4 Remastered
 DefaultGroupName=MechWarrior 4 Remastered
 DisableProgramGroupPage=yes
-PrivilegesRequired=lowest
+; Setup owns the one deliberate UAC boundary required for ISO mounting and all
+; compatibility/registration work. The installed launcher and games remain asInvoker.
+PrivilegesRequired=admin
 Uninstallable=yes
 UninstallDisplayIcon={app}\MW4RemasteredLauncher.exe
 SetupIconFile={#ProjectRoot}\assets\branding\MW4-Remastered.ico
@@ -51,7 +53,7 @@ Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLa
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
 
 [Run]
-Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 Remastered"; WorkingDir: "{app}"; Flags: postinstall nowait skipifsilent
+Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 Remastered"; WorkingDir: "{app}"; Flags: postinstall nowait skipifsilent runasoriginaluser
 
 [InstallDelete]
 ; Remove the obsolete second-installer shortcut created by builds before 0.5.0.
@@ -68,6 +70,7 @@ Type: dirifempty; Name: "{app}\Logs"
 [Code]
 var
   MediaPage: TWizardPage;
+  LicensePage: TInputOptionWizardPage;
   MediaList: TNewListBox;
   AddMediaButton: TNewButton;
   RemoveMediaButton: TNewButton;
@@ -99,6 +102,12 @@ begin
     SelectedFiles.Free;
   end;
   RefreshMediaList;
+
+  LicensePage := CreateInputOptionPage(MediaPage.ID, 'Original game license',
+    'Accept the license terms included with your selected original media',
+    'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
+    True, False);
+  LicensePage.Add('I accept the original Microsoft license terms included with the media I selected.');
 end;
 
 procedure RemoveMediaButtonClick(Sender: TObject);
@@ -175,6 +184,11 @@ begin
   if (CurPageID = MediaPage.ID) and (MediaFiles.Count = 0) then
   begin
     MsgBox('Add at least one original MechWarrior 4 ISO or ISO-containing ZIP before continuing.', mbError, MB_OK);
+    Result := False;
+  end;
+  if (CurPageID = LicensePage.ID) and (not LicensePage.Values[0]) then
+  begin
+    MsgBox('You must accept the original game license terms to install and launch the selected games.', mbError, MB_OK);
     Result := False;
   end;
 end;

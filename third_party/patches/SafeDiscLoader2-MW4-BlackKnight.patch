@@ -1,0 +1,47 @@
+diff --git a/src/version.cpp b/src/version.cpp
+index f33c3d5..9482acb 100644
+--- a/src/version.cpp
++++ b/src/version.cpp
+@@ -1996,10 +1996,41 @@ HMODULE WINAPI LoadLibraryA_27and28_Hook(LPCSTR lpLibFileName)
+ /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ 
+ DWORD OEPAddress = 0;
++bool PatchMechWarrior4BlackKnightInstallChecks()
++{
++	char exePath[MAX_PATH] = {};
++	GetModuleFileNameA(NULL, exePath, MAX_PATH);
++	NString executable = exePath;
++	if (!executable.ToLower().EndsWith("\\mw4x.exe"))
++		return false;
++
++	DWORD imageBase = (DWORD)GetModuleHandle(NULL);
++	DWORD firstCall = imageBase + 0x5A24;
++	DWORD secondCall = imageBase + 0x5A46;
++	BYTE expectedFirst[5] = { 0xE8, 0x07, 0xFA, 0xFF, 0xFF };
++	BYTE expectedSecond[5] = { 0xE8, 0xE5, 0xF9, 0xFF, 0xFF };
++	if (memcmp((void*)firstCall, expectedFirst, sizeof(expectedFirst)) != 0 ||
++		memcmp((void*)secondCall, expectedSecond, sizeof(expectedSecond)) != 0)
++	{
++		logc(FOREGROUND_RED, "MW4 Black Knight install-check signatures did not match; refusing to patch.\n");
++		return false;
++	}
++
++	// Setup has validated the selected original media and installed payload.
++	// Replace only the two obsolete CDPath/volume checks with a true result.
++	WriteProtectedDWORD(firstCall, 0x909001B0);
++	WriteProtectedBYTE(firstCall + 4, 0x90);
++	WriteProtectedDWORD(secondCall, 0x909001B0);
++	WriteProtectedBYTE(secondCall + 4, 0x90);
++	logc(FOREGROUND_GREEN, "Applied MW4 Black Knight setup-validation compatibility patch.\n");
++	return true;
++}
++
+ void OEPHookFunction()
+ {
+ 	logc(FOREGROUND_BLUE, "At the OEP\n");
+-	GetKey(true);
++	if (!PatchMechWarrior4BlackKnightInstallChecks())
++		GetKey(true);
+ 	__asm 
+ 	{
+ 		push [OEPAddress]

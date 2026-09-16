@@ -4,6 +4,7 @@ using MW4Remastered.Core.Launch;
 using MW4Remastered.Core.Media;
 using System.Security.Cryptography;
 using System.IO.Compression;
+using System.Text.Json;
 
 var failures = new List<string>();
 var safeDiscBlock = Convert.FromHexString("234319fa48b20e26");
@@ -141,11 +142,12 @@ var vengeanceRegistration = LegacyGameRegistration.Describe(new ProductStatus(
     ProductCatalog.All.Single(item => item.Id == "vengeance"), ProductInstallState.Ready,
     Path.Combine(registrationRoot, "vengeance", "MW4.exe"), null, null,
     Path.Combine(registrationRoot, "vengeance"), "synthetic"));
-Check(vengeanceRegistration is not null && !vengeanceRegistration.Use32BitView &&
+Check(vengeanceRegistration is not null && vengeanceRegistration.Use32BitView &&
     vengeanceRegistration.KeyPath.EndsWith(
-        @"VirtualStore\MACHINE\SOFTWARE\WOW6432Node\Microsoft\Microsoft Games\MechWarrior Vengeance",
-        StringComparison.OrdinalIgnoreCase) && vengeanceRegistration.Version == 4,
-    "Vengeance registration targets the physical 32-bit VirtualStore product record");
+        @"Software\Microsoft\Microsoft Games\MechWarrior Vengeance",
+        StringComparison.OrdinalIgnoreCase) && vengeanceRegistration.Version == 4 &&
+    vengeanceRegistration.CdPath == Path.Combine(registrationRoot, "vengeance"),
+    "Vengeance registration targets its direct 32-bit per-user settings record");
 
 foreach (var (productId, executableName, productKey) in new[]
 {
@@ -159,7 +161,8 @@ foreach (var (productId, executableName, productKey) in new[]
         Path.Combine(installPath, executableName), null, null, installPath, "synthetic"));
     Check(registration is not null && registration.Use32BitView &&
         registration.KeyPath.Equals($@"Software\Microsoft\Microsoft Games\{productKey}", StringComparison.OrdinalIgnoreCase) &&
-        registration.Version == 4,
+        registration.Version == 4 &&
+        registration.CdPath == (productId == "black-knight" ? @"L:\" : installPath),
         $"{productKey} registration targets its direct 32-bit per-user product record");
 }
 Check(LegacyGameRegistration.Describe(new ProductStatus(
@@ -266,8 +269,8 @@ try
     var gameRegistration = new RecordingGameRegistration();
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
-    Check(gameRegistration.LastEnsured == installedStatuses["vengeance"], "launch orchestration prepares per-user legacy registration before starting Vengeance");
-    var modernArguments = new[] { "-32", "-window", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
+    Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
+    var modernArguments = new[] { "-32", "-window", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Vengeance launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
     var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
@@ -278,6 +281,31 @@ try
         mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic"));
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Mercenaries launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
+
+    var blackKnightRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "black-knight-launch")).FullName;
+    var blackKnightLaunchExecutable = Path.Combine(blackKnightRoot, "MW4X.exe");
+    File.WriteAllText(blackKnightLaunchExecutable, "synthetic executable");
+    var blackKnightLaunchProduct = ProductCatalog.All.Single(item => item.Id == "black-knight");
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
+        blackKnightLaunchProduct, ProductInstallState.Ready, blackKnightLaunchExecutable, null, null,
+        blackKnightRoot, "synthetic"));
+    Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
+        processStarter.LastStart.ArgumentList.SequenceEqual(modernArguments),
+        "Black Knight starts directly with its app-local compatibility DLL and windowed profile");
+
+    var alreadyRunningState = new RecordingGameProcessState { Running = true };
+    var duplicateBlocked = false;
+    try
+    {
+        new LaunchOrchestrator(processStarter, gameRegistration, alreadyRunningState).Launch(new ProductStatus(
+            mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic"));
+    }
+    catch (InvalidOperationException exception)
+    {
+        duplicateBlocked = exception.Message.Contains("already running", StringComparison.OrdinalIgnoreCase);
+    }
+    Check(duplicateBlocked && alreadyRunningState.LastExecutablePath == mercenaryExecutable,
+        "launch orchestration blocks a second instance of the same installed game executable");
 
     var applicationRoot = Path.Combine(transactionRoot, "application-shell");
     Directory.CreateDirectory(applicationRoot);
@@ -311,29 +339,15 @@ try
         "launch orchestration ignores an adjacent helper that is not owned by the verified manifest");
     File.Delete(compatibilityLauncher);
 
-    WriteFixture(rootPath: disc1, relativePath: "MW4RemasteredCompatLauncher.exe", contents: "owned helper");
-    var compatibilityDestination = Path.Combine(transactionRoot, "compatible-installed", "vengeance");
-    new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
-    {
-        new InstallFile(disc1, "MW4.EXE", "MW4.exe"),
-        new InstallFile(disc1, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
-    }), compatibilityDestination);
-    var compatibleStatus = new InstallStatusReader(Path.Combine(transactionRoot, "compatible-installed")).Read().Single(item => item.Product.Id == "vengeance");
-    new LaunchOrchestrator(processStarter, gameRegistration).Launch(compatibleStatus);
-    var compatibleStart = processStarter.LastStart;
-    Check(compatibleStart is not null && compatibleStart.FileName == compatibleStatus.CompatibilityLaunchPath &&
-          compatibleStart.ArgumentList.Count == 1 &&
-          compatibleStart.ArgumentList[0].Equals("MW4.exe", StringComparison.OrdinalIgnoreCase),
-        "launch orchestration routes a manifest-owned compatibility installation through its verified adjacent helper");
-
-    var blackKnightExecutable = Path.Combine(compatibilityDestination, "MW4X.exe");
+    var blackKnightExecutable = Path.Combine(destination, "MW4X.exe");
     File.WriteAllText(blackKnightExecutable, "synthetic executable");
     var blackKnightProduct = ProductCatalog.All.Single(item => item.Id == "black-knight");
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
-        blackKnightProduct, ProductInstallState.Ready, blackKnightExecutable, compatibleStatus.CompatibilityLaunchPath,
-        null, compatibilityDestination, "synthetic"));
-    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(new[] { "MW4X.exe" }) == true,
-        "Black Knight launches through its compatibility helper without title-specific command-line overrides");
+        blackKnightProduct, ProductInstallState.Ready, blackKnightExecutable, null,
+        null, destination, "synthetic"));
+    Check(processStarter.LastStart?.FileName == blackKnightExecutable &&
+        processStarter.LastStart.ArgumentList.SequenceEqual(modernArguments),
+        "Black Knight launch does not use the process-injection helper");
 
     WriteFixture(destination, "Saves/pilot.sav", "user-owned save");
     Check(new InstallManifestVerifier().Verify(destination, InstallVerificationScope.OwnedFiles).IsValid, "owned-file verification permits unowned user data");
@@ -481,7 +495,8 @@ try
     Check(destinations.Contains("MW4.exe"), "Vengeance plan supplies the qualified compatibility executable");
     Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Vengeance plan expands patch-relevant 8.3 root names");
     Check(destinations.Contains("DSetup.dll"), "Vengeance plan retains the DirectX version-query runtime imported by the game executable");
-    Check(destinations.Contains("Content/ShellScripts/FILES/STUTTE_1.WAV"), "Vengeance plan restores the ShellScripts directory name");
+    Check(destinations.Contains("Content/ShellScripts/Files/StutterShark_music.wav"),
+        "Vengeance plan restores the installed ShellScripts audio path");
     Check(destinations.Contains("Content/Textures/customdecals/CSTMDCAL.TXT"), "Vengeance plan restores the custom decals directory name");
     Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE") &&
         !destinations.Contains("MW4.ICD") && !destinations.Contains("DPlayerX.dll"),
@@ -512,16 +527,27 @@ try
     WriteFixture(disc, "RESOURCE/TEXTUR_1.MW4", "textures");
     WriteFixture(disc, "SETUP.EXE", "legacy setup");
     var compatibilityRoot = Path.Combine(blackKnightPlanRoot, "compatibility");
-    WriteFixture(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "synthetic helper");
     WriteFixture(compatibilityRoot, "version.dll", "synthetic loader");
+    WriteFixture(compatibilityRoot, "version.json", "synthetic loader configuration");
     WriteFixture(compatibilityRoot, "LICENSE.txt", "synthetic license");
     WriteFixture(compatibilityRoot, "source.zip", "synthetic corresponding source");
+    var preparedEula = Path.Combine(blackKnightPlanRoot, "prepared", "EBUEULA.DLL");
+    WriteFixture(Path.GetDirectoryName(preparedEula)!, Path.GetFileName(preparedEula), "setup-accepted EULA module");
+    var vengeanceBase = Path.Combine(blackKnightPlanRoot, "vengeance-base");
+    var baseTexture = Path.Combine(vengeanceBase, "Resource", "textures.mw4");
+    WriteFixture(vengeanceBase, "Resource/textures.mw4", "verified Vengeance base texture");
+    var baseManifest = new InstallManifest(1, "vengeance", new[]
+    {
+        new InstalledFile("Resource/textures.mw4", new FileInfo(baseTexture).Length,
+            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(baseTexture))).ToLowerInvariant(), "fixture"),
+    });
+    WriteFixture(vengeanceBase, InstallManifest.RelativePath, JsonSerializer.Serialize(baseManifest));
     var compatibility = new QualifiedCompatibilityPayload(
         compatibilityRoot,
         new[]
         {
-            QualifiedFile(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
             QualifiedFile(compatibilityRoot, "version.dll", "version.dll"),
+            QualifiedFile(compatibilityRoot, "version.json", "version.json"),
             QualifiedFile(compatibilityRoot, "LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
         },
         new[]
@@ -530,11 +556,11 @@ try
         },
         requireExactInventory: true);
     var builder = new BlackKnightInstallPlanBuilder(compatibility, new MediaInspectionService(), new DirectoryMediaInventory());
-    var plan = builder.Build(disc);
+    var plan = builder.Build(disc, vengeanceBase, preparedEula);
     var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
     Check(plan.ProductId == "black-knight" && destinations.Contains("MW4X.exe"), "Black Knight plan installs the untouched executable from media");
     Check(plan.Files.Single(file => file.DestinationRelativePath.Equals("MW4X.exe", StringComparison.OrdinalIgnoreCase)).SourceRelativePath.Equals("MW4X/MW4X.EXE", StringComparison.OrdinalIgnoreCase), "Black Knight executable comes from recognized media, not a user-supplied replacement");
-    Check(destinations.Contains("MW4RemasteredCompatLauncher.exe") && destinations.Contains("version.dll") && destinations.Contains("Licenses/SafeDiscLoader2-GPL-3.0.txt"), "Black Knight plan owns the exact internal compatibility bundle");
+    Check(destinations.Contains("version.dll") && destinations.Contains("version.json") && destinations.Contains("Licenses/SafeDiscLoader2-GPL-3.0.txt"), "Black Knight plan owns the exact internal compatibility bundle without a process-injection helper");
     Check(!destinations.Contains("source.zip"), "Black Knight plan validates but does not install the corresponding-source archive");
     Check(destinations.Contains("AutoConfigx.exe") && destinations.Contains("MissionLangx.dll") &&
         destinations.Contains("ScriptStringsx.dll") && destinations.Contains("servercyclex.txt"),
@@ -545,12 +571,26 @@ try
         "Black Knight plan restores long content and resource names from the original setup table");
     Check(destinations.Contains("DSETUP.DLL"), "Black Knight plan retains the DirectX version-query runtime imported by the game executable");
     Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes legacy setup and the obsolete SafeDisc driver");
+    Check(destinations.Contains("Resource/textures.mw4"), "Black Knight plan includes the verified Vengeance base payload required by the expansion");
+
+    File.AppendAllText(baseTexture, "tampered");
+    var modifiedBaseRejected = false;
+    try
+    {
+        builder.Build(disc, vengeanceBase, preparedEula);
+    }
+    catch (InvalidDataException)
+    {
+        modifiedBaseRejected = true;
+    }
+    Check(modifiedBaseRejected, "Black Knight planning rejects a modified Vengeance dependency instead of copying it");
+    File.WriteAllText(baseTexture, "verified Vengeance base texture");
 
     WriteFixture(compatibilityRoot, "unexpected.bin", "must not enter the bundle");
     var compatibilityExtraRejected = false;
     try
     {
-        builder.Build(disc);
+        builder.Build(disc, vengeanceBase, preparedEula);
     }
     catch (InvalidDataException)
     {
@@ -563,7 +603,7 @@ try
     var compatibilityDirectoryRejected = false;
     try
     {
-        builder.Build(disc);
+        builder.Build(disc, vengeanceBase, preparedEula);
     }
     catch (InvalidDataException)
     {
@@ -576,7 +616,7 @@ try
     var compatibilityTamperRejected = false;
     try
     {
-        builder.Build(disc);
+        builder.Build(disc, vengeanceBase, preparedEula);
     }
     catch (InvalidDataException)
     {
@@ -798,6 +838,7 @@ sealed class RecordingProcessStarter : IProcessStarter
 sealed class RecordingGameRegistration : ILegacyGameRegistration
 {
     public ProductStatus? LastEnsured { get; private set; }
+    public ProductStatus? LastValidated { get; private set; }
     public ProductStatus? LastRemoved { get; private set; }
 
     public void Ensure(ProductStatus status)
@@ -805,8 +846,25 @@ sealed class RecordingGameRegistration : ILegacyGameRegistration
         LastEnsured = status;
     }
 
+    public void ValidateOwned(ProductStatus status)
+    {
+        LastValidated = status;
+    }
+
     public void RemoveOwned(ProductStatus status)
     {
         LastRemoved = status;
+    }
+}
+
+sealed class RecordingGameProcessState : IGameProcessState
+{
+    public bool Running { get; init; }
+    public string? LastExecutablePath { get; private set; }
+
+    public bool IsRunning(string executablePath)
+    {
+        LastExecutablePath = executablePath;
+        return Running;
     }
 }

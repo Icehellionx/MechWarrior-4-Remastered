@@ -118,6 +118,10 @@ public sealed class VengeanceInstallPlanBuilder
 
     private static string MapDiscPath(string path)
     {
+        if (path.Equals("CONTENT/SHELLS_1/FILES/STUTTE_1.WAV", StringComparison.OrdinalIgnoreCase))
+        {
+            return "Content/ShellScripts/Files/StutterShark_music.wav";
+        }
         if (path.StartsWith("CONTENT/SHELLS_1/", StringComparison.OrdinalIgnoreCase))
         {
             return "Content/ShellScripts/" + path["CONTENT/SHELLS_1/".Length..];
