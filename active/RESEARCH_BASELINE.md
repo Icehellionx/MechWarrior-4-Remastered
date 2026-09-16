@@ -20,6 +20,8 @@ The recognized Black Knight disc plus its exact-hash replacement produced a 138-
 
 The supplied Mercenaries Disc 2 is UDF media that `bsdtar` did not enumerate but Windows mounted successfully. It contains the expected movie/map/mission payload plus a third-party `Crack/` directory and `SECDRV.SYS`; both are detected and excluded by policy. All seven images match distinct structural descriptors through read-only Windows mounts.
 
+Mercenaries Disc 1 stores 85 `GAME/RESOURCE/...` payload entries in `MSGAME.CAB`; a containment-first extraction reproduced exactly those 85 files (615,038,509 bytes) without running setup. The disc SafeDisc image reports version `50.06.09.3002`; the exact-hash local replacement reports `50.07.01.2105` (`eff39b2f…`). Combining the verified cabinet root, allowlisted loose Disc 1 runtime files, and Disc 2 content produced a 209-file, 1,206,212,339-byte payload tree. C-Dilla, SafeDisc, setup, and Disc 2 crack files are absent; runtime behavior remains unqualified.
+
 ## External evidence to verify further
 
 - Microsoft archived support article 325999 describes pack visibility as dependent on install order, game presence, and registry/install state.

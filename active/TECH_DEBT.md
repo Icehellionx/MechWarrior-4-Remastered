@@ -27,6 +27,8 @@ A hard-ceiling file requires an extraction plan naming the contract, callers, pa
 9. The current Vengeance 8.3 restoration map is sufficient for staging and Patch 2 naming, but every inferred name must be compared with a legacy-setup reference tree before release qualification.
 10. The install-root manifest is path-contained and hash-validating but not cryptographically anchored outside the user-writable tree. Before release, bind it to a protected external install record or constrain removal against an independently trusted product manifest.
 11. The Black Knight replacement executable is a hash-gated local input with matching reported version/length but different bytes from the disc executable. Provenance, malware scanning, and runtime qualification are required before it can be recommended; it must never enter the public payload by accident.
+12. The Mercenaries replacement executable is likewise an opaque, hash-gated local input. Its `50.07.01.2105` version is newer than the disc's `50.06.09.3002`, but provenance, scan, and runtime evidence are still required. The adjacent `mercpr1.exe` was not executed or included.
+13. Mercenaries cabinet extraction currently relies on the Windows-provided `tar.exe`/libarchive surface. Release qualification must pin the supported Windows behavior or replace it with a reviewed, licensed in-process cabinet reader.
 
 ## Debt-negative rules
 

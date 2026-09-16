@@ -19,6 +19,21 @@ if (args.Length == 2 && string.Equals(args[0], "--uninstall", StringComparison.O
     return removal.Status == InstallRemovalStatus.Removed ? 0 : 1;
 }
 
+if (args.Length == 3 && string.Equals(args[0], "--extract-mercenaries-cabinet", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        var files = new CabinetPayloadExtractor().ExtractGamePayload(args[1], args[2]);
+        Console.WriteLine($"Extracted and verified {files.Count} Mercenaries cabinet files to {Path.GetFullPath(args[2])}");
+        return 0;
+    }
+    catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+    {
+        Console.Error.WriteLine($"Mercenaries cabinet extraction failed: {error.Message}");
+        return 1;
+    }
+}
+
 if (args.Length == 4 && string.Equals(args[0], "--black-knight", StringComparison.OrdinalIgnoreCase))
 {
     try
@@ -32,11 +47,26 @@ if (args.Length == 4 && string.Equals(args[0], "--black-knight", StringCompariso
     }
 }
 
+if (args.Length == 6 && string.Equals(args[0], "--mercenaries", StringComparison.OrdinalIgnoreCase))
+{
+    try
+    {
+        return Stage(new MercenariesInstallPlanBuilder().Build(args[1], args[2], args[3], args[4]), args[5], "Mercenaries");
+    }
+    catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
+    {
+        Console.Error.WriteLine($"Mercenaries staging failed: {error.Message}");
+        return 1;
+    }
+}
+
 if (args.Length != 4)
 {
     Console.Error.WriteLine("Usage:");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe <vengeance-disc-1-root> <vengeance-disc-2-root> <compatibility-executable> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --black-knight <disc-root> <compatibility-executable> <new-destination>");
+    Console.Error.WriteLine("  MW4Remastered.InstallProbe --mercenaries <disc-1-root> <disc-2-root> <cabinet-payload-root> <compatibility-executable> <new-destination>");
+    Console.Error.WriteLine("  MW4Remastered.InstallProbe --extract-mercenaries-cabinet <MSGAME.CAB> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --verify <install-root>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --uninstall <install-root>");
     return 2;

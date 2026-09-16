@@ -42,6 +42,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Flattened the disc's `MW4X` runtime payload, restored installed names, and excluded legacy setup, DirectX setup, disc-management, and SafeDisc components.
 - Staged a real 138-file, 563,490,697-byte payload tree, independently verified every manifest entry, confirmed all files writable and forbidden components absent, and detached the owned image.
 
+## Mercenaries transactional staging — 2026-09-15
+
+- Added a containment-first cabinet extractor that rejects non-`GAME/`, unsafe, and duplicate paths before extraction, verifies the exact produced inventory, and atomically commits the payload root.
+- Added a Mercenaries plan that combines the verified cabinet payload with allowlisted files from both recognized discs, restores setup-era names, exact-hash gates a local replacement executable, and excludes C-Dilla, SafeDisc, setup, and crack paths.
+- Extracted and verified all 85 real cabinet files, then staged a real 209-file, 1,206,212,339-byte payload tree; every owned hash verified, all files were writable, both images detached, and no forbidden component entered the tree.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

@@ -17,7 +17,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 
 - [x] Detect supported Vengeance media layouts and stage a disposable install.
 - [ ] Determine required official patch level and implement exact-input transforms.
-- [ ] Extend the shared contract to Mercenaries. Black Knight now stages and verifies through the shared transaction.
+- [x] Extend the shared transaction contract to Black Knight and Mercenaries, including contained cabinet extraction for Mercenaries.
 - [ ] Diagnose Inner Sphere and Clan pack failures on 64-bit Windows from installer/payload evidence.
 - [ ] Install optional packs through a tested extraction/configuration path.
 - [x] Persist an ownership manifest sufficient for repair and safe file uninstall.

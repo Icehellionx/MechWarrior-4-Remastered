@@ -3,6 +3,7 @@ using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Launch;
 using MW4Remastered.Core.Media;
 using System.Security.Cryptography;
+using System.IO.Compression;
 
 var failures = new List<string>();
 Check(ProductCatalog.All.Count == 5, "catalog contains exactly three games and two packs");
@@ -219,6 +220,91 @@ try
 finally
 {
     if (Directory.Exists(blackKnightPlanRoot)) Directory.Delete(blackKnightPlanRoot, true);
+}
+
+var cabinetRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-cabinet-test-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(cabinetRoot);
+    var source = Path.Combine(cabinetRoot, "source");
+    WriteFixture(source, "GAME/RESOURCE/core.mw4", "core");
+    WriteFixture(source, "GAME/RESOURCE/MAPS/test.mw4", "map");
+    var archive = Path.Combine(cabinetRoot, "fixture.cab");
+    ZipFile.CreateFromDirectory(source, archive, CompressionLevel.NoCompression, includeBaseDirectory: false);
+    var destination = Path.Combine(cabinetRoot, "extracted");
+    var extracted = new CabinetPayloadExtractor().ExtractGamePayload(archive, destination);
+    Check(extracted.Count == 2 && File.Exists(Path.Combine(destination, "RESOURCE", "core.mw4")), "cabinet extractor commits only the validated GAME payload");
+
+    var unsafeSource = Path.Combine(cabinetRoot, "unsafe-source");
+    WriteFixture(unsafeSource, "SETUP.EXE", "outside game payload");
+    var unsafeArchive = Path.Combine(cabinetRoot, "unsafe.cab");
+    ZipFile.CreateFromDirectory(unsafeSource, unsafeArchive, CompressionLevel.NoCompression, includeBaseDirectory: false);
+    var unsafeRejected = false;
+    try
+    {
+        new CabinetPayloadExtractor().ExtractGamePayload(unsafeArchive, Path.Combine(cabinetRoot, "unsafe-output"));
+    }
+    catch (InvalidDataException)
+    {
+        unsafeRejected = true;
+    }
+    Check(unsafeRejected && !Directory.Exists(Path.Combine(cabinetRoot, "unsafe-output")), "cabinet extractor rejects entries outside GAME before extraction");
+
+    var traversalArchive = Path.Combine(cabinetRoot, "traversal.cab");
+    using (var archiveStream = File.Create(traversalArchive))
+    using (var zip = new ZipArchive(archiveStream, ZipArchiveMode.Create))
+    {
+        using var writer = new StreamWriter(zip.CreateEntry("GAME/../escape.bin").Open());
+        writer.Write("escape");
+    }
+    var traversalRejected = false;
+    try
+    {
+        new CabinetPayloadExtractor().ExtractGamePayload(traversalArchive, Path.Combine(cabinetRoot, "traversal-output"));
+    }
+    catch (InvalidDataException)
+    {
+        traversalRejected = true;
+    }
+    Check(traversalRejected && !Directory.Exists(Path.Combine(cabinetRoot, "traversal-output")), "cabinet extractor rejects traversal before extraction");
+}
+finally
+{
+    if (Directory.Exists(cabinetRoot)) Directory.Delete(cabinetRoot, true);
+}
+
+var mercenariesPlanRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-mercs-plan-test-" + Guid.NewGuid().ToString("N"));
+try
+{
+    var disc1 = Path.Combine(mercenariesPlanRoot, "disc1");
+    var disc2 = Path.Combine(mercenariesPlanRoot, "disc2");
+    var cabinet = Path.Combine(mercenariesPlanRoot, "cabinet");
+    CreateLayoutFixture("mercenaries-disc-1", disc1);
+    CreateLayoutFixture("mercenaries-disc-2", disc2);
+    WriteFixture(disc1, "AUTOCO_1.EXE", "autoconfig");
+    WriteFixture(disc1, "GUNTIC_1.DLL", "gun ticket");
+    WriteFixture(disc1, "CDAC14BA.DLL", "c-dilla");
+    WriteFixture(disc1, "MW4MERCS.ICD", "safedisc game image");
+    WriteFixture(disc2, "CONTENT/MERCSS_1/FILES/NEXTMO_1.WAV", "audio");
+    WriteFixture(disc2, "Crack/MW4Mercs.exe", "media crack");
+    WriteFixture(cabinet, "RESOURCE/CORE.MW4", "core");
+    WriteFixture(cabinet, "RESOURCE/PROPS.MW4", "props");
+    WriteFixture(cabinet, "RESOURCE/TEXTURES.MW4", "textures");
+    var replacement = Path.Combine(mercenariesPlanRoot, "replacement", "MW4Mercs.exe");
+    WriteFixture(Path.GetDirectoryName(replacement)!, Path.GetFileName(replacement), "synthetic Mercenaries executable");
+    var replacementHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(replacement))).ToLowerInvariant();
+
+    var builder = new MercenariesInstallPlanBuilder(replacementHash, new MediaInspectionService(), new DirectoryMediaInventory());
+    var plan = builder.Build(disc1, disc2, cabinet, replacement);
+    var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    Check(plan.ProductId == "mercenaries" && destinations.Contains("MW4Mercs.exe"), "Mercenaries plan supplies the qualified compatibility executable");
+    Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("GunTicket.dll"), "Mercenaries plan expands installed root names");
+    Check(destinations.Contains("Content/MercsShellScripts/FILES/NEXTMO_1.WAV"), "Mercenaries plan restores the MercsShellScripts directory name");
+    Check(destinations.Contains("RESOURCE/CORE.MW4") && !destinations.Contains("MW4MERCS.ICD") && !destinations.Contains("CDAC14BA.DLL"), "Mercenaries plan combines cabinet data while excluding disc protection");
+}
+finally
+{
+    if (Directory.Exists(mercenariesPlanRoot)) Directory.Delete(mercenariesPlanRoot, true);
 }
 
 var uninstallRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-uninstall-test-" + Guid.NewGuid().ToString("N"));
