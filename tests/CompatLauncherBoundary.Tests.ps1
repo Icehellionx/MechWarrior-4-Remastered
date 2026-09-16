@@ -16,6 +16,7 @@ function Assert-True {
 $properties = $project.Project.PropertyGroup
 Assert-True ($properties.PlatformTarget -eq 'x86') 'Compatibility launcher must remain 32-bit for the 32-bit MW4 processes.'
 Assert-True ($properties.RuntimeIdentifier -eq 'win-x86') 'Compatibility launcher must retain the win-x86 runtime identifier.'
+Assert-True ($properties.IncludeSourceRevisionInInformationalVersion -eq 'false') 'Compatibility helper output must not create a circular hash dependency on the repository commit.'
 
 $executionLevel = $manifest.SelectSingleNode("//*[local-name()='requestedExecutionLevel']")
 Assert-True ($null -ne $executionLevel) 'Compatibility launcher must declare an execution level.'
