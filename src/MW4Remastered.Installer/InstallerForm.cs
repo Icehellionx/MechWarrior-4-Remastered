@@ -429,7 +429,12 @@ internal sealed class InstallerForm : Form
 
     private void RefreshSnapshot(MediaSelectionSnapshot snapshot)
     {
-        foreach (var capability in snapshot.Capabilities) cards[capability.ProductId].Update(capability);
+        var completeMediaProducts = snapshot.Capabilities
+            .Where(item => item.IsComplete)
+            .Select(item => item.ProductId)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+        foreach (var capability in snapshot.Capabilities)
+            cards[capability.ProductId].Update(capability, completeMediaProducts);
 
         evidenceList.BeginUpdate();
         evidenceList.Items.Clear();
@@ -598,13 +603,25 @@ internal sealed class InstallerForm : Form
 
         public Panel Panel { get; }
 
-        public void Update(MediaCapabilityStatus capability)
+        public void Update(MediaCapabilityStatus capability, IReadOnlySet<string> availableProductIds)
         {
             status.ForeColor = capability.IsComplete ? Ready : Muted;
             if (!capability.IsComplete)
             {
                 status.Text = "○  MEDIA NEEDED";
                 detail.Text = $"{capability.PresentLayoutIds.Count} / {capability.RequiredLayoutIds.Count} required source(s)";
+                return;
+            }
+
+            var missingDependencies = ProductDependencies.GetRequiredBaseProducts(capability.ProductId)
+                .Where(required => !availableProductIds.Contains(required))
+                .Select(DependencyDisplayName)
+                .ToArray();
+            if (missingDependencies.Length > 0)
+            {
+                status.ForeColor = Warning;
+                status.Text = "△  BASE MEDIA REQUIRED";
+                detail.Text = $"Add {string.Join(" + ", missingDependencies)} to install this selection";
                 return;
             }
 
@@ -616,9 +633,7 @@ internal sealed class InstallerForm : Form
             }
 
             status.Text = "✓  MEDIA VALIDATED";
-            detail.Text = capability.ProductId.Equals("black-knight", StringComparison.OrdinalIgnoreCase)
-                ? "Requires the Vengeance base installation path"
-                : "Installation support is still in progress";
+            detail.Text = "Installation support is still in progress";
         }
 
         public void ShowInstalled()
