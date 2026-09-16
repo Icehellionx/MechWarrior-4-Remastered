@@ -34,12 +34,28 @@ public sealed class LaunchOrchestrator
 
         var executable = Path.GetFullPath(status.LaunchPath);
         if (!File.Exists(executable)) throw new FileNotFoundException("Verified game executable is no longer present.", executable);
-        processStarter.Start(new ProcessStartInfo
+        var workingDirectory = Path.GetDirectoryName(executable)!;
+        var startInfo = new ProcessStartInfo
         {
-            FileName = executable,
-            WorkingDirectory = Path.GetDirectoryName(executable)!,
+            FileName = status.CompatibilityLaunchPath ?? executable,
+            WorkingDirectory = workingDirectory,
             UseShellExecute = false,
-        });
+        };
+        if (status.CompatibilityLaunchPath is not null)
+        {
+            var compatibilityLauncher = Path.GetFullPath(status.CompatibilityLaunchPath);
+            if (!File.Exists(compatibilityLauncher))
+            {
+                throw new FileNotFoundException("Verified compatibility launcher is no longer present.", compatibilityLauncher);
+            }
+            if (!string.Equals(Path.GetDirectoryName(compatibilityLauncher), workingDirectory, StringComparison.OrdinalIgnoreCase))
+            {
+                throw new InvalidDataException("Verified compatibility launcher is not adjacent to the game executable.");
+            }
+            startInfo.FileName = compatibilityLauncher;
+            startInfo.ArgumentList.Add(Path.GetFileName(executable));
+        }
+        processStarter.Start(startInfo);
     }
 }
 

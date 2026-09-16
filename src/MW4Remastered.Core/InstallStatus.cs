@@ -13,6 +13,7 @@ public sealed record ProductStatus(
     ProductDefinition Product,
     ProductInstallState State,
     string? LaunchPath,
+    string? CompatibilityLaunchPath,
     string? ManualPath,
     string? Detail)
 {
@@ -48,7 +49,7 @@ public sealed class InstallStatusReader
         {
             // Pack status remains missing until pack-specific payload evidence is defined.
             // A registry value or marker file alone must never claim installed content.
-            return new ProductStatus(product, ProductInstallState.Missing, null, manualPath, "Pack payload not installed");
+            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, "Pack payload not installed");
         }
 
         var productRoot = Path.Combine(installationRoot, product.Id);
@@ -57,17 +58,22 @@ public sealed class InstallStatusReader
             .FirstOrDefault(File.Exists);
         if (executable is null)
         {
-            return new ProductStatus(product, ProductInstallState.Missing, null, manualPath, "Game files not found");
+            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, "Game files not found");
         }
 
         var verification = verifier.Verify(productRoot, InstallVerificationScope.OwnedFiles);
         if (!verification.IsValid || !string.Equals(verification.Manifest?.ProductId, product.Id, StringComparison.OrdinalIgnoreCase))
         {
             var detail = verification.Issues.FirstOrDefault() ?? "Ownership manifest identifies a different product";
-            return new ProductStatus(product, ProductInstallState.NeedsRepair, null, manualPath, detail);
+            return new ProductStatus(product, ProductInstallState.NeedsRepair, null, null, manualPath, detail);
         }
 
-        return new ProductStatus(product, ProductInstallState.Ready, executable, manualPath, "Verified installation");
+        const string compatibilityRelativePath = "MW4RemasteredCompatLauncher.exe";
+        var compatibilityLaunchPath = verification.Manifest!.Files.Any(file =>
+            file.Path.Equals(compatibilityRelativePath, StringComparison.OrdinalIgnoreCase))
+            ? Path.Combine(productRoot, compatibilityRelativePath)
+            : null;
+        return new ProductStatus(product, ProductInstallState.Ready, executable, compatibilityLaunchPath, manualPath, "Verified installation");
     }
 
     private string? FindManual(ProductDefinition product)

@@ -1,11 +1,12 @@
-using System.Security.Cryptography;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Core.Install;
 
 public sealed class BlackKnightInstallPlanBuilder
 {
-    public const string QualifiedCompatibilityExecutableSha256 = "2a5b7f2f408d3ae9b103e42fabac2aba26df9721b292ba0537a97a3784c1bb31";
+    public const string QualifiedLoaderSha256 = "18f13072cf42fbacb5b228864bdb4a67fb1dff8c7ca7362054525816f8a4565a";
+    public const string QualifiedLaunchHelperSha256 = "2f15bf4b8f8ae5d20d74a6e7fa9dbee98cc52793e16a9f8e98e8333f20d7c25f";
+    public const string QualifiedLoaderLicenseSha256 = "81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8";
 
     private static readonly IReadOnlyDictionary<string, string> RootFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -24,41 +25,32 @@ public sealed class BlackKnightInstallPlanBuilder
     private static readonly IReadOnlySet<string> ExcludedMw4XFiles =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
-            "DRVMGT.DLL",
             "DSETUP.DLL",
-            "MW4X.EXE",
             "SECDRV.SYS",
         };
 
-    private readonly string compatibilityExecutableSha256;
+    private readonly QualifiedCompatibilityPayload compatibility;
     private readonly MediaInspectionService inspection;
     private readonly DirectoryMediaInventory inventory;
 
     public BlackKnightInstallPlanBuilder()
-        : this(QualifiedCompatibilityExecutableSha256, new MediaInspectionService(), new DirectoryMediaInventory())
+        : this(CreatePackagedPayload(), new MediaInspectionService(), new DirectoryMediaInventory())
     {
     }
 
     public BlackKnightInstallPlanBuilder(
-        string compatibilityExecutableSha256,
+        QualifiedCompatibilityPayload compatibility,
         MediaInspectionService inspection,
         DirectoryMediaInventory inventory)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(compatibilityExecutableSha256);
-        if (compatibilityExecutableSha256.Length != 64 || !compatibilityExecutableSha256.All(Uri.IsHexDigit))
-        {
-            throw new ArgumentException("Expected compatibility executable hash must be a SHA-256 hex string.", nameof(compatibilityExecutableSha256));
-        }
-
-        this.compatibilityExecutableSha256 = compatibilityExecutableSha256.ToLowerInvariant();
+        this.compatibility = compatibility ?? throw new ArgumentNullException(nameof(compatibility));
         this.inspection = inspection ?? throw new ArgumentNullException(nameof(inspection));
         this.inventory = inventory ?? throw new ArgumentNullException(nameof(inventory));
     }
 
-    public InstallPlan Build(string discRoot, string compatibilityExecutablePath)
+    public InstallPlan Build(string discRoot)
     {
         RequireLayout(discRoot);
-        var replacement = RequireQualifiedExecutable(compatibilityExecutablePath);
         var files = new List<InstallFile>();
 
         foreach (var path in inventory.Read(discRoot))
@@ -83,7 +75,7 @@ public sealed class BlackKnightInstallPlanBuilder
             }
         }
 
-        files.Add(new InstallFile(Path.GetDirectoryName(replacement)!, Path.GetFileName(replacement), "MW4X.exe"));
+        files.AddRange(compatibility.ValidateAndCreateInstallFiles());
         return new InstallPlan("black-knight", files);
     }
 
@@ -97,22 +89,15 @@ public sealed class BlackKnightInstallPlanBuilder
         }
     }
 
-    private string RequireQualifiedExecutable(string path)
+    private static QualifiedCompatibilityPayload CreatePackagedPayload()
     {
-        var executable = Path.GetFullPath(path);
-        if (!File.Exists(executable)) throw new FileNotFoundException("Black Knight compatibility executable does not exist.", executable);
-        if ((File.GetAttributes(executable) & FileAttributes.ReparsePoint) != 0)
+        var root = Path.Combine(AppContext.BaseDirectory, "Compatibility", "BlackKnight");
+        return new QualifiedCompatibilityPayload(root, new[]
         {
-            throw new InvalidDataException("Black Knight compatibility executable cannot be a reparse point.");
-        }
-
-        using var stream = File.OpenRead(executable);
-        var actualHash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-        if (!string.Equals(actualHash, compatibilityExecutableSha256, StringComparison.Ordinal))
-        {
-            throw new InvalidDataException($"Unsupported Black Knight compatibility executable SHA-256: {actualHash}");
-        }
-        return executable;
+            new QualifiedCompatibilityFile("MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe", QualifiedLaunchHelperSha256),
+            new QualifiedCompatibilityFile("version.dll", "version.dll", QualifiedLoaderSha256),
+            new QualifiedCompatibilityFile("SafeDiscLoader2-LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt", QualifiedLoaderLicenseSha256),
+        });
     }
 
     private static string MapDiscPath(string path)

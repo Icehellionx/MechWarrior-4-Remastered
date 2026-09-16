@@ -22,11 +22,13 @@ Assert-True ($lock.excludedProjects -contains 'VersionInjector/VersionInjector.v
 Assert-True ($script -match [regex]::Escape($lock.commit)) 'Build script must enforce the pinned source commit.'
 Assert-True ($script -match 'version-proxy\.vcxproj' -and $script -notmatch 'version-proxy\.sln') 'Build script must build only the DLL project, never the solution containing VersionInjector.'
 Assert-True ($script -match '0x014C') 'Build script must verify the output is x86.'
+Assert-True ($script -match 'Clear-PeTimestamps' -and $script -match 'IMAGE_DEBUG_DIRECTORY') 'Build must normalize non-semantic MSVC PE timestamps.'
 Assert-True ($script -match 'git -C \$source archive --format=zip') 'Build must emit the exact corresponding GPL source archive.'
 Assert-True ($helperScript -match '--runtime win-x86' -and $helperScript -match '--self-contained true') 'Launch helper publish must be self-contained x86.'
 Assert-True ($helperScript -match 'PublishSingleFile=true' -and $helperScript -match 'PublishTrimmed=true') 'Launch helper publish must remain one trimmed file.'
 Assert-True ($helperScript -match "executionLevel\.level -ne 'asInvoker'") 'Launch helper publish must verify its embedded non-elevating manifest.'
 Assert-True ($workflow -match [regex]::Escape($lock.commit)) 'CI workflow must check out the pinned upstream commit.'
+Assert-True ($workflow -match "dotnet-version: '10\.0\.300'") 'CI workflow must install the pinned .NET SDK used for the self-contained helper.'
 Assert-True ($workflow -notmatch 'VersionInjector') 'CI workflow must not build or package the elevated injector.'
 
 Write-Host 'Compatibility source-build contract tests passed.'

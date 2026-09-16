@@ -20,7 +20,7 @@ internal static class InstallationCoordinatorSmoke
             Check(vengeance.Manifest.ProductId == "vengeance" && vengeance.Manifest.Files.Count > 0, "coordinator installs and verifies Vengeance", failures);
 
             var blackKnight = coordinator.Install(
-                new BlackKnightInstallRequest(inputs.BlackKnightDisc, inputs.BlackKnightExecutable),
+                new BlackKnightInstallRequest(inputs.BlackKnightDisc),
                 Path.Combine(root, "installed", "black-knight"), progress);
             Check(blackKnight.Manifest.ProductId == "black-knight" && blackKnight.Manifest.Files.Count > 0, "coordinator installs and verifies Black Knight", failures);
 
@@ -58,7 +58,7 @@ internal static class InstallationCoordinatorSmoke
         var inventory = new DirectoryMediaInventory();
         var plans = new GameInstallPlanFactory(
             new VengeanceInstallPlanBuilder(Hash(inputs.VengeanceExecutable), inspection, inventory),
-            new BlackKnightInstallPlanBuilder(Hash(inputs.BlackKnightExecutable), inspection, inventory),
+            new BlackKnightInstallPlanBuilder(CreateBlackKnightCompatibility(inputs.BlackKnightCompatibilityRoot), inspection, inventory),
             new MercenariesInstallPlanBuilder(Hash(inputs.MercenariesExecutable), inspection, inventory));
         return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier());
     }
@@ -85,11 +85,14 @@ internal static class InstallationCoordinatorSmoke
         ZipFile.CreateFromDirectory(cabinetSource, cabinet, CompressionLevel.NoCompression, includeBaseDirectory: false);
 
         var vengeanceExecutable = Write(root, "replacements/vengeance/MW4.exe", "vengeance executable");
-        var blackKnightExecutable = Write(root, "replacements/black-knight/MW4X.exe", "black knight executable");
+        var blackKnightCompatibility = Path.Combine(root, "compatibility", "black-knight");
+        Write(blackKnightCompatibility, "MW4RemasteredCompatLauncher.exe", "black knight helper");
+        Write(blackKnightCompatibility, "version.dll", "black knight loader");
+        Write(blackKnightCompatibility, "SafeDiscLoader2-LICENSE.txt", "black knight loader license");
         var mercenariesExecutable = Write(root, "replacements/mercenaries/MW4Mercs.exe", "mercenaries executable");
         return new FixtureInputs(
             vengeanceDiscOne, vengeanceDiscTwo, vengeanceExecutable,
-            blackKnightDisc, blackKnightExecutable,
+            blackKnightDisc, blackKnightCompatibility,
             mercenariesDiscOne, mercenariesDiscTwo, mercenariesExecutable);
     }
 
@@ -108,6 +111,17 @@ internal static class InstallationCoordinatorSmoke
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
 
+    private static QualifiedCompatibilityPayload CreateBlackKnightCompatibility(string root) =>
+        new(root, new[]
+        {
+            Qualified(root, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
+            Qualified(root, "version.dll", "version.dll"),
+            Qualified(root, "SafeDiscLoader2-LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
+        });
+
+    private static QualifiedCompatibilityFile Qualified(string root, string source, string destination) =>
+        new(source, destination, Hash(Path.Combine(root, source.Replace('/', Path.DirectorySeparatorChar))));
+
     private static void Check(bool condition, string message, List<string> failures)
     {
         if (!condition) failures.Add("FAIL: " + message);
@@ -115,7 +129,7 @@ internal static class InstallationCoordinatorSmoke
 
     private sealed record FixtureInputs(
         string VengeanceDiscOne, string VengeanceDiscTwo, string VengeanceExecutable,
-        string BlackKnightDisc, string BlackKnightExecutable,
+        string BlackKnightDisc, string BlackKnightCompatibilityRoot,
         string MercenariesDiscOne, string MercenariesDiscTwo, string MercenariesExecutable);
 
     private sealed class RecordingProgress : IProgress<GameInstallationProgress>

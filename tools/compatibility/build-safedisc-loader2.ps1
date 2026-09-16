@@ -50,6 +50,47 @@ if ($LASTEXITCODE -ne 0) { throw "SafeDiscLoader2 build failed with exit code $L
 $builtDll = Join-Path $source 'Release/version.dll'
 if (-not (Test-Path -LiteralPath $builtDll -PathType Leaf)) { throw "Build did not produce the expected DLL: $builtDll" }
 
+function Clear-PeTimestamps {
+    param([Parameter(Mandatory)][string]$Path)
+    $bytes = [IO.File]::ReadAllBytes($Path)
+    if ([BitConverter]::ToUInt16($bytes, 0) -ne 0x5A4D) { throw 'Built compatibility DLL has no DOS header.' }
+    $peOffset = [BitConverter]::ToInt32($bytes, 0x3C)
+    if ([BitConverter]::ToUInt32($bytes, $peOffset) -ne 0x00004550) { throw 'Built compatibility DLL has no PE header.' }
+
+    [Array]::Clear($bytes, $peOffset + 8, 4)
+    $sectionCount = [BitConverter]::ToUInt16($bytes, $peOffset + 6)
+    $optionalSize = [BitConverter]::ToUInt16($bytes, $peOffset + 20)
+    $optionalOffset = $peOffset + 24
+    $magic = [BitConverter]::ToUInt16($bytes, $optionalOffset)
+    $dataDirectoryOffset = $optionalOffset + $(if ($magic -eq 0x10B) { 96 } elseif ($magic -eq 0x20B) { 112 } else { throw 'Unsupported PE optional-header format.' })
+    $debugRva = [BitConverter]::ToUInt32($bytes, $dataDirectoryOffset + (6 * 8))
+    $debugSize = [BitConverter]::ToUInt32($bytes, $dataDirectoryOffset + (6 * 8) + 4)
+    $sectionOffset = $optionalOffset + $optionalSize
+    $debugFileOffset = $null
+    for ($index = 0; $index -lt $sectionCount; $index++) {
+        $header = $sectionOffset + ($index * 40)
+        $virtualSize = [BitConverter]::ToUInt32($bytes, $header + 8)
+        $virtualAddress = [BitConverter]::ToUInt32($bytes, $header + 12)
+        $rawSize = [BitConverter]::ToUInt32($bytes, $header + 16)
+        $rawOffset = [BitConverter]::ToUInt32($bytes, $header + 20)
+        $mappedSize = [Math]::Max($virtualSize, $rawSize)
+        if ($debugRva -ge $virtualAddress -and $debugRva -lt ($virtualAddress + $mappedSize)) {
+            $debugFileOffset = $rawOffset + ($debugRva - $virtualAddress)
+            break
+        }
+    }
+    if ($debugSize -gt 0 -and $null -eq $debugFileOffset) { throw 'Could not map the PE debug directory.' }
+    for ($offset = 0; $offset -lt $debugSize; $offset += 28) {
+        [Array]::Clear($bytes, [int]($debugFileOffset + $offset + 4), 4)
+    }
+    [IO.File]::WriteAllBytes($Path, $bytes)
+}
+
+# MSVC stamps the COFF header and IMAGE_DEBUG_DIRECTORY even for otherwise identical
+# release builds. These fields do not affect execution; clearing them makes the declared
+# source/toolset build bit-reproducible without patching executable code or data.
+Clear-PeTimestamps $builtDll
+
 $stream = [IO.File]::OpenRead($builtDll)
 try {
     $reader = [IO.BinaryReader]::new($stream)

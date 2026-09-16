@@ -5,7 +5,7 @@ public abstract record GameInstallRequest(string ProductId);
 public sealed record VengeanceInstallRequest(string DiscOneRoot, string DiscTwoRoot, string CompatibilityExecutablePath)
     : GameInstallRequest("vengeance");
 
-public sealed record BlackKnightInstallRequest(string DiscRoot, string CompatibilityExecutablePath)
+public sealed record BlackKnightInstallRequest(string DiscRoot)
     : GameInstallRequest("black-knight");
 
 public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot, string CompatibilityExecutablePath)
@@ -57,7 +57,7 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
         return request switch
         {
             VengeanceInstallRequest input => vengeance.Build(input.DiscOneRoot, input.DiscTwoRoot, input.CompatibilityExecutablePath),
-            BlackKnightInstallRequest input => blackKnight.Build(input.DiscRoot, input.CompatibilityExecutablePath),
+            BlackKnightInstallRequest input => blackKnight.Build(input.DiscRoot),
             MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(mercenariesCabinetPayloadRoot) =>
                 mercenaries.Build(input.DiscOneRoot, input.DiscTwoRoot, mercenariesCabinetPayloadRoot, input.CompatibilityExecutablePath),
             MercenariesInstallRequest => throw new ArgumentException("Mercenaries installation requires an extracted cabinet payload.", nameof(mercenariesCabinetPayloadRoot)),

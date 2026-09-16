@@ -99,6 +99,29 @@ try
     new LaunchOrchestrator(processStarter).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
 
+    var compatibilityLauncher = Path.Combine(destination, "MW4RemasteredCompatLauncher.exe");
+    File.WriteAllText(compatibilityLauncher, "synthetic helper");
+    var statusWithUnownedHelper = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().Single(item => item.Product.Id == "vengeance");
+    new LaunchOrchestrator(processStarter).Launch(statusWithUnownedHelper);
+    Check(processStarter.LastStart?.FileName == statusWithUnownedHelper.LaunchPath,
+        "launch orchestration ignores an adjacent helper that is not owned by the verified manifest");
+    File.Delete(compatibilityLauncher);
+
+    WriteFixture(rootPath: disc1, relativePath: "MW4RemasteredCompatLauncher.exe", contents: "owned helper");
+    var compatibilityDestination = Path.Combine(transactionRoot, "compatible-installed", "vengeance");
+    new StagedInstallTransaction().Execute(new InstallPlan("vengeance", new[]
+    {
+        new InstallFile(disc1, "MW4.EXE", "MW4.exe"),
+        new InstallFile(disc1, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
+    }), compatibilityDestination);
+    var compatibleStatus = new InstallStatusReader(Path.Combine(transactionRoot, "compatible-installed")).Read().Single(item => item.Product.Id == "vengeance");
+    new LaunchOrchestrator(processStarter).Launch(compatibleStatus);
+    var compatibleStart = processStarter.LastStart;
+    Check(compatibleStart is not null && compatibleStart.FileName == compatibleStatus.CompatibilityLaunchPath &&
+          compatibleStart.ArgumentList.Count == 1 &&
+          compatibleStart.ArgumentList[0].Equals("MW4.exe", StringComparison.OrdinalIgnoreCase),
+        "launch orchestration routes a manifest-owned compatibility installation through its verified adjacent helper");
+
     WriteFixture(destination, "Saves/pilot.sav", "user-owned save");
     Check(new InstallManifestVerifier().Verify(destination, InstallVerificationScope.OwnedFiles).IsValid, "owned-file verification permits unowned user data");
     Check(!new InstallManifestVerifier().Verify(destination, InstallVerificationScope.ExactTree).IsValid, "exact-tree verification still reports unowned files for staging and release gates");
@@ -211,17 +234,37 @@ try
     WriteFixture(disc, "MW4X/DSETUP.DLL", "directx setup");
     WriteFixture(disc, "MW4X/SECDRV.SYS", "safedisc driver");
     WriteFixture(disc, "SETUP.EXE", "legacy setup");
-    var replacement = Path.Combine(blackKnightPlanRoot, "replacement", "MW4X.exe");
-    WriteFixture(Path.GetDirectoryName(replacement)!, Path.GetFileName(replacement), "synthetic Black Knight executable");
-    var replacementHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(replacement))).ToLowerInvariant();
-
-    var builder = new BlackKnightInstallPlanBuilder(replacementHash, new MediaInspectionService(), new DirectoryMediaInventory());
-    var plan = builder.Build(disc, replacement);
+    var compatibilityRoot = Path.Combine(blackKnightPlanRoot, "compatibility");
+    WriteFixture(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "synthetic helper");
+    WriteFixture(compatibilityRoot, "version.dll", "synthetic loader");
+    WriteFixture(compatibilityRoot, "LICENSE.txt", "synthetic license");
+    var compatibility = new QualifiedCompatibilityPayload(compatibilityRoot, new[]
+    {
+        QualifiedFile(compatibilityRoot, "MW4RemasteredCompatLauncher.exe", "MW4RemasteredCompatLauncher.exe"),
+        QualifiedFile(compatibilityRoot, "version.dll", "version.dll"),
+        QualifiedFile(compatibilityRoot, "LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
+    });
+    var builder = new BlackKnightInstallPlanBuilder(compatibility, new MediaInspectionService(), new DirectoryMediaInventory());
+    var plan = builder.Build(disc);
     var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-    Check(plan.ProductId == "black-knight" && destinations.Contains("MW4X.exe"), "Black Knight plan supplies the qualified compatibility executable");
+    Check(plan.ProductId == "black-knight" && destinations.Contains("MW4X.exe"), "Black Knight plan installs the untouched executable from media");
+    Check(plan.Files.Single(file => file.DestinationRelativePath.Equals("MW4X.exe", StringComparison.OrdinalIgnoreCase)).SourceRelativePath.Equals("MW4X/MW4X.EXE", StringComparison.OrdinalIgnoreCase), "Black Knight executable comes from recognized media, not a user-supplied replacement");
+    Check(destinations.Contains("MW4RemasteredCompatLauncher.exe") && destinations.Contains("version.dll") && destinations.Contains("Licenses/SafeDiscLoader2-GPL-3.0.txt"), "Black Knight plan owns the exact internal compatibility bundle");
     Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Black Knight plan expands installed root names");
-    Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("LANGUAGE.DLL"), "Black Knight plan copies game data and flattens runtime files");
-    Check(!destinations.Contains("DRVMGT.DLL") && !destinations.Contains("DSETUP.DLL") && !destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes setup and SafeDisc components");
+    Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("LANGUAGE.DLL") && destinations.Contains("DRVMGT.DLL"), "Black Knight plan copies game data and flattens required runtime files");
+    Check(!destinations.Contains("DSETUP.DLL") && !destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes setup and the obsolete SafeDisc driver");
+
+    File.AppendAllText(Path.Combine(compatibilityRoot, "version.dll"), "tampered");
+    var compatibilityTamperRejected = false;
+    try
+    {
+        builder.Build(disc);
+    }
+    catch (InvalidDataException)
+    {
+        compatibilityTamperRejected = true;
+    }
+    Check(compatibilityTamperRejected, "Black Knight planning rejects a modified internal compatibility payload");
 }
 finally
 {
@@ -399,6 +442,13 @@ void WriteFixture(string rootPath, string relativePath, string contents)
     var file = Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
     Directory.CreateDirectory(Path.GetDirectoryName(file)!);
     File.WriteAllText(file, contents);
+}
+
+QualifiedCompatibilityFile QualifiedFile(string rootPath, string sourceRelativePath, string destinationRelativePath)
+{
+    var path = Path.Combine(rootPath, sourceRelativePath.Replace('/', Path.DirectorySeparatorChar));
+    var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
+    return new QualifiedCompatibilityFile(sourceRelativePath, destinationRelativePath, hash);
 }
 
 sealed class RecordingProcessStarter : IProcessStarter
