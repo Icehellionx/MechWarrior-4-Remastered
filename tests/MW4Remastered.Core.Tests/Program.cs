@@ -363,6 +363,7 @@ finally
 }
 
 InstallationCoordinatorSmoke.Run(failures);
+IsoMediaSessionSmoke.Run(failures);
 
 if (failures.Count > 0)
 {

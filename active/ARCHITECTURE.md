@@ -24,6 +24,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 ## Implemented foundation
 
 - `MediaInspectionService` and `MediaCatalog` own structural recognition and prohibited-content reporting for seven supplied disc layouts.
+- `OwnedIsoMediaSessionFactory` owns read-only ISO mount lifetime and refuses pre-attached images; `PowerShellDiskImageBackend` is the replaceable initial Windows adapter.
 - `VengeanceInstallPlanBuilder` owns the current full-install allowlist, 8.3 name restoration, and exact compatibility-executable hash gate.
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.

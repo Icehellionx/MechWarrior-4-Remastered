@@ -64,6 +64,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Made the coordinator own Mercenaries cabinet extraction scratch lifetime and proved cleanup after success and injected planning failure.
 - Switched the development install probe to the coordinator so installer UI and smoke tooling can share one orchestration path.
 
+## Owned ISO media sessions — 2026-09-15
+
+- Added a read-only, ownership-aware ISO session that rejects pre-attached images and reparse inputs, validates the mounted root, and provides idempotent owned cleanup.
+- Isolated inbox Windows storage cmdlets behind a bounded, encoded-command PowerShell adapter with no execution-policy bypass and a 30-second timeout.
+- Extended the media probe to accept ISO paths and proved the new C# boundary against the real Black Knight image; recognition reported both SafeDisc exclusions and the image detached afterward.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.
