@@ -52,6 +52,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [ ] Establish clean baselines for video, audio, input, movies, configuration, saves, and multiplayer behavior.
 - [ ] Evaluate maintained open-source wrappers/fixes with license and revision records.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
+- [x] Prove a non-elevating, disc-free Black Knight process launch from the untouched ISO executable through a constrained project helper and pinned open-source loader release.
 - [ ] Test representative Intel/AMD/NVIDIA systems and current supported Windows versions.
 
 ## 6. Release and operations
@@ -68,11 +69,11 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: advance the verified Vengeance baseline from version 2.0 to the official version 3 data contract without executing setup, SafeDisc, or C-Dilla code.
-Owning boundary: game transforms and install transaction.
-Smallest verifiable slice: qualify a checksum-enforcing RTPatch transform for the supplied official 2.0/3.0 payloads, then reproduce and verify every changed output in a second disposable tree.
-Focused evidence: patch revision/license, source rolling checksums, output SHA-256 manifest, path containment, and comparison with the known 2.0/3.0 executable versions.
-Smoke/regression evidence: unchanged verified 231-file Vengeance baseline plus deterministic patched-tree comparison.
-Rollback or disable path: retain the verified baseline and emit patched output to a new sibling tree only.
-Hardware coverage gap: all runtime behavior remains unqualified.
+User-facing goal: require only Black Knight ISO/ISO-ZIP input and install a disc-free, non-elevating launch path.
+Owning boundary: compatibility payload, Black Knight install planning, and launch orchestration.
+Smallest verifiable slice: reproduce the pinned GPL loader DLL from source, stage the untouched media executable plus constrained helper/DLL as owned files, and launch via the helper from a fresh disposable install.
+Focused evidence: upstream revision/license, reproducible build command and hashes, original executable hash, ownership manifest, explicit `asInvoker` manifest, Defender scan, and bounded process/window result.
+Smoke/regression evidence: existing media/transaction/coordinator tests plus helper boundary test and a fresh Black Knight install/launch/uninstall smoke.
+Rollback or disable path: compatibility files are manifest-owned; uninstall removes them while preserving user data, and direct launch remains disabled if the bundle is missing or modified.
+Hardware coverage gap: menu presence is proven only on the current Windows device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.
 ```

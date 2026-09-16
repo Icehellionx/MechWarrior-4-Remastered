@@ -37,6 +37,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `MechPakResourceOverlayPlanBuilder` owns only the exact 10-file resource allowlist for each retail pack and permits only documented Vengeance/Black Knight targets. It deliberately does not own official patch transforms, entitlement replacement, merge transactions, or Mercenaries behavior.
 - `OwnedInstallOverlayTransaction` adds non-colliding files to an already verified matching game tree, atomically replaces its ownership manifest, rolls payload back on manifest failure, preserves unowned user data, and leaves recovery state when rollback itself fails. It does not decide whether a pack is runtime-visible.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
+- `MW4Remastered.CompatLauncher` is a 32-bit, `asInvoker`, fail-closed launch helper constrained to the three adjacent MW4 executable names and the adjacent compatibility DLL. It is not yet packaged or wired into production launch orchestration.
 - `MW4Remastered.Installer` is the initial WinForms intake shell. It requests inspection through the application service, renders selection state, and can transactionally reopen/revalidate the current selection; its install action remains locked until the permanent patch/no-disc contract and install planning UX exist.
 
 ## Dependency direction
@@ -55,6 +56,7 @@ Build and tests -> declared source/assets -> package manifest -> smoke-installed
 - Every mutation occurs in staging or under an exact validated install root and has cleanup/rollback ownership.
 - Shared game behavior is parameterized; edition-specific differences live in data or named contracts.
 - No-disc support is reproducible, narrowly documented, hash-gated, and never sourced from an unverified opaque executable at release time.
+- Normal game launch never elevates. Privileged install/repair/uninstall work cannot make the launcher or game inherit administrator integrity.
 - Optional pack status reflects verified installed payloads, not only registry residue.
 - User saves/configuration are inventoried before uninstall policy is implemented.
 - Build, smoke, antivirus, hardware, and legal/provenance claims remain separate.

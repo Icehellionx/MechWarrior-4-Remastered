@@ -30,6 +30,14 @@ try {
     Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe' } 'forbidden filename'
     Remove-Item -LiteralPath (Join-Path $root 'SECDRV.SYS') -Force
 
+    [IO.File]::WriteAllText((Join-Path $root 'VersionInjector.exe'), 'synthetic fixture')
+    Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe','VersionInjector.exe' } 'forbidden filename'
+    Remove-Item -LiteralPath (Join-Path $root 'VersionInjector.exe') -Force
+
+    [IO.File]::WriteAllText((Join-Path $root 'unSafedisc155_version.exe'), 'synthetic fixture')
+    Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe','unSafedisc155_version.exe' } 'forbidden filename'
+    Remove-Item -LiteralPath (Join-Path $root 'unSafedisc155_version.exe') -Force
+
     [IO.File]::WriteAllText((Join-Path $root '.env.production'), 'synthetic fixture')
     Assert-Rejected { & "$PSScriptRoot\..\tools\assert-release-tree.ps1" -Root $root -AllowedExecutablePaths 'Launcher.exe' } 'environment/secret file'
     Remove-Item -LiteralPath (Join-Path $root '.env.production') -Force

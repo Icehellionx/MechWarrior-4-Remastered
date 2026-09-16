@@ -4,7 +4,7 @@ Updated: 2026-09-15.
 
 ## Current state
 
-- This is a newly initialized MechWarrior 4 Remastered workspace derived only in governance shape from the MechWarrior 3 Remastered project. It now has a narrow launcher, a read-only installer intake shell, media recognition, manual pipeline, release-tree policy, and rollback-safe staging cores for all three games; no public installer package or qualified runtime baseline exists yet.
+- This is a newly initialized MechWarrior 4 Remastered workspace derived only in governance shape from the MechWarrior 3 Remastered project. It now has a narrow launcher, a read-only installer intake shell, media recognition, manual pipeline, release-tree policy, rollback-safe staging cores for all three games, and the first qualified disc-free Black Knight process launch; no public installer package or fully qualified runtime baseline exists yet.
 - Local inputs include two-disc Vengeance media, Black Knight media, two-disc Mercenaries media, Inner Sphere and Clan Mech Pak media, archival ZIP variants, patch/fix archives, and three raw PDF manuals. They are evidence/user inputs and are intentionally ignored.
 - The intended product is one MW4-themed installer and launcher for Vengeance, Black Knight, and Mercenaries. Optional Inner Sphere and Clan packs are selected/detected at install time and surfaced as status in the launcher.
 - Raw manuals now have a reproducible cleanup and verification pipeline; generated PDFs remain ignored until redistribution rights are established.
@@ -34,14 +34,17 @@ Updated: 2026-09-15.
 - `OwnedInstallOverlayTransaction` can safely merge such non-colliding payloads into a verified matching install: it stages additions, atomically replaces the manifest, rolls files back on manifest-commit failure, preserves unowned saves, and makes overlays removable by the existing uninstaller. It is not wired to production pack installation until patch/entitlement proof exists.
 - The uninstaller core removes only manifest-owned files, preserves unowned saves/configuration, blocks before mutation on modified owned files, and rolls back move-phase failures. ADR 0003 records the policy.
 - Manifest verification has explicit scopes: exact-tree verification rejects all unexpected files for staging/release gates, while owned-file verification powers launcher health so user-created saves/configuration do not disable a valid install. Both scopes still reject missing or modified owned game files.
+- The evaluated SafeDiscLoader2 v1.3 DLL supports Black Knight's SafeDisc 2.30 generation. Its upstream injector is deliberately elevated and is rejected. A project-owned `win-x86` helper now declares `asInvoker`, accepts only the three adjacent MW4 executable names plus adjacent `version.dll`, terminates pre-resume failures, and successfully launched the untouched Black Knight disc executable to a responsive `MechWarrior Black Knight` window without a disc or UAC. The complete disposable tree passed current Defender scanning.
+- Vengeance and Mercenaries are SafeDisc 1.5-era loader/ICD pairs, outside SafeDiscLoader2's documented 2.0–4.9 range. A Vengeance injection test reached its CD error but did not bypass protection. Historical unSafeDisc evidence is neither licensed nor reliable enough to ship, so these titles need an independently reviewable, hash-gated ICD transform.
+- ADR 0006 fixes the privilege contract: normal game launch never elevates; the upstream `VersionInjector.exe` and legacy unwrappers are now explicitly forbidden from release trees even if someone adds them to an executable allowlist.
 
 ## Best resume path
 
-1. Qualify a reproducible official 2.0/3.0 RTPatch transform against the staged Vengeance tree. The evaluated MIT parser is not yet compatible or path-safe enough.
-2. Compare official-patch outputs and version resources with the supplied exact-hash 2.0/3.0 executables without publishing those binaries.
-3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
-4. Record ADRs for the permanent patch/no-disc method, compatibility baseline, and remaining registry/save-location ownership.
-5. Extend the installer intake shell with destination/free-space planning, cancellation, compatibility-input selection, and `GameInstallationCoordinator` progress before enabling installation.
+1. Reproduce the Black Knight loader DLL from pinned GPL source, record build inputs/output hashes, and replace the builder's opaque replacement-executable input with original media plus an internal compatibility bundle.
+2. Independently implement or identify suitably licensed source for the SafeDisc 1 ICD transform needed by Vengeance and Mercenaries; hash-gate inputs and compare results with local evidence without publishing opaque binaries.
+3. Qualify the official Vengeance 2.0/3.0 and Mercenaries patch transforms against the media-derived executables/data.
+4. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
+5. Extend the installer intake shell with destination/free-space planning, cancellation, internal compatibility payload validation, and `GameInstallationCoordinator` progress before enabling installation.
 
 ## Known constraints and risks
 
@@ -76,5 +79,7 @@ Updated: 2026-09-15.
 - A real-tree uninstall smoke removed all 232 owned payload/manifest files from a disposable 1.04 GB copy while preserving an unowned synthetic pilot save; the exact disposable target was then removed.
 - Release-tree policy tests passed their safe baseline and rejected synthetic ISO, unallowlisted executable, SafeDisc driver, and crack-directory fixtures.
 - All three manual outputs passed page-count/geometry/render checks and deterministic SHA-256 comparison. Final full contact-sheet review found no clipped or misordered pages.
+- A project-owned `win-x86` compatibility helper built with zero warnings/errors; manifest extraction confirmed `asInvoker`, its boundary test passed, and its Vengeance smoke reached the expected CD check without UAC.
+- The untouched Black Knight disc executable launched through that helper and the verified SafeDiscLoader2 v1.3 DLL with no mounted media or elevation; after ten seconds the responsive window title was `MechWarrior Black Knight`. The helper stopped the bounded test cleanly, and current Defender scanning reported no threats in the full disposable tree.
 - GitHub CLI device authorization succeeded for `Icehellionx`; the public repository was created and the initial `main` branch pushed.
 - No game launch, permanent install, registry mutation, antivirus, or field/hardware verification has run. Uninstall is qualified only at the file-ownership core/smoke level, not through a packaged UI.
