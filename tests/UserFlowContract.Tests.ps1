@@ -18,7 +18,9 @@ Assert-True ($launcher -notmatch 'DIAGNOSTICS|SETTINGS|REMOVE GAME FILES') 'Laun
 Assert-True ($launcher -match 'CHECKING INSTALLED GAMES' -and $launcher -match 'Task\.Run\(statusReader\.Read\)') 'Launcher must become visible before hashing installed game trees.'
 
 Assert-True ($installer -match 'STEP 1 OF 2' -and $installer -match '1\. CHOOSE ISO / ZIP FILES') 'Installer must lead with an explicit media-selection step.'
-Assert-True ($installer -match 'VENGEANCE BASE PATH' -and $installer -match 'does not install a partial title set') 'Development intake must preserve the Vengeance-first dependency instead of advertising a Black Knight-only product.'
+Assert-True ($installer -match 'VENGEANCE AND BLACK KNIGHT INSTALL DIRECTLY' -and $installer -match 'VengeanceInstallRequest') 'Installer must expose the qualified Vengeance-first media installation path.'
+Assert-True ($installer -match 'INSTALL SELECTED GAMES' -and $installer -match 'installationCoordinator\.Install') 'Validated supported media must enable the actual shared installation coordinator.'
+Assert-True ($installer -match 'Mech Pak media was validated' -and $installer -match 'Mercenaries media was validated') 'Recognized but unqualified products must explain why they are not installed.'
 Assert-True ($installer -notmatch 'INSTALL BLACK KNIGHT NOW') 'The product installer must not expose the expansion as a standalone primary install path.'
 Assert-True ($installer -notmatch 'blackKnightInstaller|InstallBlackKnightAsync|CreateBlackKnightSelection') 'The product installer must not retain a hidden Black Knight-only execution path.'
 Assert-True ($installer -match 'DONE — OPEN LAUNCHER' -and $installer -match 'OpenInstalledLauncher') 'An existing test install may still hand off explicitly to the launcher.'

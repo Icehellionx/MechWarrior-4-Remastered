@@ -6,7 +6,7 @@ The project does not distribute original game ISOs, serial keys, opaque cracks, 
 
 Current planning and status live in [`active/HANDOFF.md`](active/HANDOFF.md) and [`active/PRODUCTION_PLAN.md`](active/PRODUCTION_PLAN.md).
 
-The current source includes a read-only media-intake installer shell. It can validate supported folders, ISOs, and ISO-containing ZIPs, but the public install action remains locked until the remaining patch/no-disc gates are complete. The development installation core now installs and launches Black Knight from original media alone through a reproducibly built, non-elevating compatibility bundle; Vengeance and Mercenaries still need a reproducible SafeDisc 1 transform before the full media-only contract is complete.
+The current source includes a media-first installer that validates supported folders, ISOs, and ISO-containing ZIPs before mutation. Vengeance installs directly from its two original discs through an exact-input, source-owned SafeDisc 1.50.20 transform; Black Knight can then install through a reproducibly built, non-elevating compatibility bundle. Mercenaries and the two Mech Paks are recognized but remain explicitly disabled until their media-only compatibility paths are qualified.
 
 ```powershell
 dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release

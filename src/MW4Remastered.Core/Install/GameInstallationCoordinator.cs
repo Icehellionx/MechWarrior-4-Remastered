@@ -83,7 +83,7 @@ public sealed class GameInstallationCoordinator
 
     public GameInstallationCoordinator()
         : this(new GameInstallPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
-            new UnavailableVengeanceExecutableTransform())
+            new VengeanceRetailExecutableTransform())
     {
     }
 
@@ -98,7 +98,7 @@ public sealed class GameInstallationCoordinator
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
         this.transaction = transaction ?? throw new ArgumentNullException(nameof(transaction));
         this.verifier = verifier ?? throw new ArgumentNullException(nameof(verifier));
-        this.vengeanceTransform = vengeanceTransform ?? new UnavailableVengeanceExecutableTransform();
+        this.vengeanceTransform = vengeanceTransform ?? new VengeanceRetailExecutableTransform();
     }
 
     public GameInstallationResult Install(

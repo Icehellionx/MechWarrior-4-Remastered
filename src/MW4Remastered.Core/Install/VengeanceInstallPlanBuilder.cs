@@ -5,14 +5,13 @@ namespace MW4Remastered.Core.Install;
 
 public sealed class VengeanceInstallPlanBuilder
 {
-    public const string QualifiedCompatibilityExecutableSha256 = "4f5a2add5416f15ebc1d1b7c3377a2e64c72ef94bda8688069fb300ae81c656e";
+    public const string QualifiedCompatibilityExecutableSha256 = VengeanceRetailExecutableTransform.OutputSha256;
 
     private static readonly IReadOnlyDictionary<string, string> DiscOneRootFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["AUTOCO_1.EXE"] = "AutoConfig.exe",
             ["BLADE.DLL"] = "Blade.dll",
-            ["DPLAYERX.DLL"] = "DPlayerX.dll",
             ["EBUEULA.DLL"] = "EBUEula.dll",
             ["EULA.RTF"] = "EULA.rtf",
             ["LANGUAGE.DLL"] = "Language.dll",

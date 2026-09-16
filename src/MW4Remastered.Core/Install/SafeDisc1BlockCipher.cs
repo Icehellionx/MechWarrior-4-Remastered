@@ -2,7 +2,7 @@ using System.Buffers.Binary;
 
 namespace MW4Remastered.Core.Install;
 
-public static class SafeDisc1R0R1BlockCipher
+public static class SafeDisc1BlockCipher
 {
     private const uint Delta = 0x9e3779b9;
     private const uint InitialSum = 0xc6ef3720;
@@ -12,11 +12,11 @@ public static class SafeDisc1R0R1BlockCipher
     {
         if (block.Length != 8)
         {
-            throw new ArgumentException("SafeDisc 1 r0/r1 blocks must be exactly eight bytes.", nameof(block));
+            throw new ArgumentException("SafeDisc 1 blocks must be exactly eight bytes.", nameof(block));
         }
         if (key.Length != 4)
         {
-            throw new ArgumentException("SafeDisc 1 r0/r1 keys must contain exactly four 32-bit words.", nameof(key));
+            throw new ArgumentException("SafeDisc 1 keys must contain exactly four 32-bit words.", nameof(key));
         }
 
         var left = BinaryPrimitives.ReadUInt32LittleEndian(block);

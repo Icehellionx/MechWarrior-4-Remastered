@@ -17,19 +17,19 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 
 - [x] Detect supported Vengeance media layouts and stage a disposable install.
 - [ ] Determine required official patch level and implement exact-input transforms.
-- [x] Reimplement and independently vector-test the SafeDisc 1.5 r0/r1 eight-byte block-decryption primitive; key derivation and PE repair remain unqualified.
+- [x] Reimplement and independently vector-test the SafeDisc 1 eight-byte block cipher, 1.50.20 page-local second layer, and exact-input Vengeance PE/import/pointer repair transform.
 - [x] Extend the shared transaction contract to Black Knight and Mercenaries, including contained cabinet extraction for Mercenaries.
 - [x] Diagnose the Inner Sphere and Clan 64-bit failure boundary from installer/payload evidence: plain resource payload plus official game patch plus obsolete SafeCast/C-Dilla entitlement; replacement remains unqualified.
 - [ ] Install optional packs through a tested extraction/configuration path.
 - [x] Persist an ownership manifest sufficient for repair and safe file uninstall.
-- [x] Add a read-only installer intake shell with atomic multi-source readiness for all games and packs; keep mutation locked pending patch and source-lifetime qualification.
+- [x] Add atomic multi-source readiness for all games and packs, and enable dependency-ordered mutation only for the qualified Vengeance and Black Knight paths.
 - [x] Reopen and re-recognize selected directory/ISO/ZIP sources under one disposable transaction lifetime with success and failure cleanup.
 - [x] Add read-only destination planning with contained per-game folders, conservative space budgets, current-volume capacity, and unsafe-root rejection.
 - [x] Add cooperative cancellation for installer media inspection/revalidation with owned mount and ZIP scratch cleanup.
 - [x] Encode the original product topology: Vengeance base, Black Knight dependent expansion, independent Mercenaries, and Vengeance-dependent Mech Paks.
 - [x] Apply that topology to destination planning and remove the obsolete hidden Black Knight-only installer execution path.
 - [x] Collect a neutral multi-file ISO/ZIP set in the package wizard before Install and hand it directly to intake validation without a second picker.
-- [x] Remove the caller-supplied Vengeance replacement executable from installation requests; confine the pending media-derived transform to coordinator-owned scratch and fail closed until qualified.
+- [x] Remove the caller-supplied Vengeance replacement executable from installation requests; confine the qualified retail media-derived transform to coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Validate and assemble the exact internal Black Knight helper/loader/license/corresponding-source bundle from reproducible CI evidence.
 - [x] Prove the Black Knight media transformation internally; keep it out of the primary product flow until the Vengeance base path and dependency-aware orchestration are qualified.
 
@@ -80,10 +80,10 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: require only Vengeance ISO/ISO-ZIP input and produce a disc-free executable from its original SafeDisc 1 loader/ICD pair.
-Owning boundary: deterministic executable transform, official patch chain, and Vengeance install planning.
-Smallest verifiable slice: implement or adopt suitably licensed source for a hash-gated ICD transform, compare it with known local evidence, and eliminate the extra replacement-executable input.
-Focused evidence: exact loader/ICD input hashes, documented transform stages, deterministic output hash, current Defender scan, and a bounded non-elevating launch.
+User-facing goal: require only Vengeance ISO/ISO-ZIP input and complete a verified, disc-free Vengeance install.
+Owning boundary: coordinator-owned media transform, staging transaction, manifest verification, and ownership-safe uninstall.
+Smallest verifiable slice: run the now-qualified managed transform through a fresh full coordinator install and remove it through the owned-file uninstaller.
+Focused evidence: exact loader/ICD/DPLAYER input hashes, deterministic output hash, exact install manifest, current Defender scan, and a bounded non-elevating launch.
 Smoke/regression evidence: transform unit vectors plus fresh Vengeance install/launch/repair/uninstall smoke from media alone.
 Rollback or disable path: transforms operate in staging; failed or unknown revisions never modify media or an existing install.
 Hardware coverage gap: Black Knight menu presence is proven only on the current Windows device; gameplay, renderer, input, audio, saves, and additional GPUs remain unqualified.

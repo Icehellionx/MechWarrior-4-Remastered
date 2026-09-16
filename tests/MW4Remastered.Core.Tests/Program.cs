@@ -7,11 +7,60 @@ using System.IO.Compression;
 
 var failures = new List<string>();
 var safeDiscBlock = Convert.FromHexString("234319fa48b20e26");
-SafeDisc1R0R1BlockCipher.DecryptBlock(
+SafeDisc1BlockCipher.DecryptBlock(
     safeDiscBlock,
     new uint[] { 0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210 });
 Check(Convert.ToHexString(safeDiscBlock).Equals("4433221188776655", StringComparison.OrdinalIgnoreCase),
-    "SafeDisc 1 r0/r1 block cipher matches the independent TEA-family test vector");
+    "SafeDisc 1 block cipher matches the independent TEA-family test vector");
+
+var safeDiscSecondLayerVector = Convert.FromHexString("000102030405060708090A0B0C0D0E0F");
+SafeDisc15020SecondLayer.DecodePage(safeDiscSecondLayerVector);
+Check(
+    Convert.ToHexString(safeDiscSecondLayerVector).Equals(
+        "21260BFDA9304082FAB93A0742C1B366",
+        StringComparison.Ordinal),
+    "SafeDisc 1.50.20 second layer matches the independent modifier-chain vector");
+
+var safeDiscSectionVector = Enumerable.Range(0, 4110)
+    .Select(index => unchecked((byte)((index * 37) + 11)))
+    .ToArray();
+SafeDisc15020ImageCipher.DecodeSection(
+    safeDiscSectionVector,
+    4107,
+    new uint[] { 0x01234567, 0x89abcdef, 0xfedcba98, 0x76543210 });
+Check(
+    Convert.ToHexString(SHA256.HashData(safeDiscSectionVector)).Equals(
+        "1F475696D4D9319353FBA6FBC6A27EEECCE50B2BA0FAA63BFB5CDA66BA1F1581",
+        StringComparison.Ordinal),
+    "SafeDisc 1.50.20 section decoding matches the independent page and overlap-tail vector");
+
+var transformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-transform-rejection-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(transformRejectionRoot);
+    File.WriteAllText(Path.Combine(transformRejectionRoot, "MW4.EXE"), "unsupported loader");
+    File.WriteAllText(Path.Combine(transformRejectionRoot, "MW4.ICD"), "unsupported image");
+    File.WriteAllText(Path.Combine(transformRejectionRoot, "DPLAYERX.DLL"), "unsupported player");
+    var rejected = false;
+    try
+    {
+        new VengeanceRetailExecutableTransform().Transform(
+            transformRejectionRoot,
+            Path.Combine(transformRejectionRoot, "scratch"));
+    }
+    catch (InvalidDataException exception)
+    {
+        rejected = exception.Message.Contains("Unsupported Vengeance MW4.EXE SHA-256", StringComparison.Ordinal);
+    }
+    Check(rejected, "Vengeance transform rejects media that does not match the qualified retail revision");
+    Check(!Directory.Exists(Path.Combine(transformRejectionRoot, "scratch")),
+        "Vengeance transform does not write output after input validation fails");
+}
+finally
+{
+    if (Directory.Exists(transformRejectionRoot)) Directory.Delete(transformRejectionRoot, true);
+}
+
 Check(ProductCatalog.All.Count == 5, "catalog contains exactly three games and two packs");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.Game) == 3, "catalog contains three games");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.OptionalPack) == 2, "catalog contains two optional packs");
@@ -271,7 +320,9 @@ try
     Check(destinations.Contains("AutoConfig.exe") && destinations.Contains("ScriptStrings.dll"), "Vengeance plan expands patch-relevant 8.3 root names");
     Check(destinations.Contains("Content/ShellScripts/FILES/STUTTE_1.WAV"), "Vengeance plan restores the ShellScripts directory name");
     Check(destinations.Contains("Content/Textures/customdecals/CSTMDCAL.TXT"), "Vengeance plan restores the custom decals directory name");
-    Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE") && !destinations.Contains("MW4.ICD"), "Vengeance plan excludes setup and SafeDisc components");
+    Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE") &&
+        !destinations.Contains("MW4.ICD") && !destinations.Contains("DPlayerX.dll"),
+        "Vengeance plan excludes setup and SafeDisc components");
 }
 finally
 {

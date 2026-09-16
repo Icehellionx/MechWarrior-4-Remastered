@@ -19,6 +19,7 @@ internal static class Program
             new MediaSelectionSet(),
             new MediaSelectionSessionFactory(mediaSessions, mediaInspection),
             new InstallDestinationPlanner(),
+            new GameInstallationCoordinator(),
             new InstalledLauncherOrchestrator(AppContext.BaseDirectory, processStarter),
             initialMediaPaths));
     }

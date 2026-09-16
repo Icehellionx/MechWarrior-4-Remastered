@@ -21,6 +21,7 @@ internal sealed class InstallerForm : Form
     private readonly MediaSelectionSet selection;
     private readonly MediaSelectionSessionFactory selectionSessions;
     private readonly InstallDestinationPlanner destinationPlanner;
+    private readonly GameInstallationCoordinator installationCoordinator;
     private readonly InstalledLauncherOrchestrator installedLauncher;
     private readonly IReadOnlyList<string> initialMediaPaths;
     private readonly Dictionary<string, CapabilityCard> cards = new(StringComparer.OrdinalIgnoreCase);
@@ -44,6 +45,7 @@ internal sealed class InstallerForm : Form
         MediaSelectionSet selection,
         MediaSelectionSessionFactory selectionSessions,
         InstallDestinationPlanner destinationPlanner,
+        GameInstallationCoordinator installationCoordinator,
         InstalledLauncherOrchestrator installedLauncher,
         IReadOnlyList<string> initialMediaPaths)
     {
@@ -51,6 +53,7 @@ internal sealed class InstallerForm : Form
         this.selection = selection ?? throw new ArgumentNullException(nameof(selection));
         this.selectionSessions = selectionSessions ?? throw new ArgumentNullException(nameof(selectionSessions));
         this.destinationPlanner = destinationPlanner ?? throw new ArgumentNullException(nameof(destinationPlanner));
+        this.installationCoordinator = installationCoordinator ?? throw new ArgumentNullException(nameof(installationCoordinator));
         this.installedLauncher = installedLauncher ?? throw new ArgumentNullException(nameof(installedLauncher));
         this.initialMediaPaths = initialMediaPaths ?? throw new ArgumentNullException(nameof(initialMediaPaths));
 
@@ -172,7 +175,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             ForeColor = Warning,
             Font = new Font("Segoe UI Semibold", 9F),
-            Text = "DEVELOPMENT MEDIA CHECK  •  INSTALLATION RETURNS AFTER THE VENGEANCE BASE PATH IS QUALIFIED",
+            Text = "MEDIA-FIRST SETUP  •  VENGEANCE AND BLACK KNIGHT INSTALL DIRECTLY FROM VALIDATED ORIGINAL MEDIA",
             Margin = new Padding(3, 5, 0, 0),
         });
         return panel;
@@ -294,7 +297,7 @@ internal sealed class InstallerForm : Form
             AutoSize = true,
             Anchor = AnchorStyles.Left,
             ForeColor = Muted,
-            Text = "Validate any game media here. This development build does not install a partial title set.",
+            Text = "Validate media, choose a destination, then install every currently supported selected title.",
         }, 0, 0);
 
         ConfigureSourceButton(revalidateButton, "REVALIDATE MEDIA");
@@ -311,14 +314,18 @@ internal sealed class InstallerForm : Form
         installButton.FlatAppearance.BorderSize = 0;
         installButton.Padding = new Padding(16, 7, 16, 7);
         installButton.Text = "ADD MEDIA TO BEGIN";
-        installButton.Click += (_, _) => OpenInstalledLauncher();
+        installButton.Click += async (_, _) =>
+        {
+            if (HaveAllPlannedProductsReady()) OpenInstalledLauncher();
+            else await InstallSelectedAsync();
+        };
         footer.Controls.Add(installButton, 2, 0);
         return footer;
     }
 
     private void OpenInstalledLauncher()
     {
-        if (!HasExistingPlannedInstall()) return;
+        if (!HaveAllPlannedProductsReady()) return;
 
         try
         {
@@ -331,6 +338,63 @@ internal sealed class InstallerForm : Form
             MessageBox.Show(this, error.Message, "Launcher unavailable", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
+
+    private async Task InstallSelectedAsync()
+    {
+        var plan = currentDestinationPlan;
+        if (plan is null || !CanInstallPlan(plan) || !plan.HasEnoughSpace || HasConflictingPlannedDestination()) return;
+
+        SetBusy(true);
+        var cancellationToken = operationCancellation!.Token;
+        var progressReporter = new Progress<GameInstallationProgress>(value =>
+        {
+            operationStatus.Text = $"{ProductDisplayName(value.ProductId)} — {value.Message}";
+        });
+        try
+        {
+            await Task.Run(() =>
+            {
+                using var media = selectionSessions.Open(selection.Current, cancellationToken);
+                var alreadyReady = GetReadyProductIds(plan);
+                foreach (var product in plan.Products.Where(item => !alreadyReady.Contains(item.ProductId)))
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    installationCoordinator.Install(
+                        CreateInstallRequest(product.ProductId, media),
+                        product.DestinationPath,
+                        progressReporter,
+                        cancellationToken);
+                }
+            }, cancellationToken);
+
+            operationStatus.Text = "Installation completed and verified. Opening the launcher…";
+            RefreshDestinationPlan();
+            OpenInstalledLauncher();
+        }
+        catch (OperationCanceledException)
+        {
+            operationStatus.Text = "Installation cancelled at a safe boundary; committed titles remain ownership-managed.";
+        }
+        catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException or InvalidOperationException or Win32Exception or TimeoutException)
+        {
+            operationStatus.Text = "Installation stopped safely before reporting success.";
+            MessageBox.Show(this, error.Message, "Installation could not continue", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            SetBusy(false);
+            RefreshDestinationPlan();
+        }
+    }
+
+    private static GameInstallRequest CreateInstallRequest(string productId, IMediaSelectionSession media) => productId switch
+    {
+        "vengeance" => new VengeanceInstallRequest(
+            media.GetRoot("vengeance-disc-1"),
+            media.GetRoot("vengeance-disc-2")),
+        "black-knight" => new BlackKnightInstallRequest(media.GetRoot("black-knight-disc-1")),
+        _ => throw new InvalidOperationException($"{ProductDisplayName(productId)} is not enabled in this installer build."),
+    };
 
     private async Task SelectFilesAsync()
     {
@@ -460,7 +524,11 @@ internal sealed class InstallerForm : Form
         currentDestinationPlan = null;
         try
         {
-            var plan = destinationPlanner.Plan(selection.Current, destinationText.Text);
+            var preliminaryPlan = destinationPlanner.Plan(selection.Current, destinationText.Text);
+            var installedProductIds = new InstallStatusReader(preliminaryPlan.RootPath).Read()
+                .Where(item => item.State == ProductInstallState.Ready)
+                .Select(item => item.Product.Id);
+            var plan = destinationPlanner.Plan(selection.Current, destinationText.Text, installedProductIds);
             currentDestinationPlan = plan;
             if (!plan.HasSelectedGames)
             {
@@ -511,33 +579,72 @@ internal sealed class InstallerForm : Form
     private void UpdateInstallAvailability()
     {
         var snapshot = selection.Current;
-        var alreadyInstalled = HasExistingPlannedInstall();
+        var alreadyInstalled = HaveAllPlannedProductsReady();
+        var existingDestination = HasConflictingPlannedDestination();
         var launcherAvailable = alreadyInstalled && installedLauncher.IsAvailable && !UseWaitCursor;
+        var canInstall = currentDestinationPlan is { HasEnoughSpace: true } plan &&
+            CanInstallPlan(plan) && !HasConflictingPlannedDestination() && !alreadyInstalled && !UseWaitCursor;
 
-        installButton.Enabled = launcherAvailable;
+        installButton.Enabled = launcherAvailable || canInstall;
         installButton.Text = launcherAvailable ? "DONE — OPEN LAUNCHER"
             : UseWaitCursor ? "WORKING…"
             : alreadyInstalled ? "INSTALLED — LAUNCHER UNAVAILABLE"
+            : existingDestination ? "DESTINATION NEEDS REPAIR"
             : snapshot.Layouts.Count == 0 ? "ADD MEDIA TO VALIDATE"
-            : "MEDIA VALIDATED — INSTALL BUILD NOT READY";
-        installButton.AccessibleDescription = "Installation remains disabled until the shared Vengeance-first product path is qualified.";
+            : canInstall ? "INSTALL SELECTED GAMES"
+            : "SELECTED MEDIA NOT YET SUPPORTED";
+        installButton.AccessibleDescription = canInstall
+            ? "Install selected supported games directly from the validated original media."
+            : "Installation requires a complete supported media set and a new destination.";
     }
 
-    private bool HasExistingPlannedInstall()
+    private bool HasConflictingPlannedDestination()
     {
-        return currentDestinationPlan?.Products.Any(item =>
-            Directory.Exists(item.DestinationPath) || File.Exists(item.DestinationPath)) == true;
+        var plan = currentDestinationPlan;
+        if (plan is null) return false;
+        var ready = GetReadyProductIds(plan);
+        return plan.Products.Any(item => !ready.Contains(item.ProductId) &&
+            (Directory.Exists(item.DestinationPath) || File.Exists(item.DestinationPath)));
+    }
+
+    private bool HaveAllPlannedProductsReady()
+    {
+        var plan = currentDestinationPlan;
+        if (plan is null || plan.Products.Count == 0) return false;
+        var ready = GetReadyProductIds(plan);
+        return plan.Products.All(item => ready.Contains(item.ProductId));
+    }
+
+    private static HashSet<string> GetReadyProductIds(InstallDestinationPlan plan) =>
+        new InstallStatusReader(plan.RootPath).Read()
+            .Where(item => item.State == ProductInstallState.Ready)
+            .Select(item => item.Product.Id)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private bool CanInstallPlan(InstallDestinationPlan plan)
+    {
+        if (!plan.HasSelectedGames || plan.BlockedProducts.Count > 0) return false;
+        if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "black-knight"))) return false;
+        var unsupportedPackSelected = selection.Current.Capabilities.Any(item =>
+            item.Kind == ProductKind.OptionalPack && item.IsComplete);
+        return !unsupportedPackSelected;
     }
 
     private string GetNextStepText()
     {
-        if (HasExistingPlannedInstall())
+        if (HaveAllPlannedProductsReady())
         {
             return installedLauncher.IsAvailable
                 ? "An earlier verified game installation exists. Open the launcher to use or remove it."
                 : "A game is already installed, but the launcher is missing. Repair the application shell before continuing.";
         }
-        if (selection.Current.Layouts.Count > 0) return "Media validated. Installation is disabled while the Vengeance-first shared path is being qualified.";
+        if (currentDestinationPlan is { } plan && CanInstallPlan(plan))
+            return "Media validated. Click INSTALL SELECTED GAMES to continue.";
+        if (selection.Current.Capabilities.Any(item => item.Kind == ProductKind.OptionalPack && item.IsComplete))
+            return "Mech Pak media was validated, but pack entitlement installation is not enabled in this build.";
+        if (selection.Current.Capabilities.Any(item => item.ProductId == "mercenaries" && item.IsComplete))
+            return "Mercenaries media was validated, but its media-only executable transform is not enabled in this build.";
+        if (selection.Current.Layouts.Count > 0) return "Add both discs for Vengeance, or Vengeance plus Black Knight, to enable installation.";
         return "Choose one or more ISO or ZIP files to begin.";
     }
 
@@ -563,6 +670,9 @@ internal sealed class InstallerForm : Form
     }
 
     private static string DependencyDisplayName(string productId) =>
+        ProductCatalog.All.Single(item => item.Id.Equals(productId, StringComparison.OrdinalIgnoreCase)).DisplayName;
+
+    private static string ProductDisplayName(string productId) =>
         ProductCatalog.All.Single(item => item.Id.Equals(productId, StringComparison.OrdinalIgnoreCase)).DisplayName;
 
     private static void ConfigureSourceButton(Button button, string text)
