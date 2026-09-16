@@ -103,4 +103,5 @@ Updated: 2026-09-16.
 - Two clean package builds produced byte-identical 72,276,429-byte setup executables and identical checksum sidecars; setup SHA-256 is `83a396a6cc497440f171a9fffb68ba2788dad5843c93989b0fa462dfbbafed52`.
 - A disposable silent per-user package install completed without UAC, both installed applications started responsively, and the standard uninstaller removed every package-owned shell file while preserving an unowned synthetic `black-knight/Saves/pilot.sav`.
 - The final reproducible setup passed the ADR 0008 Defender gate with engine `1.1.26080.3` and intelligence `1.459.223.0`, with no threat and no matching detection/remediation event.
+- Hosted Windows application-contract run `35055297275` passed all source smoke, build, privilege, release-tree, packaging, and compatibility-source checks for commit `9888e9a`; the workflow uploaded no binaries.
 - No permanent product install, interactive packaged-installer UI, signing/SmartScreen qualification, or field/hardware verification has run. Black Knight process launch is qualified on this device only; repair remains unimplemented.
