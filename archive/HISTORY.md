@@ -58,6 +58,12 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Split manifest verification into exact-tree and owned-file scopes so staging/release gates remain strict while user-created saves/configuration do not incorrectly force launcher repair state.
 - Added regression coverage proving unowned user data is permitted for launch health but reported by exact-tree verification; owned-file tampering remains a failure.
 
+## Shared game-install coordination — 2026-09-15
+
+- Added typed Vengeance, Black Knight, and Mercenaries requests behind one UI-independent installation coordinator with common progress stages and exact-tree completion verification.
+- Made the coordinator own Mercenaries cabinet extraction scratch lifetime and proved cleanup after success and injected planning failure.
+- Switched the development install probe to the coordinator so installer UI and smoke tooling can share one orchestration path.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

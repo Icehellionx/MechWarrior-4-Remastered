@@ -22,6 +22,7 @@ Updated: 2026-09-15.
 - A real 1.04 GB disposable Vengeance tree exists under ignored `staging/vengeance-baseline`; independent manifest verification passes. It has not been launched.
 - Black Knight now uses the same transaction contract. Its plan consumes the recognized disc, flattens runtime files from `MW4X`, restores installed root names, excludes setup/DirectX/SafeDisc components, and accepts only the exact-hash local replacement executable. A real 138-file, 563,490,697-byte payload tree plus ownership manifest exists under ignored `staging/black-knight-baseline`; verification passes and it has not been launched.
 - Mercenaries now uses a containment-first cabinet extractor plus the shared transaction. The extractor preflights all archive paths, accepts only `GAME/` payload entries, verifies the exact extracted inventory, and atomically commits the payload root. The install plan combines 85 cabinet files with allowlisted Disc 1 runtime files and Disc 2 content, restores installer-era names, and exact-hash gates the local version-`50.07.01.2105` executable. A real 209-file, 1,206,212,339-byte payload tree plus manifest exists under ignored `staging/mercenaries-baseline`; verification passes and it has not been launched.
+- `GameInstallationCoordinator` now provides one UI-independent orchestration path for all three games. It reports validation/extraction/planning/commit/verification stages, owns Mercenaries cabinet scratch cleanup on success or failure, delegates title allowlists to the existing builders, and returns success only after exact-tree verification. The development install probe now consumes this service instead of duplicating orchestration.
 - Static pack evidence now shows a 32-bit setup/DRM stack that explicitly invokes `CDILLA16.EXE`; this supports a 16-bit-helper incompatibility on 64-bit Windows rather than “16-bit encrypted assets.”
 - The uninstaller core removes only manifest-owned files, preserves unowned saves/configuration, blocks before mutation on modified owned files, and rolls back move-phase failures. ADR 0003 records the policy.
 - Manifest verification has explicit scopes: exact-tree verification rejects all unexpected files for staging/release gates, while owned-file verification powers launcher health so user-created saves/configuration do not disable a valid install. Both scopes still reject missing or modified owned game files.
@@ -32,7 +33,7 @@ Updated: 2026-09-15.
 2. Compare official-patch outputs and version resources with the supplied exact-hash 2.0/3.0 executables without publishing those binaries.
 3. Derive pack payload/entitlement effects from Patch 3 plus controlled before/after trees, avoiding C-Dilla installation.
 4. Record ADRs for the permanent patch/no-disc method, compatibility baseline, and remaining registry/save-location ownership.
-5. Connect install/repair/uninstall orchestration to the launcher after patch/compatibility inputs are qualified.
+5. Add ownership-aware ISO/archive media sessions, then connect the coordinator to an installer UI without putting mount/extraction policy in presentation code.
 
 ## Known constraints and risks
 
@@ -55,6 +56,7 @@ Updated: 2026-09-15.
 - Real Vengeance staging committed 231 files from two read-only mounted discs and the exact version-2.0 replacement input. Manifest verification passed, no staged files remained read-only, and both owned images were detached.
 - Real Black Knight staging committed 138 payload files from its read-only mounted disc and exact-hash local replacement input. Manifest verification passed, no staged file remained read-only, no forbidden setup/DRM file entered the tree, and the image was detached.
 - Real Mercenaries cabinet extraction committed and exactly re-inventoried 85 files. The subsequent two-disc transaction committed 209 payload files, verified its manifest, left no read-only or forbidden files, and detached both owned images.
+- Synthetic coordinator smoke installs and verifies all three games through the common application service, observes completion progress for each, and proves Mercenaries cabinet scratch cleanup after both success and injected planning failure.
 - A real-tree uninstall smoke removed all 232 owned payload/manifest files from a disposable 1.04 GB copy while preserving an unowned synthetic pilot save; the exact disposable target was then removed.
 - Release-tree policy tests passed their safe baseline and rejected synthetic ISO, unallowlisted executable, SafeDisc driver, and crack-directory fixtures.
 - All three manual outputs passed page-count/geometry/render checks and deterministic SHA-256 comparison. Final full contact-sheet review found no clipped or misordered pages.

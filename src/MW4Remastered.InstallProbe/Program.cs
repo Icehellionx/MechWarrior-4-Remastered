@@ -38,7 +38,7 @@ if (args.Length == 4 && string.Equals(args[0], "--black-knight", StringCompariso
 {
     try
     {
-        return Stage(new BlackKnightInstallPlanBuilder().Build(args[1], args[2]), args[3], "Black Knight");
+        return Install(new BlackKnightInstallRequest(args[1], args[2]), args[3], "Black Knight");
     }
     catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
     {
@@ -47,11 +47,11 @@ if (args.Length == 4 && string.Equals(args[0], "--black-knight", StringCompariso
     }
 }
 
-if (args.Length == 6 && string.Equals(args[0], "--mercenaries", StringComparison.OrdinalIgnoreCase))
+if (args.Length == 5 && string.Equals(args[0], "--mercenaries", StringComparison.OrdinalIgnoreCase))
 {
     try
     {
-        return Stage(new MercenariesInstallPlanBuilder().Build(args[1], args[2], args[3], args[4]), args[5], "Mercenaries");
+        return Install(new MercenariesInstallRequest(args[1], args[2], args[3]), args[4], "Mercenaries");
     }
     catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
     {
@@ -65,7 +65,7 @@ if (args.Length != 4)
     Console.Error.WriteLine("Usage:");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe <vengeance-disc-1-root> <vengeance-disc-2-root> <compatibility-executable> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --black-knight <disc-root> <compatibility-executable> <new-destination>");
-    Console.Error.WriteLine("  MW4Remastered.InstallProbe --mercenaries <disc-1-root> <disc-2-root> <cabinet-payload-root> <compatibility-executable> <new-destination>");
+    Console.Error.WriteLine("  MW4Remastered.InstallProbe --mercenaries <disc-1-root> <disc-2-root> <compatibility-executable> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --extract-mercenaries-cabinet <MSGAME.CAB> <new-destination>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --verify <install-root>");
     Console.Error.WriteLine("  MW4Remastered.InstallProbe --uninstall <install-root>");
@@ -74,8 +74,7 @@ if (args.Length != 4)
 
 try
 {
-    var plan = new VengeanceInstallPlanBuilder().Build(args[0], args[1], args[2]);
-    return Stage(plan, args[3], "Vengeance");
+    return Install(new VengeanceInstallRequest(args[0], args[1], args[2]), args[3], "Vengeance");
 }
 catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidDataException)
 {
@@ -83,20 +82,13 @@ catch (Exception error) when (error is IOException or UnauthorizedAccessExceptio
     return 1;
 }
 
-static int Stage(InstallPlan plan, string destination, string productName)
+static int Install(GameInstallRequest request, string destination, string productName)
 {
     try
     {
-        Console.WriteLine($"Qualified {plan.Files.Count} source files; beginning staged transaction.");
-        var manifest = new StagedInstallTransaction().Execute(plan, destination);
-        Console.WriteLine($"Committed {manifest.Files.Count} files to {Path.GetFullPath(destination)}");
+        var result = new GameInstallationCoordinator().Install(request, destination, new ConsoleInstallProgress());
+        Console.WriteLine($"Committed {result.Manifest.Files.Count} files to {result.DestinationPath}");
         Console.WriteLine($"Ownership manifest: {InstallManifest.RelativePath}");
-        var verification = new InstallManifestVerifier().Verify(destination);
-        if (!verification.IsValid)
-        {
-            foreach (var issue in verification.Issues) Console.Error.WriteLine($"Verification: {issue}");
-            return 1;
-        }
         Console.WriteLine("Ownership manifest verification passed.");
         return 0;
     }
@@ -105,4 +97,9 @@ static int Stage(InstallPlan plan, string destination, string productName)
         Console.Error.WriteLine($"{productName} staging failed: {error.Message}");
         return 1;
     }
+}
+
+sealed class ConsoleInstallProgress : IProgress<GameInstallationProgress>
+{
+    public void Report(GameInstallationProgress value) => Console.WriteLine($"{value.Stage}: {value.Message}");
 }

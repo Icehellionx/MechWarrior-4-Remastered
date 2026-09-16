@@ -28,6 +28,7 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 - `StagedInstallTransaction` owns contained copy, writable normalization, manifest generation, atomic directory commit, and pre-commit rollback.
 - `InstallManifestVerifier` independently rejects missing, extra, changed, unsafe, or reparse-point content.
 - `OwnedInstallUninstaller` removes only verified owned files, preserves unowned content, and blocks before mutation on modified owned files.
+- `GameInstallationCoordinator` is the UI-independent application service for all three games. It reports common stages, delegates title policy to plan builders, owns Mercenaries cabinet scratch lifetime, commits through the shared transaction, and requires exact-tree verification before success.
 - `MW4Remastered.InstallProbe` is a development smoke entry point, not the installer UI.
 
 ## Dependency direction

@@ -362,6 +362,8 @@ finally
     if (Directory.Exists(uninstallRoot)) Directory.Delete(uninstallRoot, true);
 }
 
+InstallationCoordinatorSmoke.Run(failures);
+
 if (failures.Count > 0)
 {
     Console.Error.WriteLine(string.Join(Environment.NewLine, failures));
