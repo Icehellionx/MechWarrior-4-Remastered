@@ -82,6 +82,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [x] Move optional multiplayer firewall authorization into the elevated setup as an explicit private-network choice, keep silent installs opt-in, and remove only project-named rules during uninstall.
 - [ ] Verify Black Knight startup video, all in-engine cinematics, and real Alt-Tab return using the final title-specific package.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
+- [ ] Qualify or reject official `dinputto8` v1.1.100.0 on the exact final all-title trees. Black Knight loads it without `/gosNoJoystick`, but pilot creation, two consecutive missions, in-mission rebinding, joystick/HOTAS, keyboard/mouse, and the upstream MW4 crash report remain open; do not package it yet.
 - [x] Prove a non-elevating, disc-free Black Knight process/window launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Dialog-aware menu/gameplay confirmation remains open.
 - [x] Re-evaluate the locally patched Black Knight compatibility bundle against fresh officially patched reference trees before restoring only the exact PR1 path to installation policy.
 - [ ] Replace timed responsive-process checks with dialog-aware menu and gameplay assertions for all three titles.

@@ -2,6 +2,12 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## dinputto8 candidate intake — 2026-09-17
+
+- Resolved official Zlib-licensed `dinputto8` v1.1.100.0 to tag commit `46e7ea7b76dd64ea1066f899212e2102774cc0d2`, recorded exact binary/source hashes, confirmed x86 architecture, and passed current Defender scanning.
+- A disposable final-static Black Knight/dgVoodoo tree loaded the exact wrapper and stayed correctly titled/responsive for 15 seconds without `/gosNoJoystick`.
+- Did not integrate it: upstream MW4 issue 22 records second-mission and in-mission binding crashes, its closed state exposes no validating resolution, and attempted Vengeance/Mercenaries loads used retired DDrawCompat trees that produced generic errors. Interactive current-stack pilot/two-mission/binding/device coverage remains mandatory.
+
 ## Black Knight static PR1 v3 correction — 2026-09-17
 
 - Reproduced the first static candidate's focused-transition failure under a 32-bit debugger at `0x008A3504`, immediately beyond the retained five-section image, rather than attributing it to video codecs or dgVoodoo.
