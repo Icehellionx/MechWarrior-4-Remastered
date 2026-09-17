@@ -33,7 +33,8 @@ public sealed record PreparedInstallInputs(
     string? MercenariesCabinetPayloadRoot = null,
     string? MercenariesExecutablePath = null,
     string? BlackKnightEulaPath = null,
-    string? MercenariesPr1PayloadRoot = null);
+    string? MercenariesPr1PayloadRoot = null,
+    IReadOnlyList<InstallFile>? BlackKnightPr1Files = null);
 
 public interface IGameInstallPlanFactory
 {
@@ -151,6 +152,16 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             }
             files.AddRange(expansionFiles);
             components.Add("black-knight");
+
+            if (preparedInputs.BlackKnightPr1Files is null)
+            {
+                throw new ArgumentException("Black Knight requires an internally prepared official PR1 payload.", nameof(preparedInputs));
+            }
+            var patchDestinations = preparedInputs.BlackKnightPr1Files
+                .Select(file => file.DestinationRelativePath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            files = files.Where(file => !patchDestinations.Contains(file.DestinationRelativePath)).ToList();
+            files.AddRange(preparedInputs.BlackKnightPr1Files);
         }
 
         return new InstallPlan("vengeance", files, components);
@@ -169,7 +180,10 @@ public sealed class GameInstallationCoordinator
     private readonly VengeancePatch3RetailInputBuilder vengeancePatch3Inputs;
     private readonly OfficialMercenariesPr1Transform mercenariesPr1Transform;
     private readonly IBlackKnightEulaTransform blackKnightEulaTransform;
+    private readonly IBlackKnightPr1Transform blackKnightPr1Transform;
     private readonly string patchHostPath;
+    private readonly string blackKnightCaptureHostPath;
+    private readonly string blackKnightCaptureDllPath;
 
     public GameInstallationCoordinator()
         : this(new GameInstallPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
@@ -189,7 +203,10 @@ public sealed class GameInstallationCoordinator
         VengeancePatch3RetailInputBuilder? vengeancePatch3Inputs = null,
         OfficialMercenariesPr1Transform? mercenariesPr1Transform = null,
         string? patchHostPath = null,
-        IBlackKnightEulaTransform? blackKnightEulaTransform = null)
+        IBlackKnightEulaTransform? blackKnightEulaTransform = null,
+        IBlackKnightPr1Transform? blackKnightPr1Transform = null,
+        string? blackKnightCaptureHostPath = null,
+        string? blackKnightCaptureDllPath = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
@@ -201,7 +218,10 @@ public sealed class GameInstallationCoordinator
         this.vengeancePatch3Inputs = vengeancePatch3Inputs ?? new VengeancePatch3RetailInputBuilder();
         this.mercenariesPr1Transform = mercenariesPr1Transform ?? new OfficialMercenariesPr1Transform();
         this.blackKnightEulaTransform = blackKnightEulaTransform ?? new BlackKnightEulaTransform();
+        this.blackKnightPr1Transform = blackKnightPr1Transform ?? new OfficialBlackKnightPr1Transform();
         this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
+        this.blackKnightCaptureHostPath = Path.GetFullPath(blackKnightCaptureHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredBlackKnightCaptureHost.exe"));
+        this.blackKnightCaptureDllPath = Path.GetFullPath(blackKnightCaptureDllPath ?? Path.Combine(AppContext.BaseDirectory, "BlackKnightPr1Capture.dll"));
     }
 
     public GameInstallationResult Install(
@@ -227,6 +247,8 @@ public sealed class GameInstallationCoordinator
         string? mercenariesPr1Payload = null;
         string? blackKnightTransformScratch = null;
         string? blackKnightEula = null;
+        string? blackKnightPr1Scratch = null;
+        IReadOnlyList<InstallFile>? blackKnightPr1Files = null;
         try
         {
             if (request is VengeanceInstallRequest vengeance)
@@ -268,6 +290,27 @@ public sealed class GameInstallationCoordinator
                     Report(GameInstallationStage.Transforming, "Recording setup-time license acceptance for Black Knight.");
                     blackKnightTransformScratch = Path.Combine(parent, $".black-knight-transform-{Guid.NewGuid():N}");
                     blackKnightEula = blackKnightEulaTransform.Transform(vengeance.BlackKnightDiscRoot, blackKnightTransformScratch);
+
+                    Report(GameInstallationStage.Transforming, "Applying official Black Knight Point Release 1 and producing its static executable.");
+                    blackKnightPr1Scratch = Path.Combine(parent, $".black-knight-pr1-{Guid.NewGuid():N}");
+                    var aggregatePlan = plans.Build(vengeance, new PreparedInstallInputs(
+                        vengeanceExecutable,
+                        vengeancePatch3Payload,
+                        BlackKnightEulaPath: blackKnightEula,
+                        BlackKnightPr1Files: []));
+                    var patchMedia = packRoots.FirstOrDefault() ?? vengeance.BlackKnightDiscRoot;
+                    var pr1 = blackKnightPr1Transform.Transform(
+                        aggregatePlan,
+                        patchMedia,
+                        patchHostPath,
+                        blackKnightCaptureHostPath,
+                        blackKnightCaptureDllPath,
+                        blackKnightPr1Scratch,
+                        cancellationToken);
+                    if (!pr1.TransformId.Equals(OfficialBlackKnightPr1Transform.TransformId, StringComparison.Ordinal) &&
+                        blackKnightPr1Transform is OfficialBlackKnightPr1Transform)
+                        throw new InvalidDataException("Black Knight PR1 transform returned an unexpected identity.");
+                    blackKnightPr1Files = pr1.InstallFiles;
                 }
             }
 
@@ -320,7 +363,8 @@ public sealed class GameInstallationCoordinator
                 cabinetPayload,
                 mercenariesExecutable,
                 blackKnightEula,
-                mercenariesPr1Payload));
+                mercenariesPr1Payload,
+                blackKnightPr1Files));
             if (!string.Equals(plan.ProductId, request.ProductId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException($"Install plan product '{plan.ProductId}' does not match request '{request.ProductId}'.");
@@ -349,6 +393,7 @@ public sealed class GameInstallationCoordinator
             if (vengeancePatch3Scratch is not null) RemoveScratchTree(vengeancePatch3Scratch);
             if (vengeanceTransformScratch is not null) RemoveScratchTree(vengeanceTransformScratch);
             if (blackKnightTransformScratch is not null) RemoveScratchTree(blackKnightTransformScratch);
+            if (blackKnightPr1Scratch is not null) RemoveScratchTree(blackKnightPr1Scratch);
         }
 
         void Report(GameInstallationStage stage, string message) =>

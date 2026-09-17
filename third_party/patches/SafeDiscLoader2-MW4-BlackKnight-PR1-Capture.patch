@@ -1,0 +1,47 @@
+diff --git a/src/version.cpp b/src/version.cpp
+index f33c3d5..622ceb8 100644
+--- a/src/version.cpp
++++ b/src/version.cpp
+@@ -1996,9 +1996,42 @@ HMODULE WINAPI LoadLibraryA_27and28_Hook(LPCSTR lpLibFileName)
+ /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+ 
+ DWORD OEPAddress = 0;
++
++bool CaptureMechWarrior4BlackKnightPr1Image()
++{
++	WCHAR outputPath[32768] = {};
++	DWORD outputLength = GetEnvironmentVariableW(L"MW4_PR1_IMAGE_OUTPUT", outputPath, _countof(outputPath));
++	if (outputLength == 0)
++		return false;
++	if (outputLength >= _countof(outputPath))
++		ExitProcess(ERROR_BUFFER_OVERFLOW);
++
++	DWORD imageBase = (DWORD)GetModuleHandle(NULL);
++	PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)imageBase;
++	PIMAGE_NT_HEADERS nt = (PIMAGE_NT_HEADERS)(imageBase + dos->e_lfanew);
++	if (dos->e_magic != IMAGE_DOS_SIGNATURE || nt->Signature != IMAGE_NT_SIGNATURE ||
++		nt->OptionalHeader.SizeOfImage != 0x4A8000)
++		ExitProcess(ERROR_BAD_EXE_FORMAT);
++
++	HANDLE output = CreateFileW(outputPath, GENERIC_WRITE, 0, NULL, CREATE_NEW,
++		FILE_ATTRIBUTE_NORMAL, NULL);
++	if (output == INVALID_HANDLE_VALUE)
++		ExitProcess(GetLastError());
++
++	DWORD written = 0;
++	BOOL complete = WriteFile(output, (void*)imageBase,
++		nt->OptionalHeader.SizeOfImage, &written, NULL);
++	DWORD error = !complete ? GetLastError() :
++		(written == nt->OptionalHeader.SizeOfImage ? ERROR_SUCCESS : ERROR_WRITE_FAULT);
++	CloseHandle(output);
++	ExitProcess(error == ERROR_SUCCESS ? 0 : error);
++	return true;
++}
++
+ void OEPHookFunction()
+ {
+ 	logc(FOREGROUND_BLUE, "At the OEP\n");
++	CaptureMechWarrior4BlackKnightPr1Image();
+ 	GetKey(true);
+ 	__asm 
+ 	{

@@ -36,6 +36,11 @@
     "runtimeQualified": false,
     "notes": "Hosted compilation and provenance checks passed. Different compiler bytes are recorded but are not substituted for the locally runtime- and Defender-qualified payload."
   },
+  "pr1Capture": {
+    "purpose": "setup-only mapped-image capture for the exact Black Knight PR1 executable; never used by launcher or normal game launch",
+    "localPatchSha256": "e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6",
+    "outputQualification": "pending clean hosted source build, Defender scan, and complete installer smoke"
+  },
   "includedProjects": [
     "version-proxy.vcxproj"
   ],

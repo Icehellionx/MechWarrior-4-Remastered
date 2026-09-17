@@ -4,16 +4,27 @@ param(
     [string]$SourceRoot,
     [Parameter(Mandatory)]
     [string]$OutputDirectory,
-    [string]$MSBuildPath
+    [string]$MSBuildPath,
+    [ValidateSet('Retail', 'Pr1Capture')]
+    [string]$Mode = 'Retail'
 )
 
 $ErrorActionPreference = 'Stop'
 $expectedCommit = 'f27286a363aa675a0422141cb96fc8619cf8b9d8'
 $expectedLicenseHash = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
 $expectedProjectHash = '0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13'
-$expectedPatchHash = '286de58683edd45065f884b201109815b7252a6d8b3baf896e0a4ea68b03dadb'
+$expectedPatchHash = if ($Mode -eq 'Pr1Capture') {
+    'e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6'
+} else {
+    '286de58683edd45065f884b201109815b7252a6d8b3baf896e0a4ea68b03dadb'
+}
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
-$patch = Join-Path $projectRoot 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
+$patchName = if ($Mode -eq 'Pr1Capture') {
+    'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch'
+} else {
+    'SafeDiscLoader2-MW4-BlackKnight.patch'
+}
+$patch = Join-Path $projectRoot (Join-Path 'third_party/patches' $patchName)
 
 $source = (Resolve-Path -LiteralPath $SourceRoot -ErrorAction Stop).Path
 $project = Join-Path $source 'version-proxy.vcxproj'
@@ -119,10 +130,11 @@ finally {
 
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-$outputDll = Join-Path $output 'version.dll'
+$outputDllName = if ($Mode -eq 'Pr1Capture') { 'BlackKnightPr1Capture.dll' } else { 'version.dll' }
+$outputDll = Join-Path $output $outputDllName
 Copy-Item -LiteralPath $builtDll -Destination $outputDll -Force
 Copy-Item -LiteralPath $license -Destination (Join-Path $output 'SafeDiscLoader2-LICENSE.txt') -Force
-Copy-Item -LiteralPath $patch -Destination (Join-Path $output 'SafeDiscLoader2-MW4-BlackKnight.patch') -Force
+Copy-Item -LiteralPath $patch -Destination (Join-Path $output $patchName) -Force
 $sourceArchive = Join-Path $output "SafeDiscLoader2-source-$expectedCommit.zip"
 & git -C $source archive --format=zip --output=$sourceArchive $expectedCommit
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) {
@@ -132,6 +144,7 @@ if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sourceArchive -PathTyp
 $dll = Get-Item -LiteralPath $outputDll
 $metadata = [ordered]@{
     name = 'SafeDiscLoader2'
+    mode = $Mode
     sourceRepository = 'https://github.com/nckstwrt/SafeDiscLoader2.git'
     sourceCommit = $expectedCommit
     localPatchSha256 = $expectedPatchHash
@@ -147,7 +160,7 @@ $metadata = [ordered]@{
 }
 $metadata | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath (Join-Path $output 'build-metadata.json') -Encoding utf8
 
-Write-Host "Built pinned SafeDiscLoader2 x86 DLL: $outputDll"
+Write-Host "Built pinned SafeDiscLoader2 $Mode x86 DLL: $outputDll"
 Write-Host "SHA-256: $($metadata.versionDllSha256)"
 }
 finally {

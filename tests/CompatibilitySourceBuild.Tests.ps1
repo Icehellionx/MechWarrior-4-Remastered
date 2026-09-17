@@ -6,6 +6,7 @@ $bundleScriptPath = Join-Path $root 'tools/compatibility/assemble-black-knight-b
 $workflowPath = Join-Path $root '.github/workflows/compatibility-build.yml'
 $blackKnightBuilderPath = Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightInstallPlanBuilder.cs'
 $patchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
+$capturePatchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch'
 
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $script = Get-Content -LiteralPath $scriptPath -Raw
@@ -13,6 +14,7 @@ $bundleScript = Get-Content -LiteralPath $bundleScriptPath -Raw
 $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $blackKnightBuilder = Get-Content -LiteralPath $blackKnightBuilderPath -Raw
 $patchHash = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$capturePatchHash = (Get-FileHash -LiteralPath $capturePatchPath -Algorithm SHA256).Hash.ToLowerInvariant()
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -29,6 +31,7 @@ Assert-True ($script -match '0x014C') 'Build script must verify the output is x8
 Assert-True ($script -match 'Clear-PeTimestamps' -and $script -match 'IMAGE_DEBUG_DIRECTORY') 'Build must normalize non-semantic MSVC PE timestamps.'
 Assert-True ($script -match 'git -C \$source archive --format=zip') 'Build must emit the exact corresponding GPL source archive.'
 Assert-True ($script -match [regex]::Escape($patchHash)) 'Build script must require the exact local Black Knight patch.'
+Assert-True ($script -match [regex]::Escape($capturePatchHash) -and $script -match "Pr1Capture") 'Build script must require the exact setup-only PR1 capture patch.'
 Assert-True ($workflow -match [regex]::Escape($lock.commit)) 'CI workflow must check out the pinned upstream commit.'
 Assert-True ($workflow -notmatch 'VersionInjector') 'CI workflow must not build or package the elevated injector.'
 Assert-True ($workflow -notmatch 'publish-launch-helper') 'CI workflow must not build or package a runtime launch helper.'

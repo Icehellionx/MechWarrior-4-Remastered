@@ -34,7 +34,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Remove the caller-supplied Mercenaries replacement executable; derive its disc-free executable from exact original-media inputs inside coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Prove official Vengeance Patch 3 applies directly to retail media, apply it through a constrained source-owned host, retain only exact qualified outputs, and remove the obsolete C-Dilla and ARTP imports/call sites from the generated executable.
 - [x] Recognize the exact official Mercenaries PR1 updater from the supported fix ZIP, exclude its adjacent historical no-CD payload, apply PR1 in contained scratch, and derive an exact-hash source-owned `50.07.01.2105` executable before commit.
-- [ ] Re-evaluate or replace the suspended Black Knight loader experiment against the official `45.30.04.1908` PR1 executable; the previous retail `45.05.10.0701` result is not product evidence.
+- [x] Replace the suspended retail Black Knight loader path with an exact-input setup-only capture plus deterministic managed static transform for official `45.30.04.1908`; keep hosted capture-byte, Defender, and full-package runtime qualification open.
 - [x] Apply official Black Knight PR1 and Mercenaries PR1 in contained reference trees and retain exact pre/post manifests as ignored evidence.
 - [x] Replace separate Vengeance/Black Knight destinations with one atomic schema-2 Vengeance-family manifest and preserve the original `MW4X` subdirectory.
 - [x] Remove the superseded retail Black Knight proxy DLL from production package staging and constrain the RTP host to the three qualified official-update hashes.
@@ -95,7 +95,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: stop the whack-a-mole cycle by reproducing the established retail topology and official point-release state before changing compatibility code.
 Owning boundary: reference install/registry capture, official RTP application, staging parity, per-title launch contracts, and dialog-aware runtime proof.
-Smallest verifiable slice: the independent Inno page-initialization crash is fixed in source; next implement the shared Vengeance/Black Knight aggregate plan and the two proven PR1 transforms, then prove minimal launches reach actual menus rather than incorrect-install dialogs.
+Smallest verifiable slice: the Black Knight PR1 managed transform now reproduces exact SHA-256 `22620369…` across four independent captures and is wired into aggregate setup orchestration. Next obtain the pinned hosted capture DLL, run the full seven-media worker/setup path, scan exact package/install bytes, and prove actual menus rather than dialogs.
 Focused evidence: pre/post file and 32-bit registry manifests, exact official patch inputs/outputs, window text/class capture, process exit, and one menu/gameplay assertion.
 Smoke/regression evidence: previous responsive-window smokes are downgraded; no title currently has valid runtime qualification.
 Rollback or disable path: do not issue a replacement installer until reference parity and menu-level proof pass; never reintroduce injectors, opaque no-CD files, or Defender exclusions.

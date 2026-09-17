@@ -120,7 +120,8 @@ internal static class InstallationCoordinatorSmoke
             new MercenariesInstallPlanBuilder(Hash(inputs.MercenariesExecutable), inspection, inventory));
         return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
             new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable),
-            blackKnightEulaTransform: new FixtureBlackKnightEulaTransform());
+            blackKnightEulaTransform: new FixtureBlackKnightEulaTransform(),
+            blackKnightPr1Transform: new FixtureBlackKnightPr1Transform());
     }
 
     private static FixtureInputs PrepareInputs(string root)
@@ -240,5 +241,26 @@ sealed class FixtureBlackKnightEulaTransform : IBlackKnightEulaTransform
         var output = Path.Combine(outputDirectory, "EBUEULA.DLL");
         File.WriteAllText(output, "setup-accepted synthetic EULA module");
         return output;
+    }
+}
+
+sealed class FixtureBlackKnightPr1Transform : IBlackKnightPr1Transform
+{
+    public PreparedBlackKnightPr1Payload Transform(
+        InstallPlan aggregateRetailPlan,
+        string patchMediaRoot,
+        string patchHostPath,
+        string captureHostPath,
+        string captureDllPath,
+        string scratchDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var payload = Path.Combine(scratchDirectory, "payload");
+        var executable = Path.Combine(payload, "MW4X", "MW4x.exe");
+        Directory.CreateDirectory(Path.GetDirectoryName(executable)!);
+        File.WriteAllText(executable, "synthetic Black Knight PR1 executable");
+        IReadOnlyList<InstallFile> files = [new InstallFile(payload, "MW4X/MW4x.exe", "MW4X/MW4x.exe")];
+        return new PreparedBlackKnightPr1Payload(payload, "synthetic-black-knight-pr1", files);
     }
 }

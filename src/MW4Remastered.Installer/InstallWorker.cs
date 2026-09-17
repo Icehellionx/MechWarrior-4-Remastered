@@ -134,6 +134,10 @@ internal sealed class InstallWorker
         var vengeanceSelected = selection.Capabilities.Any(item => item.ProductId == "vengeance" && item.IsComplete);
         if (packSelected && !vengeanceSelected)
             throw new InvalidDataException("Mech Pak installation requires both Vengeance discs in the same setup run.");
+        var blackKnightSelected = selection.Capabilities.Any(item => item.ProductId == "black-knight" && item.IsComplete);
+        if (blackKnightSelected && !packSelected)
+            throw new InvalidDataException(
+                "Black Knight requires either the Inner Sphere or Clan Mech Pak media in this setup run because those original discs contain the official Black Knight Point Release 1 update.");
         var mercenariesSelected = selection.Capabilities.Any(item => item.ProductId == "mercenaries" && item.IsComplete);
         if (mercenariesSelected && !selection.Layouts.Any(item => item.Layout.Id.Equals("mercenaries-pr1", StringComparison.OrdinalIgnoreCase)))
             throw new InvalidDataException("Mercenaries installation requires the official Point Release 1 update. Add a supported archive containing mercpr1.exe.");
