@@ -12,3 +12,4 @@ Use one numbered Markdown file per durable decision. Include status, date, conte
 - [0008 — Defender-clean release boundary](0008-defender-clean-release-boundary.md)
 - [0009 — Per-user Inno Setup package](0009-per-user-inno-package.md)
 - [0010 — Preserve the original product dependency order](0010-original-product-dependency-order.md)
+- [0011 — Shared Vengeance family tree and official update chain](0011-shared-vengeance-family-and-official-updates.md)

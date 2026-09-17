@@ -1,9 +1,11 @@
 # 0007 — Media-derived Black Knight compatibility bundle
 
-- Status: Accepted
+- Status: Superseded by ADR 0011
 - Date: 2026-09-16
 
 ## Context and evidence
+
+> Correction (2026-09-16): later field testing showed that the responsive window classified below was the game's `incorrectly installed` dialog. The tested executable was the retail `45.05.10.0701` build in a flattened standalone tree, while the official PR1 produces `45.30.04.1908` under the original shared `Vengeance\MW4X` topology. The bundle remains research evidence only and is suspended from installation policy.
 
 Black Knight's original `MW4X.EXE` is an integrated SafeDisc 2.30-era executable that cannot use the removed SafeDisc driver on current Windows. The previously staged replacement executable was opaque and would have required an extra user-supplied file, contrary to the ISO-only product contract.
 

@@ -23,6 +23,7 @@ Assert-True ($launcher -match 'CHECKING INSTALLED GAMES' -and $launcher -match '
 
 Assert-True ($setup -match 'Choose original game media' -and $setup -match 'GetOpenFileNameMulti') 'The package must ask for media before its installation action.'
 Assert-True ($setup -notmatch 'Black Knight ISO or ZIP \(required\)') 'The package media page must not privilege or require Black Knight.'
+Assert-True ($setup -match '(?s)procedure InitializeWizard;.*?LicensePage := CreateInputOptionPage.*?(?=procedure DeinitializeSetup)' -and $setup -notmatch '(?s)procedure AddMediaButtonClick.*?LicensePage := CreateInputOptionPage.*?(?=procedure RemoveMediaButtonClick)') 'The license page must exist during wizard initialization, before navigation callbacks can inspect it.'
 Assert-True ($worker -match 'VengeanceInstallRequest' -and $worker -match 'BlackKnightInstallRequest' -and $worker -match 'MercenariesInstallRequest') 'The contained worker must retain all three qualified media installation paths.'
 Assert-True ($worker -match 'inner-sphere-mech-pak' -and $worker -match 'clan-mech-pak' -and $worker -match 'GameInstallationCoordinator') 'Qualified Mech Paks must flow into the shared coordinator with their Vengeance gate.'
 Assert-True ($worker -match 'RollBack' -and $worker -match 'OwnedInstallUninstaller') 'A failed unified setup run must roll back games newly committed by that run.'

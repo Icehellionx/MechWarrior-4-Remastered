@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "product": "MechWarrior 4: Black Knight Point Release 1 (English)",
+  "classification": "exact user-media input and local compatibility evidence; redistribution not authorized",
+  "inputs": [
+    {
+      "path": "GOODIES/PATCH3/MW4XP1/PATCHW32.DLL",
+      "size": 185344,
+      "sha256": "0ec6e25234ad74489eb1890d4de57bb6140bb8196bdc4a5dcac90dd9d16eb2dd"
+    },
+    {
+      "path": "GOODIES/PATCH3/MW4XP1/ENGLISH/MW4X.RTP",
+      "size": 43865979,
+      "sha256": "5f3b6a383b7c1821e9f682ea3d6675818c23bf0138289e89a951256ecf2ab6ff"
+    }
+  ],
+  "qualifiedExperiment": {
+    "date": "2026-09-16",
+    "method": "Applied the exact RTP payload through the source-owned x86 asInvoker host to Vengeance Patch 3 plus retail Black Knight in the original shared Vengeance/MW4X topology.",
+    "result": "RTPatch returned success: 12 operations applied, 16 Vengeance Patch 3 outputs already current, and no old files missing or invalid.",
+    "changedOutputs": [
+      { "path": "autoconfigx.exe", "size": 438272, "sha256": "60ef0143ed45ae73340fbb16f3d2e110770beda855e1260fde162a010d86b6cb" },
+      { "path": "MissionLangx.dll", "size": 331776, "sha256": "b8c6d7efd93265bb1e642819f085e21440aab375a05398fbbf847a7dcf280260" },
+      { "path": "MW4 Dedicated Server.bat", "size": 25, "sha256": "ff81e867d3fb7dc9fec4b65213a8ae3ba9800f5d0c2265ba508e5bef7f21aaa0" },
+      { "path": "MW4X/artpclnt.dll", "size": 106496, "sha256": "30ea1455f4ade24f4b6426781632b29c23c8006bc478da3a0d3c1fd6381925ee" },
+      { "path": "MW4X/cabarc.exe", "size": 114688, "sha256": "3ed33e71641645367442e65dca6dab0d326b22b48ef9a4c2a2488e67383aa9a6" },
+      { "path": "MW4X/Cdac14ba.dll", "size": 112128, "sha256": "9d8379cd2cf899e8873d40932c66bc683676d9bdad6f0cdec7873859c95b13c1" },
+      { "path": "MW4X/MW4x.exe", "size": 4735573, "sha256": "be9c15731b2ab59471f35add8df4935ea65355cbb4672bc48b63295ad83632b0" },
+      { "path": "NFXEditor.exe", "size": 471040, "sha256": "197b69f3d0f119ca131c7191073a7dd945963647fed02e863a4269ddd7c96523" },
+      { "path": "RESOURCE/corex.mw4", "size": 1444440, "sha256": "c1b444cb137820c7f08a66ee70f778da3fc985fda5551e22a22e89aeb6fe02a5" },
+      { "path": "RESOURCE/propsx.mw4", "size": 33126658, "sha256": "527a136b01b06105d0aa8db3eb6aa1a215cd1619dcd345ac018a7c290fed3e0" },
+      { "path": "RESOURCE/texturesx.mw4", "size": 40373012, "sha256": "1e7e8c89618e0de19f87598cbb459d811ddc0ae8943d6d2807835bc772049863" },
+      { "path": "ScriptStringsx.dll", "size": 163840, "sha256": "59ac2fda1f5234977bc95d91c622ec8faf3210de937278fb4311610c246bfd28" }
+    ]
+  }
+}

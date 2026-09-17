@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "product": "MechWarrior 4: Mercenaries Point Release 1 (English)",
+  "classification": "exact user-supplied official update input and local compatibility evidence; redistribution not authorized",
+  "inputs": [
+    {
+      "path": "Patchw32.dll",
+      "size": 185344,
+      "sha256": "0ec6e25234ad74489eb1890d4de57bb6140bb8196bdc4a5dcac90dd9d16eb2dd"
+    },
+    {
+      "path": "English/MW4MERCS.RTP",
+      "size": 5119691,
+      "sha256": "d3ebf1c2dc098a8e55d7cbeb112426fb413dfd23595a1ed078cd35fe7a551a65"
+    }
+  ],
+  "qualifiedExperiment": {
+    "date": "2026-09-16",
+    "method": "Applied the exact RTP payload through the source-owned x86 asInvoker host to a contained retail Mercenaries tree reconstructed from the validated discs.",
+    "result": "RTPatch returned success: 11 operations applied and no old files missing or invalid. The protected executable/image pair reports version 50.07.01.2105.",
+    "changedOutputs": [
+      { "path": "Content/ABLScripts/StockScripts/objectives.abl", "size": 1932, "sha256": "1fb57e558b62828399d7204bc258f72c76b342617a24d99bb642aa05186d223d" },
+      { "path": "Content/ABLScripts/StockScripts/Stock_MissionPlay.abl", "size": 4081, "sha256": "c025ffa411d0c55e39c49fb551e833b83cc212fbe7029bddf97eb26184a01629" },
+      { "path": "EULA.RTF", "size": 52711, "sha256": "91226db5185574517ee0ed72971551c6cb086ba658dce865c0f2657344524a24" },
+      { "path": "MissionLang_MERCS.dll", "size": 253952, "sha256": "280d422c13d428bc4b4b17d7809ace628b10927047c2f5e37aadeb337f0db1b3" },
+      { "path": "MW4Mercs.exe", "size": 344863, "sha256": "c75d1c053290a5a00da0fb5efa1802304aa5f689a7a57c19917b3649e2742810" },
+      { "path": "MW4MERCS.ICD", "size": 3915897, "sha256": "aafff190e08119ff3ac86b0628813315cde05de46c0e36840ac3eba986a7d550" },
+      { "path": "NFMEditor.exe", "size": 471040, "sha256": "173db0b5f7c7000febf86e7c21519c24f8e11cdab41730d049a1fd22aaf3aa21" },
+      { "path": "RESOURCE/core.mw4", "size": 1694684, "sha256": "ad045a0a2026408ecaf22ea739a53812803a91464d647f87a8d3e90b92ba1421" },
+      { "path": "RESOURCE/MISSIONS/paradise.mw4", "size": 298072, "sha256": "2a16f957749f020e7564aeb48db748bf626f3c0d5275c8b3cc3fc881a74cd177" },
+      { "path": "RESOURCE/props.mw4", "size": 178114343, "sha256": "9facd9753aa5336d320a5ec280bc063ed38cd2be7e0315fa147972f8cd91fb6c" },
+      { "path": "ScriptStrings_MERCS.dll", "size": 307200, "sha256": "588114d0ce5a8956785df13093276bafb617ad8ac1d2a271c3f1362dd9dd2620" }
+    ]
+  }
+}

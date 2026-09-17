@@ -102,12 +102,6 @@ begin
     SelectedFiles.Free;
   end;
   RefreshMediaList;
-
-  LicensePage := CreateInputOptionPage(MediaPage.ID, 'Original game license',
-    'Accept the license terms included with your selected original media',
-    'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
-    True, False);
-  LicensePage.Add('I accept the original Microsoft license terms included with the media I selected.');
 end;
 
 procedure RemoveMediaButtonClick(Sender: TObject);
@@ -152,6 +146,11 @@ begin
   AddCommandLineMedia(ExpandConstant('{param:MEDIAFILES|}'));
   MediaPage := CreateCustomPage(wpWelcome, 'Choose original game media',
     'Add every MechWarrior 4 ISO or ISO-containing ZIP you want Setup to validate.');
+  LicensePage := CreateInputOptionPage(MediaPage.ID, 'Original game license',
+    'Accept the license terms included with your selected original media',
+    'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
+    True, False);
+  LicensePage.Add('I accept the original Microsoft license terms included with the media I selected.');
 
   MediaList := TNewListBox.Create(MediaPage);
   MediaList.Parent := MediaPage.Surface;
