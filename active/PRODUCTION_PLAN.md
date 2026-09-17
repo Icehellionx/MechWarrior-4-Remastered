@@ -16,7 +16,7 @@ Outcome: supported inputs and publishable outputs are explicit and defensible.
 Outcome: user media becomes a verified, rollback-safe installation without invoking unsupported legacy setup paths where avoidable.
 
 - [x] Detect supported Vengeance media layouts and stage a disposable install.
-- [ ] Implement the now-proven official update chain: Vengeance Patch 3, Black Knight PR1 in the shared `MW4X` topology, and Mercenaries PR1 before any disc-check transform.
+- [x] Implement the proven official update chain: Vengeance Patch 3, Black Knight PR1 in the shared `MW4X` topology, and Mercenaries PR1 before any disc-check transform.
 - [x] Reimplement and independently vector-test the SafeDisc 1 eight-byte block cipher, title-specific 1.50.20 page-local second layers, and exact-input Vengeance/Mercenaries PE/import/pointer repair transforms.
 - [x] Extend the shared transaction contract to Black Knight and Mercenaries, including contained cabinet extraction for Mercenaries.
 - [x] Diagnose the Inner Sphere and Clan 64-bit failure boundary from installer/payload evidence: plain resource payload plus official game patch plus obsolete SafeCast/C-Dilla entitlement; replacement remains unqualified.

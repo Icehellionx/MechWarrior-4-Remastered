@@ -33,9 +33,6 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
         key.SetValue("CDPath", registration.CdPath, RegistryValueKind.String);
         key.SetValue("EXE Path", registration.ExecutablePath, RegistryValueKind.String);
         key.SetValue("Version", registration.Version, RegistryValueKind.DWord);
-        // Setup obtains explicit acceptance before this registration is created.
-        // Recording it here keeps the original first-run dialog out of gameplay.
-        key.SetValue("FIRSTRUN", 1, RegistryValueKind.DWord);
     }
 
     public void ValidateOwned(ProductStatus status)
@@ -48,10 +45,11 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
         var view = registration.Use32BitView ? RegistryView.Registry32 : RegistryView.Default;
         using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
         using var key = currentUser.OpenSubKey(registration.KeyPath, writable: false);
-        if (key is null ||
-            !PathsEqual(key.GetValue("CDPath") as string, registration.CdPath) ||
-            !PathsEqual(key.GetValue("EXE Path") as string, registration.ExecutablePath) ||
-            Convert.ToInt32(key.GetValue("Version", 0)) != registration.Version)
+        if (key is null || !ValuesMatchOrWereConsumed(
+                registration,
+                key.GetValue("CDPath") as string,
+                key.GetValue("EXE Path") as string,
+                key.GetValue("Version")))
         {
             throw new InvalidOperationException(
                 $"{status.Product.DisplayName} setup registration is missing or belongs to another installation. Run Setup again to repair it.");
@@ -98,6 +96,28 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
             status.Product.Id == "black-knight" ? @"L:\" : installPath,
             Path.GetFullPath(status.LaunchPath),
             4);
+    }
+
+    internal static bool ValuesMatchOrWereConsumed(
+        LegacyRegistrationDescription registration,
+        string? cdPath,
+        string? executablePath,
+        object? version)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        var allConsumed = cdPath is null && executablePath is null && version is null;
+        if (allConsumed) return true;
+        if (cdPath is null || executablePath is null || version is null) return false;
+        try
+        {
+            return PathsEqual(cdPath, registration.CdPath) &&
+                   PathsEqual(executablePath, registration.ExecutablePath) &&
+                   Convert.ToInt32(version) == registration.Version;
+        }
+        catch (Exception error) when (error is FormatException or InvalidCastException or OverflowException)
+        {
+            return false;
+        }
     }
 
     private static bool PathsEqual(string? left, string? right)

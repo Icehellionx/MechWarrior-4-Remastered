@@ -5,6 +5,8 @@ $worker = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer
 $installerProgram = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/Program.cs') -Raw
 $setup = Get-Content -LiteralPath (Join-Path $root 'packaging/MechWarrior4Remastered.iss') -Raw
 $launch = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
+$registration = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LegacyGameRegistration.cs') -Raw
+$blackKnightEula = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightEulaTransform.cs') -Raw
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -30,6 +32,8 @@ Assert-True ($worker -match 'mercenaries-pr1' -and $worker -match 'Point Release
 Assert-True ($worker -match 'RollBack' -and $worker -match 'OwnedInstallUninstaller') 'A failed unified setup run must roll back games newly committed by that run.'
 Assert-True ($worker -match 'LegacyGameRegistration' -and $worker -match 'registration\.Ensure') 'Setup must own legacy game registration before the launcher is offered.'
 Assert-True ($launch -match 'ValidateOwned' -and $launch -notmatch 'gameRegistration\.Ensure') 'Normal game launch must validate setup state without performing installation writes.'
+Assert-True ($registration -match 'ValuesMatchOrWereConsumed' -and $registration -notmatch 'SetValue\("FIRSTRUN"') 'Launch validation must accept the games consuming all setup values without writing a guessed FIRSTRUN marker.'
+Assert-True ($blackKnightEula -match 'd150fcebe8560bdfd5389b4eec9fa7f82b134f8714ef42591ad6daeb4afac85b' -and $blackKnightEula -match 'AcceptedExport') 'Black Knight must install the exact qualified setup-accepted EULA transform.'
 Assert-True ($installerProgram -notmatch 'Application\.Run|InstallerForm' -and $installerProgram -match 'InstallWorkerArguments') 'The package must not launch a second visible installer UI.'
 Assert-True ($setup -match 'CurStepChanged' -and $setup -match 'SW_HIDE' -and $setup -match 'ewWaitUntilTerminated') 'The sole visible setup wizard must invoke its contained worker synchronously and hidden.'
 Assert-True ($setup -match '--install-worker' -and $setup -match '--destination' -and $setup -match '--media') 'The sole setup wizard must forward its destination and every selected media path to the contained worker.'

@@ -200,6 +200,28 @@ Check(vengeanceRegistration is not null && vengeanceRegistration.Use32BitView &&
         StringComparison.OrdinalIgnoreCase) && vengeanceRegistration.Version == 4 &&
     vengeanceRegistration.CdPath == Path.Combine(registrationRoot, "vengeance"),
     "Vengeance registration targets its direct 32-bit per-user settings record");
+var qualifiedVengeanceRegistration = vengeanceRegistration ?? throw new InvalidOperationException("Vengeance registration description was not created.");
+Check(LegacyGameRegistration.ValuesMatchOrWereConsumed(
+        qualifiedVengeanceRegistration, qualifiedVengeanceRegistration.CdPath,
+        qualifiedVengeanceRegistration.ExecutablePath, qualifiedVengeanceRegistration.Version),
+    "launch validation accepts the exact setup-owned registration");
+Check(LegacyGameRegistration.ValuesMatchOrWereConsumed(qualifiedVengeanceRegistration, null, null, null),
+    "launch validation accepts the legacy game's all-consumed setup registration state");
+Check(!LegacyGameRegistration.ValuesMatchOrWereConsumed(
+        qualifiedVengeanceRegistration, qualifiedVengeanceRegistration.CdPath, null, qualifiedVengeanceRegistration.Version),
+    "launch validation rejects a partially consumed setup registration");
+Check(!LegacyGameRegistration.ValuesMatchOrWereConsumed(
+        qualifiedVengeanceRegistration, qualifiedVengeanceRegistration.CdPath,
+        Path.Combine(registrationRoot, "other", "MW4.exe"), qualifiedVengeanceRegistration.Version),
+    "launch validation rejects a registration owned by another executable");
+Check(!LegacyGameRegistration.ValuesMatchOrWereConsumed(
+        qualifiedVengeanceRegistration, Path.Combine(registrationRoot, "other"),
+        qualifiedVengeanceRegistration.ExecutablePath, qualifiedVengeanceRegistration.Version),
+    "launch validation rejects a registration with another media path");
+Check(!LegacyGameRegistration.ValuesMatchOrWereConsumed(
+        qualifiedVengeanceRegistration, qualifiedVengeanceRegistration.CdPath,
+        qualifiedVengeanceRegistration.ExecutablePath, qualifiedVengeanceRegistration.Version + 1),
+    "launch validation rejects a registration with another version");
 
 foreach (var (productId, executableName, productKey) in new[]
 {
