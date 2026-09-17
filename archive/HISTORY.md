@@ -205,3 +205,10 @@ Completed implementation, verification, durable decisions, and disproven investi
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.
 - No MW3 compatibility baseline, native binary, configuration, qualified behavior, or release claim carries into this project automatically.
+
+## Intro-to-menu install-layout diagnosis — 2026-09-17
+
+- Preserved the original movies and disproved the codec hypothesis: Vengeance rendered its intro before logging a missing `Burnloop_lr_15.avi`; Black Knight's MPEG-1/MP2 intro validated independently and remained responsive until its 31.88-second boundary.
+- Extracted the original Vengeance `SETUP.EXE` source/destination table and identified 13 renamed content/resource paths that literal ISO-tree copying did not reproduce.
+- Added one centralized Vengeance media-path map for fresh installs and an ownership-safe migration for verified existing manifests. The migration stages only formerly owned paths, retires only those paths, and retains the existing collision and rollback transaction.
+- Confirmed current community recipes still converge on official Vengeance Patch 3, Black Knight PR1 in the shared `MW4X` topology, dgVoodoo beside each executable, and title-specific autoconfig arguments; no codec pack, launch elevation, Defender exclusion, or opaque replacement binary was added.

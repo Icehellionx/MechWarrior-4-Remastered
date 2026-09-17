@@ -113,6 +113,25 @@ internal sealed class InstallWorker
                 registeredThisRun.Add(status);
                 TryAppendLog(args.LogPath, $"Registered {status.Product.DisplayName} for non-elevated launch.");
             }
+            if (statuses.TryGetValue("vengeance", out var vengeanceStatus) &&
+                !string.IsNullOrWhiteSpace(vengeanceStatus.InstallPath))
+            {
+                var verified = new InstallManifestVerifier().Verify(
+                    vengeanceStatus.InstallPath, InstallVerificationScope.OwnedFiles);
+                if (!verified.IsValid || verified.Manifest is null)
+                    throw new InvalidDataException("Vengeance media-path migration requires a verified owned manifest.");
+                var migration = VengeanceMediaPathMap.CreateOwnedMigration(
+                    vengeanceStatus.InstallPath, verified.Manifest);
+                if (migration.Files.Count > 0)
+                {
+                    compatibilityReplacement.Migrate(
+                        "vengeance",
+                        vengeanceStatus.InstallPath,
+                        migration.Files,
+                        migration.RetiredOwnedPaths);
+                    TryAppendLog(args.LogPath, "Restored Vengeance long filenames from the original setup table.");
+                }
+            }
             foreach (var productId in new[] { "vengeance", "mercenaries" })
             {
                 if (!statuses.TryGetValue(productId, out var status) || string.IsNullOrWhiteSpace(status.InstallPath)) continue;

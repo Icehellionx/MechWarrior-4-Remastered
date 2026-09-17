@@ -4,6 +4,7 @@ Updated: 2026-09-17. This is the decision gate requested after field testing dis
 
 ## Trigger and corrected baseline
 
+- Post-review field evidence narrowed the current Vengeance/Black Knight failures to extraction parity. The original Vengeance setup table renames 13 ISO paths; literal copying left `BURNLO_1.AVI` where the shared shell requests `Burnloop_lr_15.avi`. Vengeance logged that exact miss after its cinematic. Black Knight's validated 31.88-second MPEG-1/MP2 intro then exited at the same menu transition because the expansion reuses Vengeance's shared content. This evidence supersedes further codec or renderer guessing for that boundary.
 - Setup `0.5.7` is invalid. It fails at startup with Inno Setup `Runtime error (at 36:461): Could not call proc.` The script creates `LicensePage` only from the Add Media click handler but dereferences the page from global navigation logic. That packaging defect is independent of MW4 runtime compatibility.
 - Earlier “responsive process/window plus empty log” smokes were false-positive gates. The user's field run showed that the legacy `STOP: MechWarrior 4 has been incorrectly installed` dialog can remain responsive and produce an empty log. No title is currently launch-qualified.
 - The shared forced launch profile is unqualified. It applies the same OpenGL, windowed, movie, joystick, resolution, and frame-limit switches to all three titles before a clean default baseline exists.
@@ -115,6 +116,8 @@ Each stage must fail or pass independently; no later stage may mask an earlier o
 9. **Package gate:** A compiled setup must open, collect media, install, reach all selected title menus and one mission, uninstall owned files while preserving saves, and pass final-tree Defender scans before it is offered for field testing.
 
 ## Auxiliary review disposition
+
+The 2026-09-17 filename-migration adversary found no demonstrated security defect and correctly requested explicit shared-tree component preservation coverage; that assertion was added. Its duplicate-source-name concern is rejected because media layouts are exact-hash/structure recognized, and its manual hardware-error intervention suggestion is rejected in favor of the existing automatic atomic rollback. The local adviser route returned no final text after one automatic and one explicit-local attempt, so it contributed no finding and no remote/private data was sent.
 
 Local adviser (`qwen3:8b`) and adversary (`mistral:7b-instruct`) calls were run with a sanitized project-only prompt. Remote Featherless calls were not made because the external-data approval gate rejected transmission without separate informed approval.
 

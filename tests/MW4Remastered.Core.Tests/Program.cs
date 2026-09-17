@@ -599,6 +599,12 @@ try
     WriteFixture(disc1, "DSETUP.DLL", "directx runtime query");
     WriteFixture(disc1, "CONTENT/SHELLS_1/FILES/STUTTE_1.WAV", "audio");
     WriteFixture(disc1, "CONTENT/TEXTURES/CUSTOM_1/CSTMDCAL.TXT", "decals");
+    WriteFixture(disc1, "CONTENT/MOVIES/BURNLO_1.AVI", "menu loop");
+    WriteFixture(disc1, "CONTENT/MOVIES/CLOSEA_1.MPG", "closing a");
+    WriteFixture(disc1, "CONTENT/MOVIES/CLOSEB_1.MPG", "closing b");
+    WriteFixture(disc1, "CONTENT/MOVIES/CLOSIN_1.MPG", "closing intro");
+    WriteFixture(disc1, "RESOURCE/MISSIONS/CENTRA_1.TGA", "central park preview");
+    WriteFixture(disc1, "RESOURCE/MISSIONS/EDITOR_1.MW4", "editor template");
     WriteFixture(disc1, "SECDRV.SYS", "must not copy");
     WriteFixture(disc1, "SETUP.EXE", "must not copy");
     var replacement = Path.Combine(planRoot, "replacement", "MW4.exe");
@@ -614,6 +620,40 @@ try
     Check(destinations.Contains("Content/ShellScripts/Files/StutterShark_music.wav"),
         "Vengeance plan restores the installed ShellScripts audio path");
     Check(destinations.Contains("Content/Textures/customdecals/CSTMDCAL.TXT"), "Vengeance plan restores the custom decals directory name");
+    Check(destinations.Contains("Content/Movies/Burnloop_lr_15.avi") &&
+        destinations.Contains("Content/Movies/Close a.mpg") &&
+        destinations.Contains("Content/Movies/Close b.mpg") &&
+        destinations.Contains("Content/Movies/Closinga1.mpg"),
+        "Vengeance plan restores every renamed movie from the original setup table");
+    Check(destinations.Contains("Resource/Missions/centralpark.tga") &&
+        destinations.Contains("Resource/Missions/editortemplate.mw4"),
+        "Vengeance plan restores renamed mission assets from the original setup table");
+    var setupTableNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ["CONTENT/MOVIES/BURNLO_1.AVI"] = "Content/Movies/Burnloop_lr_15.avi",
+        ["CONTENT/MOVIES/CLOSEA_1.MPG"] = "Content/Movies/Close a.mpg",
+        ["CONTENT/MOVIES/CLOSEB_1.MPG"] = "Content/Movies/Close b.mpg",
+        ["CONTENT/MOVIES/CLOSIN_1.MPG"] = "Content/Movies/Closinga1.mpg",
+        ["CONTENT/SHELLS_1/FILES/STUTTE_1.WAV"] = "Content/ShellScripts/Files/StutterShark_music.wav",
+        ["CONTENT/TEXTURES/CUSTOM_1/CSTMDCAL.TXT"] = "Content/Textures/customdecals/CSTMDCAL.TXT",
+        ["RESOURCE/MISSIONS/CENTRA_1.TGA"] = "Resource/Missions/centralpark.tga",
+        ["RESOURCE/MISSIONS/EDITOR_1.MW4"] = "Resource/Missions/editortemplate.mw4",
+        ["RESOURCE/MISSIONS/FROSTB_1.TGA"] = "Resource/Missions/frostbite.tga",
+        ["RESOURCE/MISSIONS/GATORB_1.TGA"] = "Resource/Missions/gatorbait.tga",
+        ["RESOURCE/MISSIONS/INNERC_1.TGA"] = "Resource/Missions/innercity.tga",
+        ["RESOURCE/MISSIONS/PALACE_1.TGA"] = "Resource/Missions/PalaceGates.tga",
+        ["RESOURCE/MISSIONS/TIMBER_1.TGA"] = "Resource/Missions/timberline.tga",
+    };
+    Check(setupTableNames.All(entry => VengeanceMediaPathMap.Map(entry.Key) == entry.Value),
+        "Vengeance path map reproduces every renamed content/resource entry reviewed from the original setup table");
+    var legacyManifest = new InstallManifest(2, "vengeance",
+        setupTableNames.Keys.Select(path => new InstalledFile(path, 1, new string('0', 64), "disc1")).ToArray(),
+        new[] { "vengeance" });
+    var migration = VengeanceMediaPathMap.CreateOwnedMigration(disc1, legacyManifest);
+    Check(migration.Files.Count == setupTableNames.Count &&
+        migration.RetiredOwnedPaths.Count == setupTableNames.Count &&
+        migration.Files.All(file => setupTableNames[file.SourceRelativePath] == file.DestinationRelativePath),
+        "Vengeance upgrade plan renames every manifest-owned legacy path without broadening source ownership");
     Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE") &&
         !destinations.Contains("MW4.ICD") && !destinations.Contains("DPlayerX.dll"),
         "Vengeance plan excludes setup and SafeDisc components");

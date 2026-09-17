@@ -86,7 +86,7 @@ public sealed class VengeanceInstallPlanBuilder
             else if (path.StartsWith("CONTENT/", StringComparison.OrdinalIgnoreCase) ||
                      path.StartsWith("RESOURCE/", StringComparison.OrdinalIgnoreCase))
             {
-                files.Add(new InstallFile(discOneRoot, path, MapDiscPath(path)));
+                files.Add(new InstallFile(discOneRoot, path, VengeanceMediaPathMap.Map(path)));
             }
         }
 
@@ -94,7 +94,7 @@ public sealed class VengeanceInstallPlanBuilder
         {
             if (path.StartsWith("RESOURCE/", StringComparison.OrdinalIgnoreCase))
             {
-                files.Add(new InstallFile(discTwoRoot, path, MapDiscPath(path)));
+                files.Add(new InstallFile(discTwoRoot, path, VengeanceMediaPathMap.Map(path)));
             }
         }
 
@@ -114,23 +114,6 @@ public sealed class VengeanceInstallPlanBuilder
         {
             throw new InvalidDataException($"Expected {expectedLayoutId}, but media recognition returned {recognition.Status} ({recognition.Layout?.Id ?? "unknown"}).");
         }
-    }
-
-    private static string MapDiscPath(string path)
-    {
-        if (path.Equals("CONTENT/SHELLS_1/FILES/STUTTE_1.WAV", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Content/ShellScripts/Files/StutterShark_music.wav";
-        }
-        if (path.StartsWith("CONTENT/SHELLS_1/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Content/ShellScripts/" + path["CONTENT/SHELLS_1/".Length..];
-        }
-        if (path.StartsWith("CONTENT/TEXTURES/CUSTOM_1/", StringComparison.OrdinalIgnoreCase))
-        {
-            return "Content/Textures/customdecals/" + path["CONTENT/TEXTURES/CUSTOM_1/".Length..];
-        }
-        return path;
     }
 
     private static string ComputeSha256(string path)

@@ -77,6 +77,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [x] Resolve startup DirectShow movie-surface interoperability without a system codec pack: Vengeance uses the qualified fork with `keepvidmem(1)` and Mercenaries uses clean upstream v0.7.1 with `noactivateapp(0)`.
 - [x] Re-audit current MW4 community recipes and maintained compatibility projects; identify dgVoodoo2 as the convergent Windows/Lutris path, record exact 2.86.5 archive and x86 DLL hashes/terms, pass Defender, and complete bounded three-title load smokes.
 - [x] Replace the DDrawCompat release payload with an exact-hash dgVoodoo2 import/profile and preserve a collision-safe, rollback-capable owned-install migration path for existing installs.
+- [x] Reproduce all 13 reviewed Vengeance InstallShield long-name mappings, including `Burnloop_lr_15.avi`, and route existing verified installs through the ownership-safe migration transaction so Vengeance and Black Knight can cross the shared intro-to-menu asset boundary.
 - [ ] Interactively qualify the exact staged dgVoodoo profile across all three startup movies, menus, Alt-Tab, pilot creation, and one mission before building a user-facing setup.
 - [x] Move optional multiplayer firewall authorization into the elevated setup as an explicit private-network choice, keep silent installs opt-in, and remove only project-named rules during uninstall.
 - [ ] Verify Black Knight startup video, all in-engine cinematics, and real Alt-Tab return using the final title-specific package.
@@ -104,9 +105,9 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: ship one media-first installer whose launcher plays every original cinematic and reaches stable menu/gameplay in each installed title.
 Owning boundary: exact-hash dgVoodoo import/profile, launch arguments, owned manifests/migration, setup-owned firewall rules, packaging provenance, and dialog-aware runtime proof.
-Smallest verifiable slice: stage stock dgVoodoo2 2.86.5 x86 DirectX files plus the MW4 cursor/30 FPS/aspect profile for all three executable directories, then prove each original intro reaches its real menu and returns from Alt-Tab before rebuilding setup.
-Focused evidence: exact archive/DLL/profile hashes, loaded-module paths, screenshots of live cinematic and menu frames, empty game error logs, pilot creation, one mission per title, and real Alt-Tab return.
-Smoke/regression evidence: stock dgVoodoo loaded in all three disposable media-derived trees and each stayed responsive for 35 seconds; cinematic/menu/gameplay capture remains the next gate.
+Smallest verifiable slice: apply the original Vengeance setup-table filename mapping to a verified disposable installed tree, then prove Vengeance and Black Knight both cross their original intro-to-menu boundary while Mercenaries retains its qualified baseline.
+Focused evidence: exact old/new path and content hashes, manifest migration/rollback assertions, absence of the former `Burnloop_lr_15.avi` error, positive menu capture, pilot creation, one mission per title, and real Alt-Tab return.
+Smoke/regression evidence: Vengeance's log identifies the missing long filename; Black Knight exits at the matching 31.88-second intro boundary; the 13-entry fresh-plan and owned-upgrade mapping passes core smoke, installer build, user-flow, and presentation contracts. Interactive migrated-tree confirmation remains open.
 Rollback or disable path: retain the last title-specific DDrawCompat payloads only as A/B evidence; never restore `/gosnovideo` as a release default or introduce injectors, opaque no-CD files, codec packs, or Defender exclusions.
 Hardware coverage gap: only this NVIDIA/Windows multi-monitor device is available; gameplay, input, audio completeness, saves, multiplayer, and additional GPUs remain unqualified.
 ```

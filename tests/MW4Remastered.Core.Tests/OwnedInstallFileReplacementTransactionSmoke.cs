@@ -17,7 +17,7 @@ internal static class OwnedInstallFileReplacementTransactionSmoke
                 new InstallFile(original, "ddraw.dll", "ddraw.dll"),
                 new InstallFile(original, "old-profile.ini", "old-profile.ini"),
                 new InstallFile(original, "MW4.exe", "MW4.exe"),
-            }), install);
+            }, new[] { "vengeance", "black-knight" }), install);
             Write(install, "Saves/pilot.sav", "user save");
 
             var replacement = Path.Combine(root, "replacement");
@@ -93,8 +93,10 @@ internal static class OwnedInstallFileReplacementTransactionSmoke
                   !File.Exists(Path.Combine(install, "old-profile.ini")),
                 "owned migration can add absent project files and retire an owned legacy profile", failures);
             Check(migrated.Files.Count == 4 &&
+                  migrated.EffectiveComponents.Contains("vengeance", StringComparer.OrdinalIgnoreCase) &&
+                  migrated.EffectiveComponents.Contains("black-knight", StringComparer.OrdinalIgnoreCase) &&
                   new InstallManifestVerifier().Verify(install, InstallVerificationScope.OwnedFiles).IsValid,
-                "owned migration records additions and retirement in a valid manifest", failures);
+                "owned migration records additions and retirement while preserving shared-tree components", failures);
 
             Write(install, "unowned-collision.dll", "user file");
             var collisionRejected = false;
