@@ -7,6 +7,7 @@ $workflowPath = Join-Path $root '.github/workflows/compatibility-build.yml'
 $blackKnightBuilderPath = Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightInstallPlanBuilder.cs'
 $patchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
 $capturePatchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch'
+$runtimePatchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch'
 
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $script = Get-Content -LiteralPath $scriptPath -Raw
@@ -15,6 +16,7 @@ $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $blackKnightBuilder = Get-Content -LiteralPath $blackKnightBuilderPath -Raw
 $patchHash = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $capturePatchHash = (Get-FileHash -LiteralPath $capturePatchPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$runtimePatchHash = (Get-FileHash -LiteralPath $runtimePatchPath -Algorithm SHA256).Hash.ToLowerInvariant()
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -32,9 +34,11 @@ Assert-True ($script -match 'Clear-PeTimestamps' -and $script -match 'IMAGE_DEBU
 Assert-True ($script -match 'git -C \$source archive --format=zip') 'Build must emit the exact corresponding GPL source archive.'
 Assert-True ($script -match [regex]::Escape($patchHash)) 'Build script must require the exact local Black Knight patch.'
 Assert-True ($script -match [regex]::Escape($capturePatchHash) -and $script -match "Pr1Capture") 'Build script must require the exact setup-only PR1 capture patch.'
+Assert-True ($script -match [regex]::Escape($runtimePatchHash) -and $script -match "Pr1Runtime") 'Build script must require the exact app-local PR1 runtime patch.'
 Assert-True ($workflow -match [regex]::Escape($lock.commit)) 'CI workflow must check out the pinned upstream commit.'
 Assert-True ($workflow -notmatch 'VersionInjector') 'CI workflow must not build or package the elevated injector.'
 Assert-True ($workflow -notmatch 'publish-launch-helper') 'CI workflow must not build or package a runtime launch helper.'
+Assert-True ($workflow -match 'SafeDiscLoader2-Pr1Runtime' -and $workflow -match [regex]::Escape((Split-Path $runtimePatchPath -Leaf))) 'CI must build the pinned PR1 app-local DLL without an injector.'
 Assert-True ($lock.qualifiedSourceBuild.reproducibility -match 'byte-identical') 'The lock must state the result of the reproducibility comparison.'
 Assert-True ($lock.qualifiedSourceBuild.upstreamSourceCommit -eq $lock.commit) 'The qualified build must identify the exact pinned upstream commit.'
 Assert-True ($lock.qualifiedSourceBuild.versionDllSha256 -match '^[0-9a-f]{64}$') 'The qualified loader hash must be recorded.'

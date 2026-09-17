@@ -41,6 +41,11 @@
     "localPatchSha256": "e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6",
     "outputQualification": "pending clean hosted source build, Defender scan, and complete installer smoke"
   },
+  "pr1Runtime": {
+    "purpose": "app-local Black Knight PR1 loader; no injector, helper process, elevation, logging, or research dumps",
+    "localPatchSha256": "e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce",
+    "outputQualification": "pending clean hosted source build, exact artifact hash, Defender scan, and complete installer smoke"
+  },
   "includedProjects": [
     "version-proxy.vcxproj"
   ],
