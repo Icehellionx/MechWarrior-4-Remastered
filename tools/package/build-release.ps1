@@ -69,8 +69,10 @@ try {
     $DDrawCompatBundle = [IO.Path]::GetFullPath($DDrawCompatBundle)
     $qualifiedPresentationFiles = [ordered]@{
         'ddraw.dll' = 'b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509'
+        'ddraw-upstream.dll' = 'f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea'
         'DDrawCompat-LICENSE.txt' = 'd82c3e995bd48af26672368fa72ae397874b707abb012960eaef9987932bd6a8'
         'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4.zip' = 'b09e5a8360c9b4ab866946919e9224a65ba1100eb4068dcae3aeea319675cc6c'
+        'DDrawCompat-upstream-source-2c9a07fdf9308e2b0b117886a7e363b149ee1bc7.zip' = '3e60984effffe7de7ad6351381765c0d89f2e5d977e4a4c91015da1d424d24be'
         'DDrawCompat-MW4-Surface-Retry.patch' = 'ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98'
     }
     foreach ($entry in $qualifiedPresentationFiles.GetEnumerator()) {
@@ -102,10 +104,13 @@ try {
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch') -Destination $runtimeNotices
     $presentationDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/DDrawCompat') -Force
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'ddraw.dll') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'ddraw.dll') -Destination (Join-Path $presentationDestination 'ddraw-vengeance.dll')
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'ddraw-upstream.dll') -Destination (Join-Path $presentationDestination 'ddraw-mercenaries.dll')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'assets/compatibility/DDrawCompat-MW4.ini') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'assets/compatibility/DDrawCompat-MW4Mercs.ini') -Destination $presentationDestination
     Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-LICENSE.txt') -Destination $presentationDestination
     Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4.zip') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-upstream-source-2c9a07fdf9308e2b0b117886a7e363b149ee1bc7.zip') -Destination $presentationDestination
     Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-MW4-Surface-Retry.patch') -Destination $presentationDestination
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
 
@@ -189,7 +194,8 @@ try {
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
         'BlackKnightRuntime.dll',
-        'Compatibility/DDrawCompat/ddraw.dll'
+        'Compatibility/DDrawCompat/ddraw-vengeance.dll',
+        'Compatibility/DDrawCompat/ddraw-mercenaries.dll'
     )
 
     if ($StageOnly) {

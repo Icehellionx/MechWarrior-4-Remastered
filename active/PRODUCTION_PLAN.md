@@ -74,7 +74,8 @@ Outcome: all installed titles and optional packs work on supported modern Window
 
 - [ ] Establish clean baselines for video, audio, input, movies, configuration, saves, and multiplayer behavior.
 - [x] Pin, source-build, patch narrowly, and record the 0BSD DDrawCompat-MW3 r18 revision used for MW4 borderless presentation; two clean qualified builds are byte-identical.
-- [ ] Resolve legacy DirectShow movie-surface interoperability without a system codec pack; `/gosnovideo` remains the reversible baseline meanwhile.
+- [x] Resolve startup DirectShow movie-surface interoperability without a system codec pack: Vengeance uses the qualified fork with `keepvidmem(1)` and Mercenaries uses clean upstream v0.7.1 with `noactivateapp(0)`.
+- [ ] Verify Black Knight startup video, all in-engine cinematics, and real Alt-Tab return using the final title-specific package.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process/window launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Dialog-aware menu/gameplay confirmation remains open.
 - [x] Re-evaluate the locally patched Black Knight compatibility bundle against fresh officially patched reference trees before restoring only the exact PR1 path to installation policy.
@@ -97,11 +98,11 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ## Next slice
 
 ```text
-User-facing goal: stop the whack-a-mole cycle by reproducing the established retail topology and official point-release state before changing compatibility code.
-Owning boundary: reference install/registry capture, official RTP application, staging parity, per-title launch contracts, and dialog-aware runtime proof.
-Smallest verifiable slice: use internal `0.6.14` to prove pilot creation and one mission in every title, then exercise unified uninstall and interactive Setup foreground behavior. Preserve the exact-hash DDrawCompat boundary only for Vengeance/Mercenaries and Black Knight's no-proxy windowed fallback.
-Focused evidence: pre/post file and 32-bit registry manifests, exact official patch inputs/outputs, window text/class capture, process exit, and one menu/gameplay assertion.
-Smoke/regression evidence: previous responsive-window smokes are downgraded; no title currently has valid runtime qualification.
-Rollback or disable path: do not issue a replacement installer until reference parity and menu-level proof pass; never reintroduce injectors, opaque no-CD files, or Defender exclusions.
-Hardware coverage gap: only this NVIDIA/Windows device is available; gameplay, input, audio, saves, multiplayer, and additional GPUs remain unqualified.
+User-facing goal: ship one media-first installer whose launcher plays every original cinematic and reaches stable menu/gameplay in each installed title.
+Owning boundary: title-specific presentation payloads/profiles, launch arguments, owned manifests, packaging provenance, and dialog-aware runtime proof.
+Smallest verifiable slice: stage the paired Vengeance/Mercenaries DDrawCompat payloads, rebuild setup, then prove each intro reaches its real menu and returns from Alt-Tab; verify Black Knight's intro separately on its no-proxy windowed path.
+Focused evidence: exact wrapper/profile hashes, screenshots of live cinematic and menu frames, empty game error logs, process/window state, and real Alt-Tab return.
+Smoke/regression evidence: Vengeance and Mercenaries intros are visually proven only in direct installed-tree A/B tests; final-package menu, Alt-Tab, pilot creation, and missions remain open.
+Rollback or disable path: retain the last qualified title-specific payloads; never restore `/gosnovideo` as a release default or introduce injectors, opaque no-CD files, codec packs, or Defender exclusions.
+Hardware coverage gap: only this NVIDIA/Windows multi-monitor device is available; gameplay, input, audio completeness, saves, multiplayer, and additional GPUs remain unqualified.
 ```

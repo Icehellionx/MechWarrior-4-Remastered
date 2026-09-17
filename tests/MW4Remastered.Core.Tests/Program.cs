@@ -359,8 +359,8 @@ try
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
-    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
-    var blackKnightArguments = new[] { "-window", "-noautoconfigx", "/gosnovideo", "/gosNoJoystick" };
+    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosNoJoystick" };
+    var blackKnightArguments = new[] { "-window", "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Vengeance requests a 1024x768 fullscreen surface for DDrawCompat borderless presentation");
     var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));

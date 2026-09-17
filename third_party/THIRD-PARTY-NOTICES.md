@@ -14,7 +14,7 @@ The upstream elevated `VersionInjector` project is neither built nor distributed
 
 ## DDrawCompat-MW3
 
-Vengeance and Mercenaries use a source-built, narrowly patched revision of the project's pinned MechWarrior 3 DDrawCompat fork to preserve DirectDraw/Direct3D 7 behavior while scaling a 1024x768 fullscreen surface into a desktop-sized 4:3 borderless presentation. The wrapper does not switch the desktop into exclusive fullscreen, preserving normal Windows Alt-Tab behavior. The MW4 patch only retries transiently lost DirectDraw surface locks/unlocks in-process. Black Knight deliberately does not load this wrapper because its app-local PR1 compatibility runtime exits when a `ddraw.dll` proxy is present.
+Vengeance uses a source-built, narrowly patched revision of the project's pinned MechWarrior 3 DDrawCompat fork. Mercenaries uses the clean upstream DDrawCompat v0.7.1 release because field tests showed the MW3-specific fork destabilized its DirectShow movie surfaces. Both preserve DirectDraw/Direct3D 7 behavior while scaling a 1024x768 fullscreen surface into desktop-sized borderless 4:3 presentation. Title-specific activation profiles keep the original startup movies enabled. Black Knight deliberately does not load a wrapper because its app-local PR1 compatibility runtime exits when a `ddraw.dll` proxy is present.
 
 - Project fork: <https://github.com/Icehellionx/DDrawCompat-MW3>
 - Exact tag: `v0.7.1-mw3-r18`
@@ -23,4 +23,7 @@ Vengeance and Mercenaries use a source-built, narrowly patched revision of the p
 - License: BSD Zero Clause License (0BSD)
 - Local patch SHA-256: `ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98`
 - Qualified DLL SHA-256: `b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509`
+- Clean upstream project: <https://github.com/narzoul/DDrawCompat>
+- Clean upstream commit: `2c9a07fdf9308e2b0b117886a7e363b149ee1bc7`
+- Mercenaries upstream DLL SHA-256: `f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea`
 - Installed license, local patch, and exact corresponding source are under `Compatibility/DDrawCompat`.

@@ -120,7 +120,6 @@ public sealed class LaunchOrchestrator
             // independently proven minimal windowed path until a compatible scaler exists.
             startInfo.ArgumentList.Add("-window");
             startInfo.ArgumentList.Add("-noautoconfigx");
-            startInfo.ArgumentList.Add("/gosnovideo");
             startInfo.ArgumentList.Add("/gosNoJoystick");
             return;
         }
@@ -134,7 +133,6 @@ public sealed class LaunchOrchestrator
         startInfo.ArgumentList.Add("-gl");
         startInfo.ArgumentList.Add("-GameTime.MaxVariableFps");
         startInfo.ArgumentList.Add("60");
-        startInfo.ArgumentList.Add("/gosnovideo");
         startInfo.ArgumentList.Add("/gosNoJoystick");
     }
 }

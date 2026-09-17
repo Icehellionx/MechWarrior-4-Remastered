@@ -3,7 +3,9 @@ param(
     [Parameter(Mandatory)]
     [string]$SourceRepository,
     [Parameter(Mandatory)]
-    [string]$OutputDirectory
+    [string]$OutputDirectory,
+    [Parameter(Mandatory)]
+    [string]$UpstreamDll
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,12 +13,19 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Pat
 $source = (Resolve-Path -LiteralPath $SourceRepository).Path
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw "DDrawCompat output already exists: $output" }
+$upstreamDll = (Resolve-Path -LiteralPath $UpstreamDll).Path
 
 $tag = 'v0.7.1-mw3-r18'
 $commit = '73ac0f47af16a1d28dcda25c3228053beb3eb5f4'
 $patchPath = Join-Path $projectRoot 'third_party/patches/DDrawCompat-MW4-Surface-Retry.patch'
 $patchHash = 'ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98'
 $qualifiedDllHash = 'b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509'
+$upstreamCommit = '2c9a07fdf9308e2b0b117886a7e363b149ee1bc7'
+$upstreamDllHash = 'f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea'
+$actualUpstreamDllHash = (Get-FileHash -LiteralPath $upstreamDll -Algorithm SHA256).Hash.ToLowerInvariant()
+if ($actualUpstreamDllHash -ne $upstreamDllHash) {
+    throw "Clean upstream DDrawCompat DLL hash mismatch: $actualUpstreamDllHash"
+}
 $safeDirectory = $source.Replace('\', '/')
 $tagCommit = (& git -c "safe.directory=$safeDirectory" -C $source rev-list -n 1 $tag).Trim()
 if ($LASTEXITCODE -ne 0 -or $tagCommit -ne $commit) { throw "DDrawCompat tag $tag does not resolve to the pinned commit." }
@@ -122,11 +131,15 @@ try {
 
     New-Item -ItemType Directory -Path $output | Out-Null
     Copy-Item -LiteralPath $dll -Destination (Join-Path $output 'ddraw.dll')
+    Copy-Item -LiteralPath $upstreamDll -Destination (Join-Path $output 'ddraw-upstream.dll')
     Copy-Item -LiteralPath (Join-Path $scratch 'LICENSE.txt') -Destination (Join-Path $output 'DDrawCompat-LICENSE.txt')
     Copy-Item -LiteralPath $patchPath -Destination (Join-Path $output 'DDrawCompat-MW4-Surface-Retry.patch')
     $archive = Join-Path $output "DDrawCompat-MW3-source-$commit.zip"
     & git -c "safe.directory=$safeDirectory" -C $source archive --format=zip "--output=$archive" $tag
     if ($LASTEXITCODE -ne 0) { throw 'Could not archive the pinned DDrawCompat source revision.' }
+    $upstreamArchive = Join-Path $output "DDrawCompat-upstream-source-$upstreamCommit.zip"
+    & git -c "safe.directory=$safeDirectory" -C $source archive --format=zip "--output=$upstreamArchive" $upstreamCommit
+    if ($LASTEXITCODE -ne 0) { throw 'Could not archive the pinned clean upstream DDrawCompat source revision.' }
 } finally {
     if (Test-Path -LiteralPath $scratch) { Remove-Item -LiteralPath $scratch -Recurse -Force }
 }

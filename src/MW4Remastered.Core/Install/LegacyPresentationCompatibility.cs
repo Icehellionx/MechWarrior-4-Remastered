@@ -4,11 +4,13 @@ namespace MW4Remastered.Core.Install;
 
 public static class LegacyPresentationCompatibility
 {
-    public const string DllSha256 = "b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509";
+    public const string VengeanceDllSha256 = "b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509";
+    public const string MercenariesDllSha256 = "f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea";
 
     public static IReadOnlyList<InstallFile> CreateVengeanceFiles(string root)
     {
-        var (sourceRoot, dllName, configName) = Validate(root);
+        var (sourceRoot, dllName, configName) = Validate(
+            root, "ddraw-vengeance.dll", "DDrawCompat-MW4.ini", VengeanceDllSha256);
         var files = new List<InstallFile>
         {
             new(sourceRoot, dllName, "ddraw.dll"),
@@ -19,7 +21,8 @@ public static class LegacyPresentationCompatibility
 
     public static IReadOnlyList<InstallFile> CreateMercenariesFiles(string root)
     {
-        var (sourceRoot, dllName, configName) = Validate(root);
+        var (sourceRoot, dllName, configName) = Validate(
+            root, "ddraw-mercenaries.dll", "DDrawCompat-MW4Mercs.ini", MercenariesDllSha256);
         return
         [
             new InstallFile(sourceRoot, dllName, "ddraw.dll"),
@@ -27,7 +30,8 @@ public static class LegacyPresentationCompatibility
         ];
     }
 
-    private static (string Root, string DllName, string ConfigName) Validate(string root)
+    private static (string Root, string DllName, string ConfigName) Validate(
+        string root, string dllName, string configName, string expectedDllSha256)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(root);
         var fullRoot = Path.GetFullPath(root);
@@ -35,13 +39,11 @@ public static class LegacyPresentationCompatibility
         if ((File.GetAttributes(fullRoot) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidDataException("Presentation compatibility root cannot be a reparse point.");
 
-        const string dllName = "ddraw.dll";
-        const string configName = "DDrawCompat-MW4.ini";
         var dll = RequireRegularFile(fullRoot, dllName);
         _ = RequireRegularFile(fullRoot, configName);
         using var stream = File.OpenRead(dll);
         var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
-        if (!actual.Equals(DllSha256, StringComparison.Ordinal))
+        if (!actual.Equals(expectedDllSha256, StringComparison.Ordinal))
             throw new InvalidDataException($"Unsupported DDrawCompat DLL SHA-256: {actual}");
         return (fullRoot, dllName, configName);
     }

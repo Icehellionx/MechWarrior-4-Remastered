@@ -55,5 +55,7 @@ Assert-True ($presentationLock.commit -eq '73ac0f47af16a1d28dcda25c3228053beb3eb
 Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.commit) -and $presentationBuild -match [regex]::Escape($presentationLock.dllSha256)) 'Presentation build must enforce the pinned source tag and qualified DLL hash.'
 Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.mw4PatchSha256) -and $presentationBuild -match 'Clear-PeTimestamps' -and $presentationBuild -match '/Brepro') 'Presentation build must apply the exact patch and normalize compiler/linker variability.'
 Assert-True ($presentationBuild -match 'git .* archive --format=zip') 'Presentation build must emit exact corresponding source.'
+Assert-True ($presentationBuild -match 'UpstreamDll' -and $presentationBuild -match [regex]::Escape($presentationLock.productBindings.mercenaries.dllSha256)) 'Presentation assembly must exact-hash the clean upstream Mercenaries release DLL.'
+Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.productBindings.mercenaries.commit) -and $presentationBuild -match 'DDrawCompat-upstream-source') 'Presentation assembly must archive the exact clean upstream source used by Mercenaries.'
 
 Write-Host 'Compatibility source-build contract tests passed.'

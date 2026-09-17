@@ -5,9 +5,24 @@
   "commit": "73ac0f47af16a1d28dcda25c3228053beb3eb5f4",
   "base": "DDrawCompat v0.7.1 (2c9a07f)",
   "license": "0BSD",
-  "upstreamDllSha256": "fd11b9b6b8a8cc23744dfedc10e23798860f3a96bd8b2b4c75dd2fdb3be8f8fb",
+  "forkUnpatchedDllSha256": "fd11b9b6b8a8cc23744dfedc10e23798860f3a96bd8b2b4c75dd2fdb3be8f8fb",
   "mw4PatchSha256": "ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98",
   "dllSha256": "b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509",
   "sourceArchiveSha256": "b09e5a8360c9b4ab866946919e9224a65ba1100eb4068dcae3aeea319675cc6c",
-  "reproducibility": "Two clean builds from the pinned commit and patch were byte-identical after deterministic-path compilation and non-semantic PE timestamp normalization."
+  "reproducibility": "Two clean builds from the pinned commit and patch were byte-identical after deterministic-path compilation and non-semantic PE timestamp normalization.",
+  "productBindings": {
+    "vengeance": {
+      "variant": "MW3 fork plus MW4 surface-retry patch",
+      "dllSha256": "b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509",
+      "altTabFix": "keepvidmem(1)"
+    },
+    "mercenaries": {
+      "variant": "clean upstream DDrawCompat v0.7.1 release",
+      "upstream": "https://github.com/narzoul/DDrawCompat",
+      "commit": "2c9a07fdf9308e2b0b117886a7e363b149ee1bc7",
+      "dllSha256": "f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea",
+      "sourceArchiveSha256": "3e60984effffe7de7ad6351381765c0d89f2e5d977e4a4c91015da1d424d24be",
+      "altTabFix": "noactivateapp(0)"
+    }
+  }
 }

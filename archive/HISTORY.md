@@ -2,6 +2,14 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## Startup movie suppression retired — 2026-09-17
+
+- Field reproduction tied Vengeance's black/flickering intro and `DDERR_SURFACELOST` to the wrapper activation profile, not a missing codec.
+- Vengeance visibly played its original intro using the qualified MW3-derived DDrawCompat DLL with `AltTabFix=keepvidmem(1)`.
+- Mercenaries remained unstable with the MW3-derived DLL but visibly played its original intro using clean upstream DDrawCompat v0.7.1 with `AltTabFix=noactivateapp(0)`.
+- `/gosnovideo` was removed from all three launch profiles. The prior video-suppression baseline and shared-wrapper assumption are historical only.
+- Built internal setup `0.6.16` with exact title-specific wrapper/source payloads; release-tree policy and current Defender passed. A full seven-ISO worker exact-verified both game trees before the expected existing-registration safety rollback and detached every image.
+
 ## MechWarrior 4 governance reset — 2026-09-15
 
 - Replaced inherited MechWarrior 3 runtime/release claims with an unqualified MW4 starting state.

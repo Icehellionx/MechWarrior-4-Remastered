@@ -5,6 +5,7 @@ This workspace builds a preservation-oriented, all-in-one Windows installer and 
 ## Mission priorities
 
 1. Preserve original game behavior and assets unless a remaster change is explicit, reversible, and tested.
+   Original startup and campaign cinematics are part of that presentation contract; a video-suppression launch flag is diagnostic only, not a releasable default.
 2. Accept user-supplied original ISOs or recognized archival ZIP layouts, but never commit or publish game media, serials, cracks, or extracted proprietary game trees.
 3. Keep installer, launcher UI, game discovery, media extraction, patching, compatibility, manuals, configuration, diagnostics, and uninstall behind clear ownership boundaries.
 4. Prefer evidence from hashes, file manifests, focused tests, smoke installs, real logs, and representative Windows/GPU hardware over folklore.
