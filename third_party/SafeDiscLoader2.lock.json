@@ -37,8 +37,8 @@
     "notes": "Hosted compilation and provenance checks passed. Different compiler bytes are recorded but are not substituted for the locally runtime- and Defender-qualified payload."
   },
   "pr1Runtime": {
-    "purpose": "app-local Black Knight retail/PR1 loader; no injector, helper process, elevation, logging, or research dumps",
-    "localPatchSha256": "e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce",
+    "purpose": "app-local Black Knight PR1 loader; no injector, helper process, elevation, logging, or research dumps",
+    "localPatchSha256": "ccf52d832d2baf696b83d34f6f613950685171daf0ab16246cd703d4e91775a0",
     "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35182493117",
     "msbuildVersion": "17.14.51.32402",
     "versionDllSha256": "f534b642defe15ea234988ba0b3b8f1a467aa76ee478cd3e862e6265bbd8bb1c",
@@ -46,7 +46,7 @@
     "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
     "defenderResult": "no threats with engine 1.1.26080.3 and intelligence 1.459.239.0",
     "blackKnightPr1Smoke": "exact official protected PR1 executable stayed alive and responsive for 40 seconds with a MechWarrior Black Knight window, no injector, and no launch elevation",
-    "outputQualification": "hosted source build, exact artifact hash, Defender scan, and direct PR1 launch smoke passed; retail and complete packaged installer smokes remain"
+    "outputQualification": "the preceding hosted artifact passed Defender and direct PR1 launch smoke; replacement PR1-only bytes and the complete packaged installer smoke remain"
   },
   "includedProjects": [
     "version-proxy.vcxproj"

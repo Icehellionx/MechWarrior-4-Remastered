@@ -163,14 +163,15 @@ try
     var rejected = false;
     try
     {
-        new BlackKnightRuntimeCompatibility().Prepare(runtimePath, outputPath);
+        Directory.CreateDirectory(outputPath);
+        BlackKnightRuntimeCompatibility.AddToPayload(runtimePath, outputPath);
     }
     catch (InvalidDataException exception)
     {
         rejected = exception.Message.Contains("Unsupported Black Knight runtime DLL", StringComparison.Ordinal);
     }
     Check(rejected, "Black Knight runtime rejects inputs outside the qualified source build");
-    Check(!Directory.Exists(outputPath), "Black Knight runtime removes partial output after input validation fails");
+    Check(!File.Exists(Path.Combine(outputPath, "MW4X", "version.dll")), "Black Knight runtime writes no DLL after input validation fails");
 }
 finally
 {

@@ -24,7 +24,7 @@ foreach ($component in @('MW4Remastered.Installer', 'MW4Remastered.Launcher', 'M
 
 $launchOrchestrator = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
 $runtime = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightRuntimeCompatibility.cs') -Raw
-Assert-True ($runtime -match 'RuntimeDllSha256' -and $runtime -match 'MW4X/version\.dll' -and $runtime -notmatch 'CreateRemoteThread|VersionInjector') 'Black Knight compatibility must install only an exact-hash app-local DLL without injection.'
+Assert-True ($runtime -match 'RuntimeDllSha256' -and $runtime -match '"MW4X"' -and $runtime -match '"version\.dll"' -and $runtime -notmatch 'CreateRemoteThread|VersionInjector') 'Black Knight compatibility must install only an exact-hash app-local DLL without injection.'
 Assert-True ($launchOrchestrator -notmatch 'BlackKnightRuntime|CreateRemoteThread|VersionInjector') 'Normal game launch must start Black Knight directly without a compatibility helper.'
 Assert-True (-not (Test-Path -LiteralPath (Join-Path $root 'src/MW4Remastered.BlackKnightCaptureHost/Program.cs')) -and
     -not (Test-Path -LiteralPath (Join-Path $root 'src/MW4Remastered.BlackKnightCaptureHost/MW4Remastered.BlackKnightCaptureHost.csproj'))) 'The retired process-injection capture host source must remain removed.'

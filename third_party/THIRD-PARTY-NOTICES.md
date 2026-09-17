@@ -2,7 +2,7 @@
 
 ## SafeDiscLoader2
 
-Black Knight uses a modified, source-built copy of SafeDiscLoader2 from commit `f27286a363aa675a0422141cb96fc8619cf8b9d8`. Setup exact-hash validates the DLL and places it beside the user-media `MW4x.exe`; Windows loads it through the normal app-local DLL search path. The project patch supports only the qualified retail and PR1 image layouts and replaces two obsolete setup/media checks after decryption.
+Black Knight PR1 uses a modified, source-built copy of SafeDiscLoader2 from commit `f27286a363aa675a0422141cb96fc8619cf8b9d8`. Setup exact-hash validates the DLL and places it beside the exact official PR1 `MW4x.exe`; Windows loads it through the normal app-local DLL search path. The project patch supports only the qualified PR1 image layout and replaces two obsolete setup/media checks after decryption.
 
 - Upstream: <https://github.com/nckstwrt/SafeDiscLoader2>
 - License: GPL-3.0-only
