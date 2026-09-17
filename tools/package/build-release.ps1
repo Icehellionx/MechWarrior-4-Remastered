@@ -6,6 +6,7 @@ param(
     [string]$InnoCompilerPath,
     [string]$SafeDiscLoader2SourceRoot,
     [string]$BlackKnightRuntimeBundle,
+    [string]$MercenariesPr1Archive,
     [switch]$StageOnly
 )
 
@@ -83,6 +84,56 @@ try {
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
+
+    if ([string]::IsNullOrWhiteSpace($MercenariesPr1Archive)) {
+        $MercenariesPr1Archive = Join-Path $projectRoot 'Installation Files/MechWarrior-4-Mercenaries_Fix_Win_EN.zip'
+    }
+    $MercenariesPr1Archive = [IO.Path]::GetFullPath($MercenariesPr1Archive)
+    if (-not (Test-Path -LiteralPath $MercenariesPr1Archive -PathType Leaf)) {
+        throw 'The exact official Mercenaries PR1 source archive is required to build the all-in-one package.'
+    }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $outer = [IO.Compression.ZipFile]::OpenRead($MercenariesPr1Archive)
+    try {
+        $candidates = @($outer.Entries | Where-Object {
+            [IO.Path]::GetFileName($_.FullName) -ieq 'mercpr1.exe' -and $_.Length -eq 5376000
+        })
+        if ($candidates.Count -ne 1) { throw 'Mercenaries PR1 source must contain exactly one 5,376,000-byte mercpr1.exe.' }
+        $mercPr1Installer = Join-Path $scratch 'mercpr1.exe'
+        $input = $candidates[0].Open()
+        $target = [IO.File]::Create($mercPr1Installer)
+        try { $input.CopyTo($target) } finally { $target.Dispose(); $input.Dispose() }
+    } finally {
+        $outer.Dispose()
+    }
+    $mercPr1Hash = (Get-FileHash -LiteralPath $mercPr1Installer -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($mercPr1Hash -ne '0c3d0094448e6fe5d2a30fb9ebb24001e8e8c03b39aff9232856bd30000efb30') {
+        throw "Unsupported Mercenaries PR1 installer hash: $mercPr1Hash"
+    }
+    $updateDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Updates/MercenariesPR1') -Force
+    $nested = [IO.Compression.ZipFile]::OpenRead($mercPr1Installer)
+    try {
+        $qualifiedUpdateFiles = [ordered]@{
+            'Patchw32.dll' = @{ Length = 185344; Sha256 = '0ec6e25234ad74489eb1890d4de57bb6140bb8196bdc4a5dcac90dd9d16eb2dd' }
+            'English/MW4MERCS.RTP' = @{ Length = 5119691; Sha256 = 'd3ebf1c2dc098a8e55d7cbeb112426fb413dfd23595a1ed078cd35fe7a551a65' }
+        }
+        foreach ($entry in $qualifiedUpdateFiles.GetEnumerator()) {
+            $sourceEntry = @($nested.Entries | Where-Object { $_.FullName.Replace('\', '/') -ieq $entry.Key })
+            if ($sourceEntry.Count -ne 1 -or $sourceEntry[0].Length -ne $entry.Value.Length) {
+                throw "Mercenaries PR1 is missing qualified entry: $($entry.Key)"
+            }
+            $payloadRelativePath = if ($entry.Key -ieq 'Patchw32.dll') { 'Patchw32.dat' } else { $entry.Key }
+            $destination = Join-Path $updateDestination $payloadRelativePath
+            New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($destination)) -Force | Out-Null
+            $input = $sourceEntry[0].Open()
+            $target = [IO.File]::Create($destination)
+            try { $input.CopyTo($target) } finally { $target.Dispose(); $input.Dispose() }
+            $actual = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $entry.Value.Sha256) { throw "Mercenaries PR1 payload hash mismatch: $($entry.Key)" }
+        }
+    } finally {
+        $nested.Dispose()
+    }
 
     $manualSource = Join-Path $projectRoot 'output/pdf'
     $coverSource = Join-Path $projectRoot 'output/manual-covers'

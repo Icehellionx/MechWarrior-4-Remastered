@@ -46,6 +46,12 @@ internal sealed class InstallWorker
         var inspection = new MediaInspectionService();
         var inspector = new MediaSourceInspector(inspection, sourceSessions);
         var selection = new MediaSelectionSet();
+        var bundledMercenariesUpdate = Path.Combine(args.DestinationPath, "Updates", "MercenariesPR1");
+        if (Directory.Exists(bundledMercenariesUpdate))
+        {
+            TryAppendLog(args.LogPath, "Inspecting bundled, hash-qualified Mercenaries Point Release 1 payload.");
+            selection.Add(bundledMercenariesUpdate, inspector.Inspect(bundledMercenariesUpdate));
+        }
         foreach (var path in args.MediaPaths)
         {
             TryAppendLog(args.LogPath, $"Inspecting selected source: {path}");
@@ -140,7 +146,7 @@ internal sealed class InstallWorker
                 "Black Knight requires either the Inner Sphere or Clan Mech Pak media in this setup run because those original discs contain the official Black Knight Point Release 1 update.");
         var mercenariesSelected = selection.Capabilities.Any(item => item.ProductId == "mercenaries" && item.IsComplete);
         if (mercenariesSelected && !selection.Layouts.Any(item => item.Layout.Id.Equals("mercenaries-pr1", StringComparison.OrdinalIgnoreCase)))
-            throw new InvalidDataException("Mercenaries installation requires the official Point Release 1 update. Add a supported archive containing mercpr1.exe.");
+            throw new InvalidDataException("The setup package is missing its qualified Mercenaries Point Release 1 payload. Download a complete installer package and try again.");
         var conflict = plan.Products.FirstOrDefault(item =>
             item.EffectiveComponents.Any(component => !alreadyReady.Contains(component)) && File.Exists(item.DestinationPath));
         if (conflict is not null) throw new IOException($"The game destination is an existing file: {conflict.DestinationPath}");

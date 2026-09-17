@@ -44,6 +44,8 @@ Source: "{#PayloadRoot}\Compatibility\BlackKnightRuntime\*"; DestDir: "{app}\Com
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.pdf"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.cover.png"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\Updates\MercenariesPR1\Patchw32.dat"; DestDir: "{app}\Updates\MercenariesPR1"; DestName: "Patchw32.dll"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\Updates\MercenariesPR1\English\MW4MERCS.RTP"; DestDir: "{app}\Updates\MercenariesPR1\English"; Flags: ignoreversion notimestamp
 
 [Icons]
 Name: "{group}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLauncher.exe"; WorkingDir: "{app}"
@@ -91,6 +93,9 @@ var
   AddMediaButton: TNewButton;
   RemoveMediaButton: TNewButton;
   MediaFiles: TStringList;
+
+function SetForegroundWindow(hWnd: HWND): Boolean;
+  external 'SetForegroundWindow@user32.dll stdcall';
 
 procedure RefreshMediaList;
 var
@@ -187,6 +192,21 @@ begin
   RemoveMediaButton.Enabled := False;
   RemoveMediaButton.OnClick := @RemoveMediaButtonClick;
   RefreshMediaList;
+  { Elevation can leave the newly created wizard behind the window that
+    initiated Setup. Explicitly activate the real wizard once it exists. }
+  WizardForm.BringToFront;
+  SetForegroundWindow(WizardForm.Handle);
+end;
+
+procedure CurPageChanged(CurPageID: Integer);
+begin
+  { Repeat after the wizard becomes visible; InitializeWizard can run before
+    Windows completes the post-UAC foreground transition. }
+  if (CurPageID = wpWelcome) or (CurPageID = MediaPage.ID) then
+  begin
+    WizardForm.BringToFront;
+    SetForegroundWindow(WizardForm.Handle);
+  end;
 end;
 
 procedure DeinitializeSetup;

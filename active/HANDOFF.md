@@ -1,8 +1,11 @@
 # Session handoff
 
-Updated: 2026-09-16.
+Updated: 2026-09-17.
 
 ## Current state
+
+- Field setup `0.6.4` failed before mutation because its UI quietly required a separate Mercenaries fix ZIP; the retained log proved the five selected game/pack archives were valid and the missing PR1 source was the sole validation error. Internal candidate `0.6.6` now build-time extracts only exact-hash `Patchw32.dll` and `English/MW4MERCS.RTP` from the qualified official `mercpr1.exe`, packages them as an internal update payload, and automatically routes them before user media. A full worker run using Vengeance, Black Knight, both Mech Paks, and Mercenaries media with no user-supplied patch reached exact verification for both physical game trees; the sandbox then denied HKCU registration and the worker ownership-safely rolled both trees back. Public redistribution of the official update remains a legal/provenance gate.
+- Internal `0.6.7` also explicitly foregrounds the Inno wizard during initialization and again once its first page is visible after UAC. Launcher uninstall now deduplicates the shared Vengeance/Black Knight physical root, attempts ownership-safe removal even from repair state, preserves unverifiable files, skips registry removal when no trusted launch path exists, and always hands application-shell removal to Inno. This fixes the field trap where manifestless saved logs/options prevented removal of the launcher. Exact setup SHA-256 is `c9a3ff437987f737d822382c78eec20b13595104d1820ab70216a47dfdf77e09`; current Defender reported zero target detections. Foreground behavior and the complete elevated ISO/ZIP run still require field confirmation.
 
 - Candidate `0.5.7` is invalid and must not be handed out. It fails at startup with Inno Setup `Runtime error (at 36:461): Could not call proc.` because its license page is created from the Add Media handler instead of during wizard initialization.
 - The user's field run also disproved the prior runtime gate: all three titles reached `MechWarrior 4 has been incorrectly installed`. A responsive process/window and zero-length game log can describe that error dialog, so the earlier seven-ISO runtime result is downgraded. No title is currently launch-qualified.

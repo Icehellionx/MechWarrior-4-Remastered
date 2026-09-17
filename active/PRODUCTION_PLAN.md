@@ -34,6 +34,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Remove the caller-supplied Mercenaries replacement executable; derive its disc-free executable from exact original-media inputs inside coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Prove official Vengeance Patch 3 applies directly to retail media, apply it through a constrained source-owned host, retain only exact qualified outputs, and remove the obsolete C-Dilla and ARTP imports/call sites from the generated executable.
 - [x] Recognize the exact official Mercenaries PR1 updater from the supported fix ZIP, exclude its adjacent historical no-CD payload, apply PR1 in contained scratch, and derive an exact-hash source-owned `50.07.01.2105` executable before commit.
+- [x] Make original Mercenaries media sufficient for the internal AIO flow by build-time extracting and hash-locking only the two qualified official PR1 payload files; public redistribution rights remain an explicit release gate.
 - [x] Retire the invalid static PR1 rebuild and replace it with an exact-hash, source-built app-local runtime for official `45.30.04.1908`; hosted build, Defender, and repeated fresh full-coordinator PR1 launch smokes pass. Reject retail until its separate Vengeance Patch 2 prerequisite is implemented.
 - [x] Apply official Black Knight PR1 and Mercenaries PR1 in contained reference trees and retain exact pre/post manifests as ignored evidence.
 - [x] Replace separate Vengeance/Black Knight destinations with one atomic schema-2 Vengeance-family manifest and preserve the original `MW4X` subdirectory.
@@ -50,6 +51,7 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [ ] Complete settings, diagnostics, and repair actions. Manual opening is wired for packaged cleaned outputs.
 - [x] Consolidate the supported games' first-run EULA state into one explicit setup acceptance and exact transforms/registration so gameplay is not interrupted by legacy dialogs.
 - [x] Expose one launcher uninstall action that removes verified owned game payloads, closes the launcher, and visibly hands off removal of the application shell, manuals, shortcuts, and registration.
+- [x] Keep shell uninstall available when an old or damaged game tree lacks verifiable ownership, preserve uncertain files, and remove the shared Vengeance/Black Knight physical tree only once.
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 - [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
 - [ ] Reproduce and fix the field-confirmed Vengeance/Mercenaries incorrect-install failures. The prior responsive-window smoke was a false positive and the shared launch profile is suspended.
@@ -95,7 +97,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: stop the whack-a-mole cycle by reproducing the established retail topology and official point-release state before changing compatibility code.
 Owning boundary: reference install/registry capture, official RTP application, staging parity, per-title launch contracts, and dialog-aware runtime proof.
-Smallest verifiable slice: the hosted Black Knight runtime DLL and repeated fresh full-coordinator trees pass exact hashing and Defender, and PR1 opens a correctly titled window without helper/UAC. Next run the complete package through setup/repair/uninstall and prove actual menus rather than dialogs; retail remains rejected pending its separate Patch 2 chain.
+Smallest verifiable slice: candidate `0.6.7` bundles the exact official Mercenaries PR1 inputs, and its worker reaches verified Vengeance/Black Knight/pack and Mercenaries trees without a separate patch selection. Next run the complete elevated package through ISO/ZIP setup, foreground, repair/uninstall, and actual menus rather than dialogs; retail remains rejected pending its separate Patch 2 chain.
 Focused evidence: pre/post file and 32-bit registry manifests, exact official patch inputs/outputs, window text/class capture, process exit, and one menu/gameplay assertion.
 Smoke/regression evidence: previous responsive-window smokes are downgraded; no title currently has valid runtime qualification.
 Rollback or disable path: do not issue a replacement installer until reference parity and menu-level proof pass; never reintroduce injectors, opaque no-CD files, or Defender exclusions.

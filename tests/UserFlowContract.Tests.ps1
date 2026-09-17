@@ -20,6 +20,9 @@ Assert-True ($launcher -match 'LoadManualCover' -and $launcher -match '\.cover\.
 Assert-True ($launcher -match 'MECH PAKS' -and $launcher -match 'CreatePackIndicator') 'Launcher must keep compact pack indicators below primary operations.'
 Assert-True ($launcher -match 'Text\s*=\s*"UNINSTALL"') 'Launcher must retain one clear lower-corner uninstall action.'
 Assert-True ($launcher -match 'REMOVING LAUNCHER AND SHORTCUTS' -and $launcher -match 'Application\.Exit\(\)') 'Unified uninstall must visibly hand off shell removal and terminate the launcher.'
+Assert-True ($launcher -match 'GroupBy\(item => Path\.GetFullPath\(item\.InstallPath!\)' -and $launcher -notmatch 'repairRequired') 'Unified uninstall must remove each shared physical game tree once and must not trap the application shell behind a repair-state precheck.'
+Assert-True ($launcher -match '(?s)if \(blocked\.Length > 0\).*?applicationUninstaller\.Start\(\)') 'Blocked game-tree cleanup must preserve uncertain files while still handing off application-shell removal.'
+Assert-True ($launcher -match 'installed\.Where\(item => item\.State == ProductInstallState\.Ready\)') 'Repair-state uninstall must not require an untrusted or missing launch path to remove legacy registration.'
 Assert-True ($launcher -notmatch 'DIAGNOSTICS|SETTINGS|REMOVE GAME FILES') 'Launcher primary surface must not expose unfinished or maintenance-heavy actions.'
 Assert-True ($launcher -match 'CHECKING INSTALLED GAMES' -and $launcher -match 'Task\.Run\(statusReader\.Read\)') 'Launcher must become visible before hashing installed game trees.'
 
@@ -28,7 +31,7 @@ Assert-True ($setup -notmatch 'Black Knight ISO or ZIP \(required\)') 'The packa
 Assert-True ($setup -match '(?s)procedure InitializeWizard;.*?LicensePage := CreateInputOptionPage.*?(?=procedure DeinitializeSetup)' -and $setup -notmatch '(?s)procedure AddMediaButtonClick.*?LicensePage := CreateInputOptionPage.*?(?=procedure RemoveMediaButtonClick)') 'The license page must exist during wizard initialization, before navigation callbacks can inspect it.'
 Assert-True ($worker -match 'VengeanceInstallRequest' -and $worker -match 'EffectiveComponents\.Contains\("black-knight"' -and $worker -match 'MercenariesInstallRequest') 'The contained worker must install Black Knight atomically inside the Vengeance family while retaining independent Mercenaries.'
 Assert-True ($worker -match 'inner-sphere-mech-pak' -and $worker -match 'clan-mech-pak' -and $worker -match 'GameInstallationCoordinator') 'Qualified Mech Paks must flow into the shared coordinator with their Vengeance gate.'
-Assert-True ($worker -match 'mercenaries-pr1' -and $worker -match 'Point Release 1') 'Mercenaries setup must require and route the recognized official PR1 payload before commit.'
+Assert-True ($worker -match 'Updates.*MercenariesPR1' -and $worker -match 'mercenaries-pr1' -and $worker -match 'Point Release 1') 'Mercenaries setup must automatically route the bundled, qualified official PR1 payload before commit.'
 Assert-True ($worker -match 'RollBack' -and $worker -match 'OwnedInstallUninstaller') 'A failed unified setup run must roll back games newly committed by that run.'
 Assert-True ($worker -match 'LegacyGameRegistration' -and $worker -match 'registration\.Ensure') 'Setup must own legacy game registration before the launcher is offered.'
 Assert-True ($launch -match 'ValidateOwned' -and $launch -notmatch 'gameRegistration\.Ensure') 'Normal game launch must validate setup state without performing installation writes.'

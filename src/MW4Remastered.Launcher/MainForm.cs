@@ -331,27 +331,27 @@ internal sealed class MainForm : Form
             var installed = await Task.Run(() => statusReader.Read()
                 .Where(item => item.Product.Kind == ProductKind.Game && item.InstallPath is not null)
                 .ToArray());
-            var repairRequired = installed.Where(item => item.State == ProductInstallState.NeedsRepair).ToArray();
-            if (repairRequired.Length > 0)
-            {
-                MessageBox.Show(this,
-                    "Removal cannot continue because ownership verification failed for: " +
-                    string.Join(", ", repairRequired.Select(item => item.Product.DisplayName)) + ".",
-                    "Uninstall blocked safely", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                await RefreshStatusesAsync();
-                return;
-            }
-            var results = await Task.Run(() => installed.Select(item => (item.Product.DisplayName, Result: gameUninstaller.Remove(item.InstallPath!))).ToArray());
+            var physicalInstalls = installed
+                .GroupBy(item => Path.GetFullPath(item.InstallPath!), StringComparer.OrdinalIgnoreCase)
+                .Select(group => (Path: group.Key, DisplayName: string.Join(" + ", group.Select(item => item.Product.DisplayName))))
+                .ToArray();
+            var results = await Task.Run(() => physicalInstalls
+                .Select(item => (item.DisplayName, Result: gameUninstaller.Remove(item.Path))).ToArray());
             var blocked = results.Where(item => item.Result.Status == InstallRemovalStatus.Blocked).ToArray();
             if (blocked.Length > 0)
             {
                 var details = blocked.SelectMany(item => item.Result.Issues.Select(issue => $"{item.DisplayName}: {issue}"));
-                MessageBox.Show(this, string.Join(Environment.NewLine, details), "Uninstall blocked safely", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                await RefreshStatusesAsync();
-                return;
+                MessageBox.Show(this,
+                    "Some unverified game or save files will be preserved, but the launcher, manuals, shortcuts, and registered application will still be removed." +
+                    Environment.NewLine + Environment.NewLine + string.Join(Environment.NewLine, details),
+                    "Preserving unverified files", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
 
-            foreach (var item in installed) gameRegistration.RemoveOwned(item);
+            // Repair-state records intentionally have no trusted launch path, so
+            // they cannot prove ownership of a legacy registration value. Leave
+            // those values untouched; shell removal must still be able to finish.
+            foreach (var item in installed.Where(item => item.State == ProductInstallState.Ready))
+                gameRegistration.RemoveOwned(item);
 
             statusLine.Text = "REMOVING LAUNCHER AND SHORTCUTS…";
             applicationUninstaller.Start();
