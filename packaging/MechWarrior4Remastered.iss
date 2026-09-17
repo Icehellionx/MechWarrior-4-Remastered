@@ -192,6 +192,10 @@ begin
   RemoveMediaButton.Enabled := False;
   RemoveMediaButton.OnClick := @RemoveMediaButtonClick;
   RefreshMediaList;
+  { SetForegroundWindow alone is subject to Windows' foreground-lock policy.
+    Setup is a short, explicitly invoked workflow, so keep its wizard above
+    ordinary windows for the lifetime of this process. }
+  WizardForm.FormStyle := fsStayOnTop;
   { Elevation can leave the newly created wizard behind the window that
     initiated Setup. Explicitly activate the real wizard once it exists. }
   WizardForm.BringToFront;

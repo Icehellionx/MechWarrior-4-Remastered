@@ -348,33 +348,52 @@ try
         string.Equals(installedStatuses["black-knight"].LaunchPath, Path.Combine(destination, "MW4X", "MW4X.EXE"), StringComparison.OrdinalIgnoreCase),
         $"status reader exposes Black Knight from the shared Vengeance-family manifest and MW4X path ({installedStatuses["black-knight"].State}; {installedStatuses["black-knight"].LaunchPath}; {installedStatuses["black-knight"].Detail})");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
+    var configuration = new LegacyGameConfiguration();
+    File.WriteAllText(Path.Combine(destination, "options.ini"), "[joystick]" + Environment.NewLine + "BiThrottleCenter=0.300000" + Environment.NewLine);
+    configuration.Ensure(installedStatuses["vengeance"]);
     var processStarter = new RecordingProcessStarter();
     var gameRegistration = new RecordingGameRegistration();
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
-    var modernArguments = new[] { "-32", "-window", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
+    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1080", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
-        "Vengeance launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
+        "Vengeance launch bypasses legacy joystick enumeration and requests the qualified fullscreen resolution");
+    var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
+    Check(vengeanceOptions.Contains("[graphics options]", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("screenwidth=1920", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
+        "configuration seeding preserves existing controls and adds the graphics page required by pilot scripts");
+    configuration.Ensure(installedStatuses["vengeance"]);
+    Check(File.ReadAllText(Path.Combine(destination, "options.ini")) == vengeanceOptions,
+        "configuration seeding is byte-stable after the required graphics page exists");
     var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
     var mercenaryExecutable = Path.Combine(mercenaryRoot, "MW4Mercs.exe");
     File.WriteAllText(mercenaryExecutable, "synthetic executable");
     var mercenaryProduct = ProductCatalog.All.Single(item => item.Id == "mercenaries");
-    new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
-        mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic"));
+    var mercenaryStatus = new ProductStatus(
+        mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic");
+    configuration.Ensure(mercenaryStatus);
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(mercenaryStatus);
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
-        "Mercenaries launch bypasses legacy joystick enumeration and unstable exclusive fullscreen initialization");
+        "Mercenaries launch seeds configuration and bypasses legacy joystick enumeration");
+    Check(File.ReadAllText(Path.Combine(mercenaryRoot, "options.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
+        "Mercenaries receives the required graphics page before launch");
 
     var blackKnightRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "black-knight-launch")).FullName;
     var blackKnightLaunchExecutable = Path.Combine(blackKnightRoot, "MW4X.exe");
     File.WriteAllText(blackKnightLaunchExecutable, "synthetic executable");
     var blackKnightLaunchProduct = ProductCatalog.All.Single(item => item.Id == "black-knight");
-    new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
+    var blackKnightLaunchStatus = new ProductStatus(
         blackKnightLaunchProduct, ProductInstallState.Ready, blackKnightLaunchExecutable, null, null,
-        blackKnightRoot, "synthetic"));
+        blackKnightRoot, "synthetic");
+    configuration.Ensure(blackKnightLaunchStatus);
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(blackKnightLaunchStatus);
     Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
         processStarter.LastStart.ArgumentList.SequenceEqual(modernArguments),
-        "Black Knight starts directly with its app-local compatibility DLL and windowed profile");
+        "Black Knight starts directly with its app-local compatibility DLL and fullscreen profile");
+    Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
+        "Black Knight receives its title-specific required optionsx graphics page");
 
     var alreadyRunningState = new RecordingGameProcessState { Running = true };
     var duplicateBlocked = false;

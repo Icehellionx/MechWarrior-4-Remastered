@@ -54,7 +54,8 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Keep shell uninstall available when an old or damaged game tree lacks verifiable ownership, preserve uncertain files, and remove the shared Vengeance/Black Knight physical tree only once.
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 - [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
-- [ ] Reproduce and fix the field-confirmed Vengeance/Mercenaries incorrect-install failures. The prior responsive-window smoke was a false positive and the shared launch profile is suspended.
+- [x] Reproduce and fix the field-confirmed incorrect-install failures; candidate `0.6.7` installed and reached the real menu in all three titles.
+- [ ] Field-qualify `0.6.9` pilot creation after setup seeds the required title-specific graphics INI, plus 1920×1080 fullscreen and post-UAC topmost Setup behavior.
 
 ## 4. Manuals
 
@@ -97,7 +98,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: stop the whack-a-mole cycle by reproducing the established retail topology and official point-release state before changing compatibility code.
 Owning boundary: reference install/registry capture, official RTP application, staging parity, per-title launch contracts, and dialog-aware runtime proof.
-Smallest verifiable slice: candidate `0.6.7` bundles the exact official Mercenaries PR1 inputs, and its worker reaches verified Vengeance/Black Knight/pack and Mercenaries trees without a separate patch selection. Next run the complete elevated package through ISO/ZIP setup, foreground, repair/uninstall, and actual menus rather than dialogs; retail remains rejected pending its separate Patch 2 chain.
+Smallest verifiable slice: candidate `0.6.9` replaces the skipped autoconfigurator's required INI contract for every ready title, requests 1920×1080 fullscreen, and makes Setup topmost after UAC. Next field-run pilot creation and one gameplay path in every title, then exercise unified uninstall; retail remains rejected pending its separate Patch 2 chain.
 Focused evidence: pre/post file and 32-bit registry manifests, exact official patch inputs/outputs, window text/class capture, process exit, and one menu/gameplay assertion.
 Smoke/regression evidence: previous responsive-window smokes are downgraded; no title currently has valid runtime qualification.
 Rollback or disable path: do not issue a replacement installer until reference parity and menu-level proof pass; never reintroduce injectors, opaque no-CD files, or Defender exclusions.

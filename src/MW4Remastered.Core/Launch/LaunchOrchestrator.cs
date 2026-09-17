@@ -82,8 +82,7 @@ public sealed class LaunchOrchestrator
         {
             throw new InvalidOperationException($"{status.Product.DisplayName} is already running.");
         }
-        // Setup owns registry mutation. Normal launch only validates the record,
-        // keeping first play free of elevation and other installation work.
+        // Setup owns registry mutation. Normal launch only validates the record.
         gameRegistration.ValidateOwned(status);
         var workingDirectory = Path.GetDirectoryName(executable)!;
         var startInfo = new ProcessStartInfo
@@ -104,10 +103,9 @@ public sealed class LaunchOrchestrator
         // Keep the legacy renderer in its qualified 32-bit OpenGL/windowed path,
         // skip startup movies, and avoid current DirectInput enumeration.
         startInfo.ArgumentList.Add("-32");
-        startInfo.ArgumentList.Add("-window");
         startInfo.ArgumentList.Add("-noautoconfig");
         startInfo.ArgumentList.Add("-f");
-        startInfo.ArgumentList.Add("1024x768");
+        startInfo.ArgumentList.Add($"{LegacyGameConfiguration.DefaultWidth}x{LegacyGameConfiguration.DefaultHeight}");
         startInfo.ArgumentList.Add("-gl");
         startInfo.ArgumentList.Add("-GameTime.MaxVariableFps");
         startInfo.ArgumentList.Add("60");

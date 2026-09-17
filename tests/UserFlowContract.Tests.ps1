@@ -7,6 +7,7 @@ $setup = Get-Content -LiteralPath (Join-Path $root 'packaging/MechWarrior4Remast
 $launch = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
 $registration = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LegacyGameRegistration.cs') -Raw
 $blackKnightEula = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightEulaTransform.cs') -Raw
+$configuration = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LegacyGameConfiguration.cs') -Raw
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -35,6 +36,9 @@ Assert-True ($worker -match 'Updates.*MercenariesPR1' -and $worker -match 'merce
 Assert-True ($worker -match 'RollBack' -and $worker -match 'OwnedInstallUninstaller') 'A failed unified setup run must roll back games newly committed by that run.'
 Assert-True ($worker -match 'LegacyGameRegistration' -and $worker -match 'registration\.Ensure') 'Setup must own legacy game registration before the launcher is offered.'
 Assert-True ($launch -match 'ValidateOwned' -and $launch -notmatch 'gameRegistration\.Ensure') 'Normal game launch must validate setup state without performing installation writes.'
+Assert-True ($worker -match 'foreach \(var status in statuses\.Values\)' -and $worker -match 'configuration\.Ensure\(status\)' -and $configuration -match '\[graphics options\]' -and $configuration -match 'optionsx\.ini') 'Setup must seed the required user-owned graphics page for every ready title before first launch.'
+Assert-True ($launch -notmatch 'gameConfiguration\.Ensure|\.Ensure\(status\)') 'Normal launch must not rewrite user configuration after setup has prepared it.'
+Assert-True ($launch -notmatch 'ArgumentList\.Add\("-window"\)' -and $launch -match 'DefaultWidth.*DefaultHeight') 'Normal launch must request the qualified fullscreen resolution rather than force a small window.'
 Assert-True ($registration -match 'ValuesMatchOrWereConsumed' -and $registration -notmatch 'SetValue\("FIRSTRUN"') 'Launch validation must accept the games consuming all setup values without writing a guessed FIRSTRUN marker.'
 Assert-True ($blackKnightEula -match 'd150fcebe8560bdfd5389b4eec9fa7f82b134f8714ef42591ad6daeb4afac85b' -and $blackKnightEula -match 'AcceptedExport') 'Black Knight must install the exact qualified setup-accepted EULA transform.'
 Assert-True ($installerProgram -notmatch 'Application\.Run|InstallerForm' -and $installerProgram -match 'InstallWorkerArguments') 'The package must not launch a second visible installer UI.'

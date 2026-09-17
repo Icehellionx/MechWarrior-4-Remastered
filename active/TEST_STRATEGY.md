@@ -65,6 +65,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Unified uninstall must close the launcher and invoke the standard shell uninstaller in visible-progress silent mode after owned-game removal; field acceptance must confirm the launcher, manuals, shortcuts, and registration disappear after the asynchronous handoff.
 - Setup must remain the only visible installation UI. Contract tests reject `Application.Run`/`InstallerForm`, require a hidden synchronous worker invocation, and an unattended package smoke supplies media through the same Inno page state before verifying the installed shell and game manifest.
 - Normal launch must call only read-only setup-registration validation, start the game executable directly, and never package or select a process-injection helper.
+- Setup must seed the title-correct user-owned options file with a complete `[graphics options]` page before registration; it must preserve existing controls/settings, remain idempotent once the page exists, and leave that mutable configuration outside the owned game manifest.
 - Setup errors must retain the worker log outside Inno's self-deleting temporary directory and display that durable path.
 - Diagnostics redact serials, credentials, private paths, and media content.
 - Release tests block ISOs, BIN/CUE/MDF/MDS, serial files, raw cracks, `.env`, dumps, and unintended executables.

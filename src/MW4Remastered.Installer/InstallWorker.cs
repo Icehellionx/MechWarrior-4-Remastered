@@ -94,6 +94,12 @@ internal sealed class InstallWorker
         var statuses = new InstallStatusReader(plan.RootPath).Read()
             .Where(item => item.Product.Kind == ProductKind.Game && finalReady.Contains(item.Product.Id))
             .ToDictionary(item => item.Product.Id, StringComparer.OrdinalIgnoreCase);
+        var configuration = new LegacyGameConfiguration();
+        foreach (var status in statuses.Values)
+        {
+            configuration.Ensure(status);
+            TryAppendLog(args.LogPath, $"Prepared modern graphics configuration for {status.Product.DisplayName}.");
+        }
         var registration = new LegacyGameRegistration();
         var registeredThisRun = new List<ProductStatus>();
         try
