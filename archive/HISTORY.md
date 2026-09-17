@@ -9,6 +9,7 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Recorded dgVoodoo2 2.86.5 archive SHA-256 `76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf`, exact x86 DLL hashes, official game/mod redistribution permission, and the recommended MW4 cursor hook/30 FPS/aspect-preserving profile. The complete evaluation tree passed current Defender.
 - On disposable copies of the actual media-derived trees, Vengeance, Black Knight, and Mercenaries all loaded the stock wrapper, retained their correct titles, and remained responsive for bounded 35-second smokes without crash logs. This retires further DDrawCompat patching but does not substitute for interactive movies/menu/gameplay/Alt-Tab qualification.
 - Integrated the exact wrapper/profile into internal stage `0.6.18`, added an ownership-safe DDrawCompat-to-dgVoodoo manifest migration, repeated bounded launches for all three titles with the staged profile, passed release-tree policy, and passed current Defender. No setup was promoted because interactive presentation qualification remains open.
+- Moved legacy multiplayer firewall consent into the elevated setup: interactive installs expose a private-network option, silent installs require explicit opt-in, rules target only the three installed executables, and uninstall removes only project-named rules.
 - Identified the first-run Windows Defender Firewall network prompt as a separate setup-owned multiplayer decision, not an antivirus detection or renderer failure.
 
 ## Startup movie suppression retired — 2026-09-17

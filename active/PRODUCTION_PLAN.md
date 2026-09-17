@@ -78,6 +78,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [x] Re-audit current MW4 community recipes and maintained compatibility projects; identify dgVoodoo2 as the convergent Windows/Lutris path, record exact 2.86.5 archive and x86 DLL hashes/terms, pass Defender, and complete bounded three-title load smokes.
 - [x] Replace the DDrawCompat release payload with an exact-hash dgVoodoo2 import/profile and preserve a collision-safe, rollback-capable owned-install migration path for existing installs.
 - [ ] Interactively qualify the exact staged dgVoodoo profile across all three startup movies, menus, Alt-Tab, pilot creation, and one mission before building a user-facing setup.
+- [x] Move optional multiplayer firewall authorization into the elevated setup as an explicit private-network choice, keep silent installs opt-in, and remove only project-named rules during uninstall.
 - [ ] Verify Black Knight startup video, all in-engine cinematics, and real Alt-Tab return using the final title-specific package.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process/window launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Dialog-aware menu/gameplay confirmation remains open.
