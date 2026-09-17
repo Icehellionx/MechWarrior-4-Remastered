@@ -6,7 +6,7 @@ param(
     [string]$InnoCompilerPath,
     [string]$SafeDiscLoader2SourceRoot,
     [string]$BlackKnightRuntimeBundle,
-    [string]$DDrawCompatBundle,
+    [string]$DgVoodooArchive,
     [string]$MercenariesPr1Archive,
     [switch]$StageOnly
 )
@@ -63,23 +63,14 @@ try {
         if ($actual -ne $entry.Value) { throw "Black Knight runtime bundle hash mismatch for $($entry.Key): $actual" }
     }
 
-    if ([string]::IsNullOrWhiteSpace($DDrawCompatBundle)) {
-        throw 'Provide DDrawCompatBundle containing the pinned MW3 presentation build and corresponding source/notices.'
+    if ([string]::IsNullOrWhiteSpace($DgVoodooArchive)) {
+        throw 'Provide DgVoodooArchive containing the exact dgVoodoo2 2.86.5 complete ZIP.'
     }
-    $DDrawCompatBundle = [IO.Path]::GetFullPath($DDrawCompatBundle)
-    $qualifiedPresentationFiles = [ordered]@{
-        'ddraw.dll' = 'b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509'
-        'ddraw-upstream.dll' = 'f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea'
-        'DDrawCompat-LICENSE.txt' = 'd82c3e995bd48af26672368fa72ae397874b707abb012960eaef9987932bd6a8'
-        'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4.zip' = 'b09e5a8360c9b4ab866946919e9224a65ba1100eb4068dcae3aeea319675cc6c'
-        'DDrawCompat-upstream-source-2c9a07fdf9308e2b0b117886a7e363b149ee1bc7.zip' = '3e60984effffe7de7ad6351381765c0d89f2e5d977e4a4c91015da1d424d24be'
-        'DDrawCompat-MW4-Surface-Retry.patch' = 'ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98'
-    }
-    foreach ($entry in $qualifiedPresentationFiles.GetEnumerator()) {
-        $path = Join-Path $DDrawCompatBundle $entry.Key
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Qualified DDrawCompat bundle file is missing: $($entry.Key)" }
-        $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($actual -ne $entry.Value) { throw "DDrawCompat bundle hash mismatch for $($entry.Key): $actual" }
+    $DgVoodooArchive = [IO.Path]::GetFullPath($DgVoodooArchive)
+    if (-not (Test-Path -LiteralPath $DgVoodooArchive -PathType Leaf)) { throw 'The dgVoodoo2 archive does not exist.' }
+    $dgVoodooArchiveHash = (Get-FileHash -LiteralPath $DgVoodooArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($dgVoodooArchiveHash -ne '76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf') {
+        throw "Unsupported dgVoodoo2 archive SHA-256: $dgVoodooArchiveHash"
     }
 
     $installerFiles = @(Get-ChildItem -LiteralPath $publishInstaller -File)
@@ -103,15 +94,35 @@ try {
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-LICENSE.txt') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch') -Destination $runtimeNotices
-    $presentationDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/DDrawCompat') -Force
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'ddraw.dll') -Destination (Join-Path $presentationDestination 'ddraw-vengeance.dll')
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'ddraw-upstream.dll') -Destination (Join-Path $presentationDestination 'ddraw-mercenaries.dll')
-    Copy-Item -LiteralPath (Join-Path $projectRoot 'assets/compatibility/DDrawCompat-MW4.ini') -Destination $presentationDestination
-    Copy-Item -LiteralPath (Join-Path $projectRoot 'assets/compatibility/DDrawCompat-MW4Mercs.ini') -Destination $presentationDestination
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-LICENSE.txt') -Destination $presentationDestination
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4.zip') -Destination $presentationDestination
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-upstream-source-2c9a07fdf9308e2b0b117886a7e363b149ee1bc7.zip') -Destination $presentationDestination
-    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-MW4-Surface-Retry.patch') -Destination $presentationDestination
+    $presentationDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/dgVoodoo2') -Force
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $dgVoodooZip = [IO.Compression.ZipFile]::OpenRead($DgVoodooArchive)
+    try {
+        $qualifiedPresentationFiles = [ordered]@{
+            'MS/x86/DDraw.dll' = '62f1e1b2ac5196f4a74b35b898ba8644322f976026324e2f767a4096bfb58748'
+            'MS/x86/D3DImm.dll' = 'f51507acbb1c5510ab72881eefde5e4dfe6376667546e86ddcf62e6a9ee4923f'
+            'MS/x86/D3D8.dll' = '72bd6b84face40b928dfd5d1ee6d30f2ce8671919d0264b24513e25a2c647fd3'
+            'MS/x86/D3D9.dll' = 'b7401378b2b8e8c18c88a033e77c3ee99f4c7d2ac8cfcc949d79c1dd7fa99767'
+        }
+        foreach ($entry in $qualifiedPresentationFiles.GetEnumerator()) {
+            $sourceEntry = @($dgVoodooZip.Entries | Where-Object { $_.FullName.Replace('\', '/') -ceq $entry.Key })
+            if ($sourceEntry.Count -ne 1) { throw "dgVoodoo2 archive is missing exact entry: $($entry.Key)" }
+            $destination = Join-Path $presentationDestination ([IO.Path]::GetFileName($entry.Key))
+            $input = $sourceEntry[0].Open()
+            $target = [IO.File]::Create($destination)
+            try { $input.CopyTo($target) } finally { $target.Dispose(); $input.Dispose() }
+            $actual = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($actual -ne $entry.Value) { throw "dgVoodoo2 payload hash mismatch for $($entry.Key): $actual" }
+        }
+    } finally {
+        $dgVoodooZip.Dispose()
+    }
+    $dgVoodooProfile = Join-Path $projectRoot 'assets/compatibility/dgVoodoo-MW4.conf'
+    $dgVoodooProfileHash = (Get-FileHash -LiteralPath $dgVoodooProfile -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($dgVoodooProfileHash -ne '454ef91d0efeec8ea5302b57f72258a96736f923ffb34f7e893e245babdfa18e') {
+        throw "Unsupported MW4 dgVoodoo profile SHA-256: $dgVoodooProfileHash"
+    }
+    Copy-Item -LiteralPath $dgVoodooProfile -Destination (Join-Path $presentationDestination 'dgVoodoo.conf')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
 
     if ([string]::IsNullOrWhiteSpace($MercenariesPr1Archive)) {
@@ -194,8 +205,10 @@ try {
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
         'BlackKnightRuntime.dll',
-        'Compatibility/DDrawCompat/ddraw-vengeance.dll',
-        'Compatibility/DDrawCompat/ddraw-mercenaries.dll'
+        'Compatibility/dgVoodoo2/DDraw.dll',
+        'Compatibility/dgVoodoo2/D3DImm.dll',
+        'Compatibility/dgVoodoo2/D3D8.dll',
+        'Compatibility/dgVoodoo2/D3D9.dll'
     )
 
     if ($StageOnly) {

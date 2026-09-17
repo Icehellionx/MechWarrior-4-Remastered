@@ -12,18 +12,12 @@ Black Knight PR1 uses a modified, source-built copy of SafeDiscLoader2 from comm
 
 The upstream elevated `VersionInjector` project is neither built nor distributed. There is no launch helper, process injection, service, driver, or launch-time elevation; the launcher starts `MW4x.exe` directly as the current user.
 
-## DDrawCompat-MW3
+## dgVoodoo2
 
-Vengeance uses a source-built, narrowly patched revision of the project's pinned MechWarrior 3 DDrawCompat fork. Mercenaries uses the clean upstream DDrawCompat v0.7.1 release because field tests showed the MW3-specific fork destabilized its DirectShow movie surfaces. Both preserve DirectDraw/Direct3D 7 behavior while scaling a 1024x768 fullscreen surface into desktop-sized borderless 4:3 presentation. Title-specific activation profiles keep the original startup movies enabled. Black Knight deliberately does not load a wrapper because its app-local PR1 compatibility runtime exits when a `ddraw.dll` proxy is present.
+MechWarrior 4: Vengeance, Black Knight, and Mercenaries use the stock x86 DirectX compatibility DLLs from dgVoodoo2 2.86.5 for modern D3D11 presentation, aspect-preserving scaling, and cursor stability. The project keeps the original cinematic path enabled; interactive cinematic qualification is tracked separately from this notice.
 
-- Project fork: <https://github.com/Icehellionx/DDrawCompat-MW3>
-- Exact tag: `v0.7.1-mw3-r18`
-- Exact commit: `73ac0f47af16a1d28dcda25c3228053beb3eb5f4`
-- Upstream base: DDrawCompat v0.7.1 commit `2c9a07f`
-- License: BSD Zero Clause License (0BSD)
-- Local patch SHA-256: `ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98`
-- Qualified DLL SHA-256: `b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509`
-- Clean upstream project: <https://github.com/narzoul/DDrawCompat>
-- Clean upstream commit: `2c9a07fdf9308e2b0b117886a7e363b149ee1bc7`
-- Mercenaries upstream DLL SHA-256: `f75f0ac48d2782f225c483dc2f1142303a513e8dd8a60793891ade89f64755ea`
-- Installed license, local patch, and exact corresponding source are under `Compatibility/DDrawCompat`.
+- Project: <https://github.com/dege-diosg/dgVoodoo2>
+- Version: 2.86.5
+- Complete evaluated archive SHA-256: `76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf`
+- Redistribution: the official dgVoodoo readme permits individual files to ship with a game or game mod. Standalone redistribution requires the complete ZIP; this project does not distribute dgVoodoo as a general-purpose framework.
+- Exact provenance and component hashes are recorded in `third_party/dgVoodoo2.lock.json`.

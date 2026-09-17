@@ -10,6 +10,7 @@ This workspace builds a preservation-oriented, all-in-one Windows installer and 
 3. Keep installer, launcher UI, game discovery, media extraction, patching, compatibility, manuals, configuration, diagnostics, and uninstall behind clear ownership boundaries.
 4. Prefer evidence from hashes, file manifests, focused tests, smoke installs, real logs, and representative Windows/GPU hardware over folklore.
 5. Never weaken Windows security, disable antivirus, add exclusions, conceal detections, or misrepresent freeware/redistribution status.
+6. Before inventing or patching a compatibility layer, audit established MW4 community recipes and maintained upstream projects. Treat those sources as test oracles, then pin provenance, licensing, hashes, and local evidence before integration.
 
 ## Product scope
 

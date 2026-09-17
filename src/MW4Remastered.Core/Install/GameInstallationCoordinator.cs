@@ -177,7 +177,9 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
 
         if (!string.IsNullOrWhiteSpace(input.PresentationCompatibilityRoot))
         {
-            files.AddRange(LegacyPresentationCompatibility.CreateVengeanceFiles(input.PresentationCompatibilityRoot));
+            files.AddRange(LegacyPresentationCompatibility.CreateVengeanceFiles(
+                input.PresentationCompatibilityRoot,
+                includeBlackKnight: components.Contains("black-knight", StringComparer.OrdinalIgnoreCase)));
         }
 
         return new InstallPlan("vengeance", files, components);

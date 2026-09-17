@@ -1,6 +1,6 @@
 # MechWarrior 4 compatibility ecosystem review
 
-Updated: 2026-09-16. This is the decision gate requested after field testing disproved the current release candidate. Community material is evidence and a source of test oracles; it is not automatically a distributable dependency.
+Updated: 2026-09-17. This is the decision gate requested after field testing disproved the current release candidate. Community material is evidence and a source of test oracles; it is not automatically a distributable dependency.
 
 ## Trigger and corrected baseline
 
@@ -54,9 +54,18 @@ The static resources also expose a semantic mismatch in the current experiment. 
 
 ### dxwrapper and dgVoodoo2
 
-dxwrapper is source-available under a permissive project license with separately documented bundled-component licenses, explicitly lists MechWarrior 4 as compatible, and owns graphics/input/timing concerns rather than installation or DRM. dgVoodoo2 is used by the current Lutris recipes but has different redistribution terms and no inspected MW4-specific source path.
+dxwrapper is source-available under a permissive project license with separately documented bundled-component licenses, but its own DirectDraw-to-D3D9 compatibility table marks MechWarrior 4 `Unknown`. DDrawCompat likewise has no established MW4 compatibility contract; the project's experiment needed different binaries and activation policies for Vengeance and Mercenaries and still forced Black Knight onto a native windowed exception.
 
-Neither wrapper belongs in the product until a clean, correctly installed, officially patched title reaches menus/gameplay without it and a wrapper-specific A/B test demonstrates a remaining renderer/input defect. A renderer wrapper cannot cure an “incorrectly installed” setup-state failure.
+The re-audit found materially stronger dgVoodoo2 convergence:
+
+- Current Lutris retail recipes copy dgVoodoo's x86 `DDraw.dll` and `D3DImm.dll` into Vengeance and Black Knight's `MW4X` directory.
+- Independent Windows 10/11 guides repeatedly use the four `MS\x86` DLLs beside each title executable. A 2026 MW4-specific configuration recommends `SystemHookFlags=cursor`, a 30 FPS wrapper cap for stable menu/mechlab mouse behavior, aspect-preserving scaling, and no watermark.
+- PCGamingWiki records dgVoodoo as the route to forced borderless/fullscreen scaling for Mercenaries. The older Reddit download roundup is useful availability evidence but also records Black Knight mechlab and Mercenaries mission failures in assorted prepacked builds, so those bundles are not adopted.
+- The user-provided ICMX page is protected by an anti-bot challenge in this environment. Indexed community references describe it as a simple Windows-compatible Mercenaries/MekTek package, but its binaries and licensing were not inspectable and therefore are not product inputs.
+
+Exact dgVoodoo2 `2.86.5` archive SHA-256 is `76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf`. Evaluated x86 files are `DDraw.dll` `62f1e1b2…`, `D3DImm.dll` `f51507ac…`, `D3D8.dll` `72bd6b84…`, and `D3D9.dll` `b7401378…`. The official readme permits individual dgVoodoo files to ship with a game or mod and requires the complete ZIP only for standalone redistribution; it forbids bundling as a general multi-application framework. The exact archive/extracted tree passed the project Defender gate.
+
+On disposable copies of the project's actual media-derived trees, stock dgVoodoo loaded in Vengeance, Black Knight, and Mercenaries; each process stayed responsive for 35 seconds with its correct title and no crash log. This is enough to make dgVoodoo the primary presentation candidate and retire further DDrawCompat patching, but not enough to call movies, menus, gameplay, or Alt-Tab qualified. A renderer wrapper still cannot repair setup-state or DRM defects.
 
 ### dinputto8 and recent community practice
 
@@ -84,7 +93,7 @@ The product may retain exact resource extraction and rollback-safe overlay mecha
 - Claims that Vengeance, Black Knight, Mercenaries, or either Mech Pak is launch-qualified.
 - The separate self-contained Black Knight product tree as the default architecture. First reproduce the original shared Vengeance/`MW4X` topology; isolation can be reconsidered only after parity is proven.
 - The shared aggressive command-line profile. Establish per-title minimal baselines first.
-- Addition of a graphics wrapper before installation-state parity.
+- Any further custom DDrawCompat patching or another DDrawCompat-based setup handoff. Retain it only as rollback/A-B evidence while the established dgVoodoo path is qualified.
 
 ### Reject as distributable inputs
 
@@ -101,7 +110,7 @@ Each stage must fail or pass independently; no later stage may mask an earlier o
 4. **Minimal launch:** Use each title's documented working directory and only its correct autoconfig bypass if needed (`-noautoconfig` versus Black Knight `-noautoconfigx`). No wrapper and no shared bundle of switches.
 5. **Setup-state proof:** Treat any EULA, autoconfig, incorrect-install, CD request, or error dialog as failure. Capture window class/title/text, process exit, and registry/file traces; a responsive process is insufficient.
 6. **Disc-check layer:** After setup-state parity, A/B test the exact media-derived transform against SafeDiscShim plus original media and against historical replacement executables as local oracles. Do not redistribute the latter.
-7. **Renderer/input layer:** Only after main menu and Instant Action load, A/B test native rendering, dxwrapper, and if licensing permits dgVoodoo2. Record menus, mission load, alt-tab, fullscreen/windowed, mouse, joystick, audio, movies, and frame pacing separately.
+7. **Renderer/input layer:** Integrate exact-hash dgVoodoo2 as the primary candidate and compare it with the retained native/DDrawCompat evidence. Record every startup movie, menus, pilot creation, mission load, Alt-Tab, 4:3 fullscreen/windowed scaling, mouse, joystick, audio, and frame pacing separately. Evaluate `dinputto8` only for a reproduced input defect; its open MW4 issue records second-mission and in-mission binding crashes.
 8. **Mech Pak entitlement:** Compare clean pre/post official SafeCast repair state in an isolated reference environment, then reproduce only the minimum entitlement effect and verify logos, chassis, variants, Instant Action, and Black Knight install-order behavior.
 9. **Package gate:** A compiled setup must open, collect media, install, reach all selected title menus and one mission, uninstall owned files while preserving saves, and pass final-tree Defender scans before it is offered for field testing.
 

@@ -75,6 +75,9 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [ ] Establish clean baselines for video, audio, input, movies, configuration, saves, and multiplayer behavior.
 - [x] Pin, source-build, patch narrowly, and record the 0BSD DDrawCompat-MW3 r18 revision used for MW4 borderless presentation; two clean qualified builds are byte-identical.
 - [x] Resolve startup DirectShow movie-surface interoperability without a system codec pack: Vengeance uses the qualified fork with `keepvidmem(1)` and Mercenaries uses clean upstream v0.7.1 with `noactivateapp(0)`.
+- [x] Re-audit current MW4 community recipes and maintained compatibility projects; identify dgVoodoo2 as the convergent Windows/Lutris path, record exact 2.86.5 archive and x86 DLL hashes/terms, pass Defender, and complete bounded three-title load smokes.
+- [x] Replace the DDrawCompat release payload with an exact-hash dgVoodoo2 import/profile and preserve a collision-safe, rollback-capable owned-install migration path for existing installs.
+- [ ] Interactively qualify the exact staged dgVoodoo profile across all three startup movies, menus, Alt-Tab, pilot creation, and one mission before building a user-facing setup.
 - [ ] Verify Black Knight startup video, all in-engine cinematics, and real Alt-Tab return using the final title-specific package.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process/window launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Dialog-aware menu/gameplay confirmation remains open.
@@ -99,10 +102,10 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 
 ```text
 User-facing goal: ship one media-first installer whose launcher plays every original cinematic and reaches stable menu/gameplay in each installed title.
-Owning boundary: title-specific presentation payloads/profiles, launch arguments, owned manifests, packaging provenance, and dialog-aware runtime proof.
-Smallest verifiable slice: stage the paired Vengeance/Mercenaries DDrawCompat payloads, rebuild setup, then prove each intro reaches its real menu and returns from Alt-Tab; verify Black Knight's intro separately on its no-proxy windowed path.
-Focused evidence: exact wrapper/profile hashes, screenshots of live cinematic and menu frames, empty game error logs, process/window state, and real Alt-Tab return.
-Smoke/regression evidence: Vengeance and Mercenaries intros are visually proven only in direct installed-tree A/B tests; final-package menu, Alt-Tab, pilot creation, and missions remain open.
-Rollback or disable path: retain the last qualified title-specific payloads; never restore `/gosnovideo` as a release default or introduce injectors, opaque no-CD files, codec packs, or Defender exclusions.
+Owning boundary: exact-hash dgVoodoo import/profile, launch arguments, owned manifests/migration, setup-owned firewall rules, packaging provenance, and dialog-aware runtime proof.
+Smallest verifiable slice: stage stock dgVoodoo2 2.86.5 x86 DirectX files plus the MW4 cursor/30 FPS/aspect profile for all three executable directories, then prove each original intro reaches its real menu and returns from Alt-Tab before rebuilding setup.
+Focused evidence: exact archive/DLL/profile hashes, loaded-module paths, screenshots of live cinematic and menu frames, empty game error logs, pilot creation, one mission per title, and real Alt-Tab return.
+Smoke/regression evidence: stock dgVoodoo loaded in all three disposable media-derived trees and each stayed responsive for 35 seconds; cinematic/menu/gameplay capture remains the next gate.
+Rollback or disable path: retain the last title-specific DDrawCompat payloads only as A/B evidence; never restore `/gosnovideo` as a release default or introduce injectors, opaque no-CD files, codec packs, or Defender exclusions.
 Hardware coverage gap: only this NVIDIA/Windows multi-monitor device is available; gameplay, input, audio completeness, saves, multiplayer, and additional GPUs remain unqualified.
 ```

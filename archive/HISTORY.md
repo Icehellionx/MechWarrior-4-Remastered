@@ -2,6 +2,15 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## Established MW4 presentation-path re-audit — 2026-09-17
+
+- Audited the user-provided ICMX and Reddit references plus current Lutris recipes, PCGamingWiki, dgVoodoo, dxwrapper, DDrawCompat, Nexus MW4 configuration guidance, and dinputto8 evidence. The ICMX page itself remained behind an anti-bot challenge; indexed references were treated as discovery evidence, not binary provenance.
+- Replaced the assumption that custom DDrawCompat work was the natural endpoint: established MW4 practice converges on dgVoodoo2, while DDrawCompat/dxwrapper publish no qualified MW4 contract.
+- Recorded dgVoodoo2 2.86.5 archive SHA-256 `76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf`, exact x86 DLL hashes, official game/mod redistribution permission, and the recommended MW4 cursor hook/30 FPS/aspect-preserving profile. The complete evaluation tree passed current Defender.
+- On disposable copies of the actual media-derived trees, Vengeance, Black Knight, and Mercenaries all loaded the stock wrapper, retained their correct titles, and remained responsive for bounded 35-second smokes without crash logs. This retires further DDrawCompat patching but does not substitute for interactive movies/menu/gameplay/Alt-Tab qualification.
+- Integrated the exact wrapper/profile into internal stage `0.6.18`, added an ownership-safe DDrawCompat-to-dgVoodoo manifest migration, repeated bounded launches for all three titles with the staged profile, passed release-tree policy, and passed current Defender. No setup was promoted because interactive presentation qualification remains open.
+- Identified the first-run Windows Defender Firewall network prompt as a separate setup-owned multiplayer decision, not an antivirus detection or renderer failure.
+
 ## Startup movie suppression retired — 2026-09-17
 
 - Field reproduction tied Vengeance's black/flickering intro and `DDERR_SURFACELOST` to the wrapper activation profile, not a missing codec.

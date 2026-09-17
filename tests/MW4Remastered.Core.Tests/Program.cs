@@ -360,9 +360,9 @@ try
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
     var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosNoJoystick" };
-    var blackKnightArguments = new[] { "-window", "-noautoconfigx", "/gosNoJoystick" };
+    var blackKnightArguments = new[] { "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
-        "Vengeance requests a 1024x768 fullscreen surface for DDrawCompat borderless presentation");
+        "Vengeance requests a 1024x768 fullscreen surface for dgVoodoo presentation");
     var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
     Check(vengeanceOptions.Contains("[graphics options]", StringComparison.OrdinalIgnoreCase) &&
           vengeanceOptions.Contains("screenwidth=1024", StringComparison.OrdinalIgnoreCase) &&
@@ -406,7 +406,7 @@ try
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(blackKnightLaunchStatus);
     Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
         processStarter.LastStart.ArgumentList.SequenceEqual(blackKnightArguments),
-        "Black Knight starts directly with its title-specific minimal windowed fallback and no process-injection helper");
+        "Black Knight starts directly through dgVoodoo fullscreen presentation with no process-injection helper");
     Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Black Knight receives its title-specific required optionsx graphics page");
 
@@ -819,6 +819,7 @@ MediaSourceSessionSmoke.Run(failures);
 MediaSelectionSessionSmoke.Run(failures);
 MechPakResourceOverlayPlanSmoke.Run(failures);
 OwnedInstallOverlayTransactionSmoke.Run(failures);
+OwnedInstallFileReplacementTransactionSmoke.Run(failures);
 
 if (failures.Count > 0)
 {

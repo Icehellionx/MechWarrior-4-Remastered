@@ -1,6 +1,6 @@
 # Compatibility qualification matrix
 
-Updated: 2026-09-16.
+Updated: 2026-09-17.
 
 This matrix separates protection removal, launch privilege, and actual game-runtime qualification. A title is not release-ready merely because its process starts.
 
@@ -22,6 +22,7 @@ This matrix separates protection removal, launch privilege, and actual game-runt
 
 ## Evaluated upstream
 
+- dgVoodoo2: official project `https://github.com/dege-diosg/dgVoodoo2`, evaluated binary release `2.86.5`; preserved complete ZIP SHA-256 `76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf`. Official redistribution terms permit individual files with a game/mod. Exact x86 hashes: `DDraw.dll` `62f1e1b2ac5196f4a74b35b898ba8644322f976026324e2f767a4096bfb58748`, `D3DImm.dll` `f51507acbb1c5510ab72881eefde5e4dfe6376667546e86ddcf62e6a9ee4923f`, `D3D8.dll` `72bd6b84face40b928dfd5d1ee6d30f2ce8671919d0264b24513e25a2c647fd3`, `D3D9.dll` `b7401378b2b8e8c18c88a033e77c3ee99f4c7d2ac8cfcc949d79c1dd7fa99767`. Defender passed. All three current media-derived executables loaded the wrapper and survived bounded launch smokes; interactive video/menu/gameplay/Alt-Tab qualification remains open.
 - SafeDiscLoader2: `https://github.com/nckstwrt/SafeDiscLoader2`, GPL-3.0, evaluated release `v1.3` / commit `f27286a363aa675a0422141cb96fc8619cf8b9d8`, release ZIP SHA-256 `dd36f3b7c4eeaa022f6728f0f69feec09d76c8b892db1c614c8ff02d269d09a7`.
 - Suspended patched source build: two clean local builds from upstream commit `f27286a363aa675a0422141cb96fc8619cf8b9d8` plus local patch SHA-256 `286de586…` were byte-identical; normalized `version.dll` is 82,944 bytes with SHA-256 `ff530c8144ebf82b3f32951c8cd3b1085b6527b46d55348bb1c7f8ef7f83296a`. It targeted the retail Black Knight revision and is not a current package input.
 - dinputto8: `https://github.com/elishacloud/dinputto8`, zlib-licensed DirectInput 1-7 to DirectInput 8 adapter; recent MW4 guidance places it beside all three executables. It is an unqualified A/B-test candidate after setup/DRM parity, not a current dependency.

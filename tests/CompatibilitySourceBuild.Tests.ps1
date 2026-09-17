@@ -9,6 +9,7 @@ $patchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnigh
 $runtimePatchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch'
 $presentationBuildPath = Join-Path $root 'tools/compatibility/build-ddrawcompat-mw4.ps1'
 $presentationLockPath = Join-Path $root 'third_party/DDrawCompat-MW3.lock.json'
+$currentPresentationLockPath = Join-Path $root 'third_party/dgVoodoo2.lock.json'
 
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $script = Get-Content -LiteralPath $scriptPath -Raw
@@ -19,6 +20,7 @@ $patchHash = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash.ToLow
 $runtimePatchHash = (Get-FileHash -LiteralPath $runtimePatchPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $presentationBuild = Get-Content -LiteralPath $presentationBuildPath -Raw
 $presentationLock = Get-Content -LiteralPath $presentationLockPath -Raw | ConvertFrom-Json
+$currentPresentationLock = Get-Content -LiteralPath $currentPresentationLockPath -Raw | ConvertFrom-Json
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -57,5 +59,8 @@ Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.mw4Patc
 Assert-True ($presentationBuild -match 'git .* archive --format=zip') 'Presentation build must emit exact corresponding source.'
 Assert-True ($presentationBuild -match 'UpstreamDll' -and $presentationBuild -match [regex]::Escape($presentationLock.productBindings.mercenaries.dllSha256)) 'Presentation assembly must exact-hash the clean upstream Mercenaries release DLL.'
 Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.productBindings.mercenaries.commit) -and $presentationBuild -match 'DDrawCompat-upstream-source') 'Presentation assembly must archive the exact clean upstream source used by Mercenaries.'
+Assert-True ($currentPresentationLock.upstream -eq 'https://github.com/dege-diosg/dgVoodoo2' -and $currentPresentationLock.tag -eq 'v2.86.5') 'The current presentation layer must record its official upstream and exact release tag.'
+Assert-True ($currentPresentationLock.redistribution -match 'individual dgVoodoo files' -and @($currentPresentationLock.files.PSObject.Properties).Count -eq 4) 'The current presentation lock must record the applicable redistribution boundary and every shipped x86 wrapper file.'
+Assert-True ((@($currentPresentationLock.productBindings) -join ',') -eq 'vengeance,black-knight,mercenaries') 'The current presentation lock must bind the qualified wrapper to all three products.'
 
 Write-Host 'Compatibility source-build contract tests passed.'

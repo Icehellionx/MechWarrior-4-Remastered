@@ -114,18 +114,15 @@ public sealed class LaunchOrchestrator
     {
         if (productId == "black-knight")
         {
-            // Black Knight's source-built SafeDisc PR1 runtime exits with FEEDFACE
-            // when any app-local ddraw proxy is present. Native exclusive mode also
-            // raises a hardware error on current Windows, so keep this title on its
-            // independently proven minimal windowed path until a compatible scaler exists.
-            startInfo.ArgumentList.Add("-window");
+            // Black Knight uses the expansion-specific AutoConfig bypass. dgVoodoo
+            // owns modern fullscreen presentation beside MW4X.exe, so the launcher
+            // must not force the old native windowed fallback.
             startInfo.ArgumentList.Add("-noautoconfigx");
             startInfo.ArgumentList.Add("/gosNoJoystick");
             return;
         }
 
-        // Let DDrawCompat virtualize the game's fullscreen request as a normal
-        // borderless presentation. The desktop never enters exclusive mode.
+        // Let dgVoodoo virtualize the game's fullscreen request through D3D11.
         startInfo.ArgumentList.Add("-32");
         startInfo.ArgumentList.Add("-noautoconfig");
         startInfo.ArgumentList.Add("-f");
