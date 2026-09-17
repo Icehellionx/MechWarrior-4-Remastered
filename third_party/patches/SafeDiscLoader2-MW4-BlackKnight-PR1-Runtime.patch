@@ -2,7 +2,7 @@ diff --git a/src/version.cpp b/src/version.cpp
 index f33c3d5..ce719c8 100644
 --- a/src/version.cpp
 +++ b/src/version.cpp
-@@ -1996,10 +1996,49 @@ HMODULE WINAPI LoadLibraryA_27and28_Hook(LPCSTR lpLibFileName)
+@@ -1996,10 +1996,50 @@ HMODULE WINAPI LoadLibraryA_27and28_Hook(LPCSTR lpLibFileName)
  /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
  
  DWORD OEPAddress = 0;
@@ -19,7 +19,8 @@ index f33c3d5..ce719c8 100644
 +	PIMAGE_DOS_HEADER dos = (PIMAGE_DOS_HEADER)imageBase;
 +	PIMAGE_NT_HEADERS nt = (PIMAGE_NT_HEADERS)(imageBase + dos->e_lfanew);
 +	if (dos->e_magic != IMAGE_DOS_SIGNATURE || nt->Signature != IMAGE_NT_SIGNATURE ||
-+		nt->OptionalHeader.SizeOfImage != 0x4A8000)
++		(nt->OptionalHeader.SizeOfImage != 0x494000 &&
++		 nt->OptionalHeader.SizeOfImage != 0x4A8000))
 +		return false;
 +
 +	DWORD searchStart = imageBase + 0x1000;

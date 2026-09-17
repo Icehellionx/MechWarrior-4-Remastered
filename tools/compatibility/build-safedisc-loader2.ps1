@@ -14,7 +14,7 @@ $expectedCommit = 'f27286a363aa675a0422141cb96fc8619cf8b9d8'
 $expectedLicenseHash = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
 $expectedProjectHash = '0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13'
 $expectedPatchHash = switch ($Mode) {
-    'Pr1Runtime' { 'ccf52d832d2baf696b83d34f6f613950685171daf0ab16246cd703d4e91775a0' }
+    'Pr1Runtime' { 'e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce' }
     default { '286de58683edd45065f884b201109815b7252a6d8b3baf896e0a4ea68b03dadb' }
 }
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
