@@ -4,6 +4,7 @@ Updated: 2026-09-17. This is the decision gate requested after field testing dis
 
 ## Trigger and corrected baseline
 
+- Later crash/event evidence disproved the apparent no-helper app-local Black Knight route: SafeDiscLoader2 hooks child creation and injects its DLL into the temporary protected process, where Windows recorded the access violation. The first five-section static prototype was also incomplete: its import APIs were reordered into non-equivalent IAT slots and 32 direct branches still targeted the removed SafeDisc tail, producing the focused-transition fault at `0x008A3504`. The revised setup-only capture/static transform reproduces the established descriptor/FirstThunk ordering, repairs all 127 qualified tail branches, and rejects any residual direct executable branch into the removed range. It emits deterministic `MW4x.exe` `7761c41d…` without shipping or requiring the historical comparison executable; normal launch contains no capture DLL or injection path.
 - Post-review field evidence narrowed the current Vengeance/Black Knight failures to extraction parity. The original Vengeance setup table renames 13 ISO paths; literal copying left `BURNLO_1.AVI` where the shared shell requests `Burnloop_lr_15.avi`. Vengeance logged that exact miss after its cinematic. Black Knight's validated 31.88-second MPEG-1/MP2 intro then exited at the same menu transition because the expansion reuses Vengeance's shared content. This evidence supersedes further codec or renderer guessing for that boundary.
 - Setup `0.5.7` is invalid. It fails at startup with Inno Setup `Runtime error (at 36:461): Could not call proc.` The script creates `LicensePage` only from the Add Media click handler but dereferences the page from global navigation logic. That packaging defect is independent of MW4 runtime compatibility.
 - Earlier “responsive process/window plus empty log” smokes were false-positive gates. The user's field run showed that the legacy `STOP: MechWarrior 4 has been incorrectly installed` dialog can remain responsive and produce an empty log. No title is currently launch-qualified.
@@ -31,7 +32,7 @@ This is an oracle, not a product dependency. The repository has no detected root
 
 ### Official point releases already present on user media
 
-The local Inner Sphere and Clan discs contain both official Vengeance Patch 3 and Black Knight Point Release 1 RTP payloads and patch engines. The current product applies Vengeance Patch 3 but does not reproduce Black Knight PR1. The supplied Mercenaries fix archive contains the official-looking `mercpr1.exe` beside a separate no-CD directory; those components must be inventoried and separated before use.
+The local Inner Sphere and Clan discs contain both official Vengeance Patch 3 and Black Knight Point Release 1 RTP payloads and patch engines. The current product applies both official updates in contained scratch before its title-specific transforms. The supplied Mercenaries fix archive contains the official `mercpr1.exe` beside a separate no-CD directory; only the qualified official RTP components are accepted.
 
 Exact local official inputs are now separated from the surrounding community archives:
 
@@ -116,6 +117,8 @@ Each stage must fail or pass independently; no later stage may mask an earlier o
 9. **Package gate:** A compiled setup must open, collect media, install, reach all selected title menus and one mission, uninstall owned files while preserving saves, and pass final-tree Defender scans before it is offered for field testing.
 
 ## Auxiliary review disposition
+
+The 2026-09-17 static-v3/process-lifetime adversary identified the generic `Process.Start`/job-assignment race. It is accepted as hardening debt, not a reproduced failure: the actual SafeDisc child appeared several seconds after assignment and the complete coordinator left no child or capture artifact. Suggestions about inherited children and cleanup ordering are already addressed by job inheritance, kill-on-close disposal before exact-path deletion, and the full residue smoke. Import nondeterminism and packaging leakage are already guarded by exact ordered metadata, two-capture equality, output hash, manifest inventory, and release allowlists. Its indirect-branch concern is unsubstantiated for the qualified image but remains covered by focused runtime qualification rather than claimed away by the direct-branch scan.
 
 The 2026-09-17 filename-migration adversary found no demonstrated security defect and correctly requested explicit shared-tree component preservation coverage; that assertion was added. Its duplicate-source-name concern is rejected because media layouts are exact-hash/structure recognized, and its manual hardware-error intervention suggestion is rejected in favor of the existing automatic atomic rollback. The local adviser route returned no final text after one automatic and one explicit-local attempt, so it contributed no finding and no remote/private data was sent.
 

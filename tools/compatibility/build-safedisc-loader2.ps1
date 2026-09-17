@@ -5,7 +5,7 @@ param(
     [Parameter(Mandatory)]
     [string]$OutputDirectory,
     [string]$MSBuildPath,
-    [ValidateSet('Retail', 'Pr1Runtime')]
+    [ValidateSet('Retail', 'Pr1Capture', 'Pr1Runtime')]
     [string]$Mode = 'Retail'
 )
 
@@ -14,11 +14,13 @@ $expectedCommit = 'f27286a363aa675a0422141cb96fc8619cf8b9d8'
 $expectedLicenseHash = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
 $expectedProjectHash = '0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13'
 $expectedPatchHash = switch ($Mode) {
+    'Pr1Capture' { 'e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6' }
     'Pr1Runtime' { 'e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce' }
     default { '286de58683edd45065f884b201109815b7252a6d8b3baf896e0a4ea68b03dadb' }
 }
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $patchName = switch ($Mode) {
+    'Pr1Capture' { 'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch' }
     'Pr1Runtime' { 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch' }
     default { 'SafeDiscLoader2-MW4-BlackKnight.patch' }
 }
@@ -128,7 +130,7 @@ finally {
 
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Path $output -Force | Out-Null
-$outputDllName = 'version.dll'
+$outputDllName = if ($Mode -eq 'Pr1Capture') { 'BlackKnightPr1Capture.dll' } else { 'version.dll' }
 $outputDll = Join-Path $output $outputDllName
 Copy-Item -LiteralPath $builtDll -Destination $outputDll -Force
 Copy-Item -LiteralPath $license -Destination (Join-Path $output 'SafeDiscLoader2-LICENSE.txt') -Force

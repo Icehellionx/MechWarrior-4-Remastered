@@ -35,7 +35,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Prove official Vengeance Patch 3 applies directly to retail media, apply it through a constrained source-owned host, retain only exact qualified outputs, and remove the obsolete C-Dilla and ARTP imports/call sites from the generated executable.
 - [x] Recognize the exact official Mercenaries PR1 updater from the supported fix ZIP, exclude its adjacent historical no-CD payload, apply PR1 in contained scratch, and derive an exact-hash source-owned `50.07.01.2105` executable before commit.
 - [x] Make original Mercenaries media sufficient for the internal AIO flow by build-time extracting and hash-locking only the two qualified official PR1 payload files; public redistribution rights remain an explicit release gate.
-- [x] Retire the invalid static PR1 rebuild and replace it with an exact-hash, source-built app-local runtime for official `45.30.04.1908`; hosted build, Defender, and repeated fresh full-coordinator PR1 launch smokes pass. Reject retail until its separate Vengeance Patch 2 prerequisite is implemented.
+- [x] Remove the failed app-local PR1 runtime. Apply official `45.30.04.1908`, capture its decrypted user-media image only during setup with the exact source-built GPL DLL, reproduce the established PR1 import-slot layout, repair all 127 tail branches, reject residual references to the removed SafeDisc tail, and emit deterministic static executable `7761c41d…`; a production-shaped 60-second launch crossed the prior focused-transition failure without runtime compatibility files. Reject retail until its separate Vengeance Patch 2 prerequisite is implemented.
 - [x] Apply official Black Knight PR1 and Mercenaries PR1 in contained reference trees and retain exact pre/post manifests as ignored evidence.
 - [x] Replace separate Vengeance/Black Knight destinations with one atomic schema-2 Vengeance-family manifest and preserve the original `MW4X` subdirectory.
 - [x] Remove the superseded retail Black Knight proxy DLL from production package staging and constrain the RTP host to the three qualified official-update hashes.
@@ -55,7 +55,7 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 - [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
 - [x] Reproduce and fix the field-confirmed incorrect-install failures; candidate `0.6.7` installed and reached the real menu in all three titles.
-- [ ] Field-qualify pilot creation after setup seeds and the bounded launch guard maintains each title's actual INI location; Vengeance/Mercenaries borderless 4:3 and all-title Alt-Tab are locally proven, while Black Knight intentionally remains windowed. Post-UAC topmost Setup behavior remains a user-visible gate.
+- [ ] Field-qualify pilot creation after setup seeds and the bounded launch guard maintains each title's actual INI location. The final dgVoodoo profile must prove aspect-preserving fullscreen/borderless presentation and Alt-Tab for all three titles; Black Knight is no longer intentionally forced windowed. Post-UAC topmost Setup behavior remains a user-visible gate.
 
 ## 4. Manuals
 
@@ -92,7 +92,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 
 Outcome: a clean machine can install, launch, repair, and uninstall a trustworthy package.
 
-- [ ] Build a byte-reproducible per-user setup only after the official PR1 transforms and runtime gate are complete; the superseded Black Knight loader input has been removed.
+- [ ] Build a byte-reproducible per-user setup after the revised setup-only Black Knight capture/static transform passes full worker cleanup, Defender, repair/uninstall, and interactive menu/gameplay gates; the superseded launch-time loader is removed.
 - [ ] Smoke every available game/pack/media combination.
 - [x] Preserve saves/configuration through both ownership-safe game removal and standard shell-package uninstall smoke paths.
 - [x] Permit reinstall over manifestless residue preserved by safe uninstall without deleting user data; reject owned-path collisions without mutation and retain setup failure logs after the wizard closes.
@@ -104,10 +104,10 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 
 ```text
 User-facing goal: ship one media-first installer whose launcher plays every original cinematic and reaches stable menu/gameplay in each installed title.
-Owning boundary: exact-hash dgVoodoo import/profile, launch arguments, owned manifests/migration, setup-owned firewall rules, packaging provenance, and dialog-aware runtime proof.
-Smallest verifiable slice: apply the original Vengeance setup-table filename mapping to a verified disposable installed tree, then prove Vengeance and Black Knight both cross their original intro-to-menu boundary while Mercenaries retains its qualified baseline.
-Focused evidence: exact old/new path and content hashes, manifest migration/rollback assertions, absence of the former `Burnloop_lr_15.avi` error, positive menu capture, pilot creation, one mission per title, and real Alt-Tab return.
-Smoke/regression evidence: Vengeance's log identifies the missing long filename; Black Knight exits at the matching 31.88-second intro boundary; the 13-entry fresh-plan and owned-upgrade mapping passes core smoke, installer build, user-flow, and presentation contracts. Interactive migrated-tree confirmation remains open.
+Owning boundary: Black Knight setup-only image capture, deterministic static PE/import normalization, exact-hash dgVoodoo import/profile, launch arguments, owned manifests/migration, packaging provenance, and dialog-aware runtime proof.
+Smallest verifiable slice: build the package from the now-complete official-PR1 capture/static coordinator path, prove no capture artifact enters its staged or installed tree, scan it, then cross Black Knight's original intro-to-menu boundary with the final launch profile.
+Focused evidence: deterministic output hash from independent captures, five-section/clean-import PE assertions, scratch cleanup, absence of `version.dll` in the installed tree, positive menu capture, pilot creation, one mission, and real Alt-Tab return.
+Smoke/regression evidence: candidate `04fe9acf…` is rejected after a focused transition reached omitted SafeDisc target `0x008A3504`. Two different mapped images normalize to the same 3,743,744-byte v3 output `7761c41d…`; a production-shaped tree with accepted EULA, corrected filenames, dgVoodoo, videos enabled, and `-noautoconfigx /gosNoJoystick` stayed correctly titled and responsive for 60 seconds. The complete Vengeance + Inner Sphere + Black Knight coordinator installed/exact-verified 387 owned files, leaked no capture artifact or temporary child, and uninstalled every owned file while preserving an unowned save. Final internal setup `0.6.20` and its 21-file unpacked payload passed release-tree policy and current Defender. Interactive focused intro/menu proof remains open.
 Rollback or disable path: retain the last title-specific DDrawCompat payloads only as A/B evidence; never restore `/gosnovideo` as a release default or introduce injectors, opaque no-CD files, codec packs, or Defender exclusions.
 Hardware coverage gap: only this NVIDIA/Windows multi-monitor device is available; gameplay, input, audio completeness, saves, multiplayer, and additional GPUs remain unqualified.
 ```

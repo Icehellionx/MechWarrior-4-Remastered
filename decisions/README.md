@@ -13,3 +13,4 @@ Use one numbered Markdown file per durable decision. Include status, date, conte
 - [0009 — Per-user Inno Setup package](0009-per-user-inno-package.md)
 - [0010 — Preserve the original product dependency order](0010-original-product-dependency-order.md)
 - [0011 — Shared Vengeance family tree and official update chain](0011-shared-vengeance-family-and-official-updates.md)
+- [0012 — Black Knight setup-only capture and static runtime image](0012-black-knight-setup-capture-static-image.md)

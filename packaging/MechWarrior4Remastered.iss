@@ -39,8 +39,8 @@ VersionInfoVersion={#AppVersion}
 Source: "{#PayloadRoot}\MW4RemasteredInstallWorker.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredRtpPatchHost.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
-Source: "{#PayloadRoot}\BlackKnightRuntime.dll"; DestDir: "{app}"; Flags: ignoreversion notimestamp
-Source: "{#PayloadRoot}\Compatibility\BlackKnightRuntime\*"; DestDir: "{app}\Compatibility\BlackKnightRuntime"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\BlackKnightPr1Capture.dll"; DestDir: "{app}"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\Compatibility\BlackKnightPr1Capture\*"; DestDir: "{app}\Compatibility\BlackKnightPr1Capture"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Compatibility\dgVoodoo2\*"; DestDir: "{app}\Compatibility\dgVoodoo2"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.pdf"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp

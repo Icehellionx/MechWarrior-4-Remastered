@@ -200,7 +200,7 @@ public sealed class GameInstallationCoordinator
     private readonly IBlackKnightEulaTransform blackKnightEulaTransform;
     private readonly IBlackKnightPr1Transform blackKnightPr1Transform;
     private readonly string patchHostPath;
-    private readonly string blackKnightRuntimeDllPath;
+    private readonly string blackKnightCaptureDllPath;
 
     public GameInstallationCoordinator()
         : this(new GameInstallPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
@@ -222,7 +222,7 @@ public sealed class GameInstallationCoordinator
         string? patchHostPath = null,
         IBlackKnightEulaTransform? blackKnightEulaTransform = null,
         IBlackKnightPr1Transform? blackKnightPr1Transform = null,
-        string? blackKnightRuntimeDllPath = null)
+        string? blackKnightCaptureDllPath = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
@@ -236,7 +236,7 @@ public sealed class GameInstallationCoordinator
         this.blackKnightEulaTransform = blackKnightEulaTransform ?? new BlackKnightEulaTransform();
         this.blackKnightPr1Transform = blackKnightPr1Transform ?? new OfficialBlackKnightPr1Transform();
         this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
-        this.blackKnightRuntimeDllPath = Path.GetFullPath(blackKnightRuntimeDllPath ?? Path.Combine(AppContext.BaseDirectory, "BlackKnightRuntime.dll"));
+        this.blackKnightCaptureDllPath = Path.GetFullPath(blackKnightCaptureDllPath ?? Path.Combine(AppContext.BaseDirectory, "BlackKnightPr1Capture.dll"));
     }
 
     public GameInstallationResult Install(
@@ -315,7 +315,7 @@ public sealed class GameInstallationCoordinator
                     blackKnightPr1Scratch = Path.Combine(parent, $".black-knight-pr1-{Guid.NewGuid():N}");
                     if (packRoots.Length > 0)
                     {
-                        Report(GameInstallationStage.Transforming, "Applying official Black Knight Point Release 1 and its app-local compatibility runtime.");
+                        Report(GameInstallationStage.Transforming, "Applying official Black Knight Point Release 1 and reconstructing its static compatibility executable.");
                         var aggregatePlan = plans.Build(vengeance, new PreparedInstallInputs(
                             vengeanceExecutable,
                             vengeancePatch3Payload,
@@ -330,7 +330,7 @@ public sealed class GameInstallationCoordinator
                             blackKnightPatchMedia
                                 ?? throw new InvalidDataException("Selected Mech Pak media does not contain the qualified official Black Knight Point Release 1 payload."),
                             patchHostPath,
-                            blackKnightRuntimeDllPath,
+                            blackKnightCaptureDllPath,
                             blackKnightPr1Scratch,
                             cancellationToken);
                         if (!pr1.TransformId.Equals(OfficialBlackKnightPr1Transform.TransformId, StringComparison.Ordinal) &&
@@ -347,7 +347,7 @@ public sealed class GameInstallationCoordinator
                             BlackKnightCompatibilityFiles: []));
                         blackKnightCompatibilityFiles = blackKnightPr1Transform.Transform(
                             aggregatePlan, string.Empty, vengeance.BlackKnightDiscRoot,
-                            patchHostPath, blackKnightRuntimeDllPath, blackKnightPr1Scratch,
+                            patchHostPath, blackKnightCaptureDllPath, blackKnightPr1Scratch,
                             cancellationToken).InstallFiles;
                     }
                 }

@@ -4,5 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MW4Remastered.Core.Tests" />
+    <EmbeddedResource Include="..\..\assets\compatibility\black-knight-pr1-static-transform.json"
+                      LogicalName="MW4Remastered.Core.BlackKnightPr1StaticTransform.json" />
   </ItemGroup>
 </Project>

@@ -5,7 +5,7 @@ param(
     [string]$Version = '0.1.0',
     [string]$InnoCompilerPath,
     [string]$SafeDiscLoader2SourceRoot,
-    [string]$BlackKnightRuntimeBundle,
+    [string]$BlackKnightCaptureBundle,
     [string]$DgVoodooArchive,
     [string]$MercenariesPr1Archive,
     [switch]$StageOnly
@@ -22,10 +22,10 @@ $payload = Join-Path $scratch 'payload'
 $publishInstaller = Join-Path $scratch 'installer'
 $publishLauncher = Join-Path $scratch 'launcher'
 $publishPatchHost = Join-Path $scratch 'patch-host'
-$runtimeBundle = if ([string]::IsNullOrWhiteSpace($BlackKnightRuntimeBundle)) {
-    Join-Path $scratch 'black-knight-runtime-bundle'
+$captureBundle = if ([string]::IsNullOrWhiteSpace($BlackKnightCaptureBundle)) {
+    Join-Path $scratch 'black-knight-capture-bundle'
 } else {
-    [IO.Path]::GetFullPath($BlackKnightRuntimeBundle)
+    [IO.Path]::GetFullPath($BlackKnightCaptureBundle)
 }
 try {
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
@@ -41,26 +41,26 @@ try {
         --configuration Release --runtime win-x86 --self-contained true `
         -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishPatchHost
     if ($LASTEXITCODE -ne 0) { throw "Patch host publish failed with exit code $LASTEXITCODE." }
-    if ([string]::IsNullOrWhiteSpace($BlackKnightRuntimeBundle)) {
+    if ([string]::IsNullOrWhiteSpace($BlackKnightCaptureBundle)) {
         if ([string]::IsNullOrWhiteSpace($SafeDiscLoader2SourceRoot)) {
-            throw 'Provide either SafeDiscLoader2SourceRoot for a source build or BlackKnightRuntimeBundle for an exact qualified hosted build.'
+            throw 'Provide either SafeDiscLoader2SourceRoot for a source build or BlackKnightCaptureBundle for an exact qualified hosted build.'
         }
         & (Join-Path $projectRoot 'tools/compatibility/build-safedisc-loader2.ps1') `
-            -SourceRoot $SafeDiscLoader2SourceRoot -OutputDirectory $runtimeBundle -Mode Pr1Runtime
-        if ($LASTEXITCODE -ne 0) { throw "Black Knight runtime DLL build failed with exit code $LASTEXITCODE." }
+            -SourceRoot $SafeDiscLoader2SourceRoot -OutputDirectory $captureBundle -Mode Pr1Capture
+        if ($LASTEXITCODE -ne 0) { throw "Black Knight capture DLL build failed with exit code $LASTEXITCODE." }
     }
 
-    $qualifiedRuntimeFiles = [ordered]@{
-        'version.dll' = 'f534b642defe15ea234988ba0b3b8f1a467aa76ee478cd3e862e6265bbd8bb1c'
+    $qualifiedCaptureFiles = [ordered]@{
+        'BlackKnightPr1Capture.dll' = '7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc'
         'SafeDiscLoader2-LICENSE.txt' = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
         'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip' = '78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17'
-        'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch' = 'e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce'
+        'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch' = 'e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6'
     }
-    foreach ($entry in $qualifiedRuntimeFiles.GetEnumerator()) {
-        $path = Join-Path $runtimeBundle $entry.Key
-        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Qualified Black Knight runtime bundle file is missing: $($entry.Key)" }
+    foreach ($entry in $qualifiedCaptureFiles.GetEnumerator()) {
+        $path = Join-Path $captureBundle $entry.Key
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Qualified Black Knight capture bundle file is missing: $($entry.Key)" }
         $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
-        if ($actual -ne $entry.Value) { throw "Black Knight runtime bundle hash mismatch for $($entry.Key): $actual" }
+        if ($actual -ne $entry.Value) { throw "Black Knight capture bundle hash mismatch for $($entry.Key): $actual" }
     }
 
     if ([string]::IsNullOrWhiteSpace($DgVoodooArchive)) {
@@ -89,11 +89,11 @@ try {
     Copy-Item -LiteralPath $installerFiles[0].FullName -Destination (Join-Path $payload $installerFiles[0].Name)
     Copy-Item -LiteralPath $launcherFiles[0].FullName -Destination (Join-Path $payload $launcherFiles[0].Name)
     Copy-Item -LiteralPath $patchHostFiles[0].FullName -Destination (Join-Path $payload $patchHostFiles[0].Name)
-    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'version.dll') -Destination (Join-Path $payload 'BlackKnightRuntime.dll')
-    $runtimeNotices = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/BlackKnightRuntime') -Force
-    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-LICENSE.txt') -Destination $runtimeNotices
-    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $runtimeNotices
-    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch') -Destination $runtimeNotices
+    Copy-Item -LiteralPath (Join-Path $captureBundle 'BlackKnightPr1Capture.dll') -Destination (Join-Path $payload 'BlackKnightPr1Capture.dll')
+    $captureNotices = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/BlackKnightPr1Capture') -Force
+    Copy-Item -LiteralPath (Join-Path $captureBundle 'SafeDiscLoader2-LICENSE.txt') -Destination $captureNotices
+    Copy-Item -LiteralPath (Join-Path $captureBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $captureNotices
+    Copy-Item -LiteralPath (Join-Path $captureBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch') -Destination $captureNotices
     $presentationDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/dgVoodoo2') -Force
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $dgVoodooZip = [IO.Compression.ZipFile]::OpenRead($DgVoodooArchive)
@@ -204,7 +204,7 @@ try {
         'MW4RemasteredInstallWorker.exe',
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
-        'BlackKnightRuntime.dll',
+        'BlackKnightPr1Capture.dll',
         'Compatibility/dgVoodoo2/DDraw.dll',
         'Compatibility/dgVoodoo2/D3DImm.dll',
         'Compatibility/dgVoodoo2/D3D8.dll',

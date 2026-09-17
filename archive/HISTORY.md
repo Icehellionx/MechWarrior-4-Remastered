@@ -2,6 +2,22 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## Black Knight static PR1 v3 correction — 2026-09-17
+
+- Reproduced the first static candidate's focused-transition failure under a 32-bit debugger at `0x008A3504`, immediately beyond the retained five-section image, rather than attributing it to video codecs or dgVoodoo.
+- Found 32 omitted direct branches into the removed SafeDisc tail and proved that the reconstructed import table contained the right API set in a non-equivalent FirstThunk slot order. The untouched game code therefore could call the wrong imports even though structural PE checks passed.
+- Rebuilt the transform definition from qualified metadata only: exact descriptor/slot order, 127 tail-branch repairs, and a whole-executable-code residual-target rejection. No historical executable bytes are shipped or required.
+- Two independent captured images normalize to the same 3,743,744-byte static output SHA-256 `7761c41d03e52f33091c6e9055ba4bb545be83d22082dbfed53b01faa630442b`. A production-shaped tree crossed the prior transition and remained correctly titled and responsive for 60 seconds with original videos enabled. Focused intro/menu/Alt-Tab/pilot/mission and full packaged qualification remain open.
+- The first complete coordinator run exposed a setup-lifetime leak rather than a transform failure: SafeDisc left its temporary `~xxxx.tmp` child alive after the launcher exited, keeping the setup-only proxy mapped. Capture now assigns the protected process tree to a kill-on-close Windows job. The next run installed and exact-verified 387 Vengeance/Inner Sphere/Black Knight files with output hash `7761c41d…`, no capture residue or orphan process, and ownership-safe uninstall preserved a synthetic unowned save.
+
+## Black Knight clean static PR1 recovery v2 (superseded) — 2026-09-17
+
+- Correlated the user's background-video/close-on-focus symptom with Windows `VERSION.dll` access-violation and `MW4x.exe` hang events, then confirmed upstream SafeDiscLoader2 injects itself into the temporary child even when the launcher starts the protected executable directly.
+- Used a historical PR1 no-CD executable only as ignored structural evidence after Defender scanning; it was never added to source or packaging. Its clean five-section layout exposed that the earlier source transform incorrectly retained two SafeDisc loader tails and hosted its import metadata there.
+- Rebuilt the source-owned transform to relocate generated import metadata into `.rdata`, retain original IAT slots, normalize callsites/tail branches, patch only two exact setup-validation calls, declare five sections, and truncate before the loader tails. Two independently captured mapped images emitted identical 3,743,744-byte output SHA-256 `04fe9acf1d34f92c00bde32ae13099d50ee9c7137d9ff00e6cdae3109c570160`.
+- Removed the launch-time app-local runtime design. Exact GPL DLL `7fbf1fbd…` is now a setup-only capture input in owned scratch; no `VersionInjector`, project remote-thread helper, capture DLL/configuration/image, driver, UAC, or mounted media remains in normal launch.
+- In a production-shaped disposable tree with setup-accepted EULA, corrected filenames, dgVoodoo2, and `-noautoconfigx /gosNoJoystick`, Black Knight remained correctly titled and responsive for 50 seconds. Interactive menu, Alt-Tab, pilot, mission, full-worker cleanup, packaged Defender, repair, and uninstall qualification remain open.
+
 ## Established MW4 presentation-path re-audit — 2026-09-17
 
 - Audited the user-provided ICMX and Reddit references plus current Lutris recipes, PCGamingWiki, dgVoodoo, dxwrapper, DDrawCompat, Nexus MW4 configuration guidance, and dinputto8 evidence. The ICMX page itself remained behind an anti-bot challenge; indexed references were treated as discovery evidence, not binary provenance.

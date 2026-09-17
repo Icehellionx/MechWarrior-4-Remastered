@@ -25,7 +25,7 @@
     "correspondingSourceArchiveSha256": "e96558eee5570e4085fcb9b36cbc3c30ae3ff3b2e2c02a67d54c008c920f0490",
     "reproducibility": "all packaged files are byte-identical across two clean local builds from the pinned upstream commit plus the recorded local patch",
     "defenderResult": "pending final packaged-payload scan",
-    "blackKnightSmoke": "normally loaded app-local DLL; responsive window titled MechWarrior Black Knight; zero-length game error log; no mounted media and no launch helper"
+    "blackKnightSmoke": "historical structural evidence only; the app-local DLL route was later disproven because child-process handling injected into SafeDisc's temporary process and faulted"
   },
   "hostedSourceBuildEvidence": {
     "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35158191892",
@@ -36,8 +36,18 @@
     "runtimeQualified": false,
     "notes": "Hosted compilation and provenance checks passed. Different compiler bytes are recorded but are not substituted for the locally runtime- and Defender-qualified payload."
   },
+  "pr1Capture": {
+    "purpose": "setup-only mapped-image capture for deterministic Black Knight PR1 static transformation; never installed beside the final game executable",
+    "localPatchSha256": "e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6",
+    "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35182493117",
+    "msbuildVersion": "17.14.51.32402",
+    "versionDllSha256": "7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc",
+    "versionDllSize": 91648,
+    "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
+    "normalLaunchBoundary": "capture DLL, configuration, and mapped image stay in setup scratch; no runtime DLL, injector, helper, driver, or elevation remains in the installed game tree"
+  },
   "pr1Runtime": {
-    "purpose": "app-local Black Knight PR1 loader; no injector, helper process, elevation, logging, or research dumps",
+    "purpose": "superseded app-local Black Knight PR1 experiment; retained only as historical source-build evidence and never packaged",
     "localPatchSha256": "e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce",
     "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35182493117",
     "msbuildVersion": "17.14.51.32402",
@@ -45,8 +55,8 @@
     "versionDllSize": 92160,
     "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
     "defenderResult": "no threats with engine 1.1.26080.3 and intelligence 1.459.239.0",
-    "blackKnightPr1Smoke": "exact official protected PR1 executable stayed alive and responsive for 40 seconds with a MechWarrior Black Knight window, no injector, and no launch elevation",
-    "outputQualification": "hosted source build, exact artifact hash, Defender scan, and repeated direct PR1 launch smokes passed; retail is rejected by setup and complete packaged installer smoke remains"
+    "blackKnightPr1Smoke": "superseded timed process evidence; later field/event evidence proved the DLL injected itself into SafeDisc's temporary child and faulted on the focused presentation path",
+    "outputQualification": "rejected for runtime use; exact hosted source and Defender evidence are retained only for audit history"
   },
   "includedProjects": [
     "version-proxy.vcxproj"
@@ -54,5 +64,5 @@
   "excludedProjects": [
     "VersionInjector/VersionInjector.vcxproj"
   ],
-  "notes": "Source is fetched only for the compatibility build. The elevated upstream injector and all runtime launch helpers are neither built nor packaged. GPL source, the exact local patch, and notices accompany the distributed DLL."
+  "notes": "Source is fetched only for the setup-only PR1 capture build. The elevated upstream injector, superseded runtime patch, and all launch helpers are neither built nor packaged. GPL source, the exact capture patch, and notices accompany the setup compatibility payload; capture artifacts never enter the installed game tree."
 }

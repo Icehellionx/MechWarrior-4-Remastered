@@ -15,16 +15,14 @@ public interface IBlackKnightPr1Transform
         string officialVengeancePatch3Root,
         string patchMediaRoot,
         string patchHostPath,
-        string runtimeDllPath,
+        string captureDllPath,
         string scratchDirectory,
         CancellationToken cancellationToken = default);
 }
 
 public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
 {
-    public const string TransformId = "black-knight-official-pr1-45.30.04.1908-runtime-v1";
-    private const long ProtectedExecutableLength = 4_735_573;
-    private const string ProtectedExecutableSha256 = "be9c15731b2ab59471f35add8df4935ea65355cbb4672bc48b63295ad83632b0";
+    public const string TransformId = "black-knight-official-pr1-45.30.04.1908-static-v3";
 
     private static readonly QualifiedPath[] PatchedOutputs =
     [
@@ -34,7 +32,7 @@ public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
         new("MW4X/artpclnt.dll", 106496, "30ea1455f4ade24f4b6426781632b29c23c8006bc478da3a0d3c1fd6381925ee"),
         new("MW4X/cabarc.exe", 114688, "3ed33e71641645367442e65dca6dab0d326b22b48ef9a4c2a2488e67383aa9a6"),
         new("MW4X/Cdac14ba.dll", 112128, "9d8379cd2cf899e8873d40932c66bc683676d9bdad6f0cdec7873859c95b13c1"),
-        new("MW4X/MW4x.exe", ProtectedExecutableLength, ProtectedExecutableSha256),
+        new("MW4X/MW4x.exe", BlackKnightPr1ExecutableTransform.InputLength, BlackKnightPr1ExecutableTransform.InputSha256),
         new("NFXEditor.exe", 471040, "197b69f3d0f119ca131c7191073a7dd945963647fed02e863a4269ddd7c96523"),
         new("RESOURCE/corex.mw4", 1444440, "c1b444cb137820c7f08a66ee70f778da3fc985fda5551e22a22e89aeb6fe02a5"),
         new("RESOURCE/propsx.mw4", 33126658, "527a136b01b06105d0aa8db3eb6aae1a215cd1619dcd345ac018a7c290fed3e0"),
@@ -70,6 +68,20 @@ public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
         "RESOURCE/texturesx.mw4", "ScriptStringsx.dll",
     ];
 
+    private readonly BlackKnightPr1ImageCapture imageCapture;
+    private readonly BlackKnightPr1ExecutableTransform executableTransform;
+
+    public OfficialBlackKnightPr1Transform()
+        : this(new BlackKnightPr1ImageCapture(), new BlackKnightPr1ExecutableTransform()) { }
+
+    public OfficialBlackKnightPr1Transform(
+        BlackKnightPr1ImageCapture imageCapture,
+        BlackKnightPr1ExecutableTransform executableTransform)
+    {
+        this.imageCapture = imageCapture ?? throw new ArgumentNullException(nameof(imageCapture));
+        this.executableTransform = executableTransform ?? throw new ArgumentNullException(nameof(executableTransform));
+    }
+
     public bool IsQualifiedPatchMedia(string mediaRoot)
     {
         try
@@ -94,7 +106,7 @@ public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
         string officialVengeancePatch3Root,
         string patchMediaRoot,
         string patchHostPath,
-        string runtimeDllPath,
+        string captureDllPath,
         string scratchDirectory,
         CancellationToken cancellationToken = default)
     {
@@ -130,11 +142,21 @@ public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
                 [engine, workRoot, patch], "Official Black Knight PR1", cancellationToken);
             foreach (var expected in PatchedOutputs) _ = RequireQualifiedFile(workRoot, expected, "Black Knight PR1 output");
 
+            var protectedExecutable = ContainedPath(workRoot, "MW4X/MW4x.exe");
+            var mappedImage = imageCapture.Capture(
+                protectedExecutable,
+                captureDllPath,
+                ContainedPath(scratch, "capture"),
+                cancellationToken);
+
             Directory.CreateDirectory(outputRoot);
             foreach (var relativePath in RetainedPatchedFiles)
                 Copy(workRoot, relativePath, outputRoot, relativePath, cancellationToken);
-            Copy(workRoot, "MW4X/MW4x.exe", outputRoot, "MW4X/MW4x.exe", cancellationToken);
-            BlackKnightRuntimeCompatibility.AddToPayload(runtimeDllPath, outputRoot, cancellationToken);
+            _ = executableTransform.Transform(
+                protectedExecutable,
+                mappedImage,
+                ContainedPath(outputRoot, "MW4X/MW4x.exe"),
+                cancellationToken);
             VerifyRetainedPayload(outputRoot);
             return new PreparedBlackKnightPr1Payload(outputRoot, TransformId, CreateInstallFiles(outputRoot));
         }
@@ -159,15 +181,8 @@ public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
     private static void VerifyRetainedPayload(string root)
     {
         var expected = PatchedOutputs.Where(item => RetainedPatchedFiles.Contains(item.RelativePath, StringComparer.OrdinalIgnoreCase)).ToList();
-        expected.Add(new QualifiedPath("MW4X/MW4x.exe", ProtectedExecutableLength,
-            ProtectedExecutableSha256));
-        expected.Add(new QualifiedPath("MW4X/version.dll", BlackKnightRuntimeCompatibility.RuntimeDllLength,
-            BlackKnightRuntimeCompatibility.RuntimeDllSha256));
-        var configuration = ContainedPath(root, "MW4X/version.json");
-        if (!File.Exists(configuration) || File.ReadAllText(configuration) != BlackKnightRuntimeCompatibility.Configuration)
-            throw new InvalidDataException("Retained Black Knight runtime configuration is missing or altered.");
-        expected.Add(new QualifiedPath("MW4X/version.json", new FileInfo(configuration).Length,
-            Hash(configuration)));
+        expected.Add(new QualifiedPath("MW4X/MW4x.exe", BlackKnightPr1ExecutableTransform.OutputLength,
+            BlackKnightPr1ExecutableTransform.OutputSha256));
         var actual = Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories)
             .Select(path => Path.GetRelativePath(root, path).Replace(Path.DirectorySeparatorChar, '/')).ToArray();
         if (actual.Length != expected.Count || actual.Any(path => !expected.Any(item => item.RelativePath.Equals(path, StringComparison.OrdinalIgnoreCase))))

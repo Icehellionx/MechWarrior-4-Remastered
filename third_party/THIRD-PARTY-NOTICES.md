@@ -2,15 +2,15 @@
 
 ## SafeDiscLoader2
 
-Black Knight PR1 uses a modified, source-built copy of SafeDiscLoader2 from commit `f27286a363aa675a0422141cb96fc8619cf8b9d8`. Setup exact-hash validates the DLL and places it beside the exact official PR1 `MW4x.exe`; Windows loads it through the normal app-local DLL search path. The project patch supports only the qualified PR1 image layout and replaces two obsolete setup/media checks after decryption.
+Black Knight PR1 uses a modified, source-built copy of SafeDiscLoader2 from commit `f27286a363aa675a0422141cb96fc8619cf8b9d8` only during setup-owned scratch processing. Setup exact-hash validates the capture DLL, uses it to obtain the already decrypted image from the user's exact official PR1 executable, then deterministically produces the static installed `MW4x.exe`. The capture DLL, configuration, and mapped image are deleted before commit and are never runtime files.
 
 - Upstream: <https://github.com/nckstwrt/SafeDiscLoader2>
 - License: GPL-3.0-only
-- Installed license: `Compatibility/BlackKnightRuntime/SafeDiscLoader2-LICENSE.txt`
-- Exact corresponding source: `Compatibility/BlackKnightRuntime/SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip`
-- Exact project patch: `Compatibility/BlackKnightRuntime/SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch`
+- Packaged license: `Compatibility/BlackKnightPr1Capture/SafeDiscLoader2-LICENSE.txt`
+- Exact corresponding source: `Compatibility/BlackKnightPr1Capture/SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip`
+- Exact project patch: `Compatibility/BlackKnightPr1Capture/SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch`
 
-The upstream elevated `VersionInjector` project is neither built nor distributed. There is no launch helper, process injection, service, driver, or launch-time elevation; the launcher starts `MW4x.exe` directly as the current user.
+The upstream elevated `VersionInjector` project is neither built nor distributed. SafeDiscLoader2's internal child-process technique is confined to setup scratch and never participates in ordinary game launch. There is no installed launch helper, proxy DLL, service, driver, or launch-time elevation; the launcher starts the deterministic static `MW4x.exe` directly as the current user.
 
 ## dgVoodoo2
 
