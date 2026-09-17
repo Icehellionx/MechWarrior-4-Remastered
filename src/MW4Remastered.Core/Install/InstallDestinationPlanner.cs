@@ -6,7 +6,11 @@ public sealed record InstallDestinationProduct(
     string ProductId,
     string DisplayName,
     string DestinationPath,
-    long BudgetBytes);
+    long BudgetBytes,
+    IReadOnlyList<string>? Components = null)
+{
+    public IReadOnlyList<string> EffectiveComponents => Components ?? new[] { ProductId };
+}
 
 public sealed record BlockedInstallProduct(
     string ProductId,
@@ -96,7 +100,26 @@ public sealed class InstallDestinationPlanner
 
         var products = new List<InstallDestinationProduct>();
         var blockedProducts = new List<BlockedInstallProduct>();
-        foreach (var product in ProductCatalog.All.Where(item => item.Kind == ProductKind.Game && completeGames.Contains(item.Id)))
+        var vengeanceFamily = new List<string>();
+        if (completeGames.Contains("vengeance")) vengeanceFamily.Add("vengeance");
+        if (completeGames.Contains("black-knight")) vengeanceFamily.Add("black-knight");
+        if (vengeanceFamily.Contains("black-knight") && !vengeanceFamily.Contains("vengeance"))
+        {
+            blockedProducts.Add(new BlockedInstallProduct("black-knight", "Black Knight", new[] { "vengeance-media" }));
+        }
+        else if (vengeanceFamily.Count > 0)
+        {
+            var budget = vengeanceFamily.Contains("black-knight") ? GameBudgets["black-knight"] : GameBudgets["vengeance"];
+            products.Add(new InstallDestinationProduct(
+                "vengeance",
+                vengeanceFamily.Contains("black-knight") ? "Vengeance + Black Knight" : "Vengeance",
+                Path.GetFullPath(Path.Combine(root, "vengeance")),
+                budget,
+                vengeanceFamily));
+        }
+
+        foreach (var product in ProductCatalog.All.Where(item =>
+                     item.Kind == ProductKind.Game && item.Id == "mercenaries" && completeGames.Contains(item.Id)))
         {
             var missingDependencies = ProductDependencies.GetRequiredBaseProducts(product.Id)
                 .Where(required => !availableProducts.Contains(required))

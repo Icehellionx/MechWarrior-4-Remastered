@@ -245,6 +245,8 @@ try
     Directory.CreateDirectory(disc1);
     Directory.CreateDirectory(disc2);
     File.WriteAllText(Path.Combine(disc1, "MW4.EXE"), "synthetic executable");
+    Directory.CreateDirectory(Path.Combine(disc1, "MW4X"));
+    File.WriteAllText(Path.Combine(disc1, "MW4X", "MW4X.EXE"), "synthetic expansion executable");
     File.SetAttributes(Path.Combine(disc1, "MW4.EXE"), FileAttributes.ReadOnly);
     Directory.CreateDirectory(Path.Combine(disc2, "RESOURCE", "MAPS"));
     File.WriteAllText(Path.Combine(disc2, "RESOURCE", "MAPS", "ALPINE01.MW4"), "synthetic map");
@@ -253,17 +255,24 @@ try
     var plan = new InstallPlan("vengeance", new[]
     {
         new InstallFile(disc1, "MW4.EXE", "MW4.EXE"),
+        new InstallFile(disc1, "MW4X/MW4X.EXE", "MW4X/MW4X.EXE"),
         new InstallFile(disc2, "RESOURCE/MAPS/ALPINE01.MW4", "RESOURCE/MAPS/ALPINE01.MW4"),
-    });
+    }, new[] { "vengeance", "black-knight" });
     var manifest = new StagedInstallTransaction().Execute(plan, destination);
     Check(File.Exists(Path.Combine(destination, "MW4.EXE")), "transaction commits the first source file");
     Check((File.GetAttributes(Path.Combine(destination, "MW4.EXE")) & FileAttributes.ReadOnly) == 0, "transaction makes installed media files writable");
     Check(File.Exists(Path.Combine(destination, "RESOURCE", "MAPS", "ALPINE01.MW4")), "transaction commits the second source file");
     Check(File.Exists(Path.Combine(destination, InstallManifest.RelativePath.Replace('/', Path.DirectorySeparatorChar))), "transaction persists its ownership manifest");
-    Check(manifest.Files.Count == 2 && manifest.Files.All(file => file.Sha256.Length == 64), "manifest hashes every installed file");
+    Check(manifest.SchemaVersion == 2 && manifest.HasComponent("black-knight") &&
+        manifest.Files.Count == 3 && manifest.Files.All(file => file.Sha256.Length == 64),
+        "schema 2 manifest hashes every installed file and records shared-tree components");
     Check(new InstallManifestVerifier().Verify(destination).IsValid, "manifest verifier accepts the committed tree");
     var installedStatuses = new InstallStatusReader(Path.Combine(transactionRoot, "installed")).Read().ToDictionary(item => item.Product.Id);
     Check(installedStatuses["vengeance"].State == ProductInstallState.Ready && installedStatuses["vengeance"].LaunchPath is not null, "status reader requires a verified ownership manifest before enabling launch");
+    Check(installedStatuses["black-knight"].State == ProductInstallState.Ready &&
+        installedStatuses["black-knight"].InstallPath == destination &&
+        string.Equals(installedStatuses["black-knight"].LaunchPath, Path.Combine(destination, "MW4X", "MW4X.EXE"), StringComparison.OrdinalIgnoreCase),
+        $"status reader exposes Black Knight from the shared Vengeance-family manifest and MW4X path ({installedStatuses["black-knight"].State}; {installedStatuses["black-knight"].LaunchPath}; {installedStatuses["black-knight"].Detail})");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
     var processStarter = new RecordingProcessStarter();
     var gameRegistration = new RecordingGameRegistration();
@@ -339,8 +348,7 @@ try
         "launch orchestration ignores an adjacent helper that is not owned by the verified manifest");
     File.Delete(compatibilityLauncher);
 
-    var blackKnightExecutable = Path.Combine(destination, "MW4X.exe");
-    File.WriteAllText(blackKnightExecutable, "synthetic executable");
+    var blackKnightExecutable = Path.Combine(destination, "MW4X", "MW4X.EXE");
     var blackKnightProduct = ProductCatalog.All.Single(item => item.Id == "black-knight");
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(new ProductStatus(
         blackKnightProduct, ProductInstallState.Ready, blackKnightExecutable, null,
@@ -526,103 +534,24 @@ try
     WriteFixture(disc, "RESOURCE/MISSIONS/VOLCAN_1.MW4", "mission");
     WriteFixture(disc, "RESOURCE/TEXTUR_1.MW4", "textures");
     WriteFixture(disc, "SETUP.EXE", "legacy setup");
-    var compatibilityRoot = Path.Combine(blackKnightPlanRoot, "compatibility");
-    WriteFixture(compatibilityRoot, "version.dll", "synthetic loader");
-    WriteFixture(compatibilityRoot, "version.json", "synthetic loader configuration");
-    WriteFixture(compatibilityRoot, "LICENSE.txt", "synthetic license");
-    WriteFixture(compatibilityRoot, "source.zip", "synthetic corresponding source");
     var preparedEula = Path.Combine(blackKnightPlanRoot, "prepared", "EBUEULA.DLL");
     WriteFixture(Path.GetDirectoryName(preparedEula)!, Path.GetFileName(preparedEula), "setup-accepted EULA module");
-    var vengeanceBase = Path.Combine(blackKnightPlanRoot, "vengeance-base");
-    var baseTexture = Path.Combine(vengeanceBase, "Resource", "textures.mw4");
-    WriteFixture(vengeanceBase, "Resource/textures.mw4", "verified Vengeance base texture");
-    var baseManifest = new InstallManifest(1, "vengeance", new[]
-    {
-        new InstalledFile("Resource/textures.mw4", new FileInfo(baseTexture).Length,
-            Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(baseTexture))).ToLowerInvariant(), "fixture"),
-    });
-    WriteFixture(vengeanceBase, InstallManifest.RelativePath, JsonSerializer.Serialize(baseManifest));
-    var compatibility = new QualifiedCompatibilityPayload(
-        compatibilityRoot,
-        new[]
-        {
-            QualifiedFile(compatibilityRoot, "version.dll", "version.dll"),
-            QualifiedFile(compatibilityRoot, "version.json", "version.json"),
-            QualifiedFile(compatibilityRoot, "LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
-        },
-        new[]
-        {
-            QualifiedSupportFile(compatibilityRoot, "source.zip"),
-        },
-        requireExactInventory: true);
-    var builder = new BlackKnightInstallPlanBuilder(compatibility, new MediaInspectionService(), new DirectoryMediaInventory());
-    var plan = builder.Build(disc, vengeanceBase, preparedEula);
-    var destinations = plan.Files.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-    Check(plan.ProductId == "black-knight" && destinations.Contains("MW4X.exe"), "Black Knight plan installs the untouched executable from media");
-    Check(plan.Files.Single(file => file.DestinationRelativePath.Equals("MW4X.exe", StringComparison.OrdinalIgnoreCase)).SourceRelativePath.Equals("MW4X/MW4X.EXE", StringComparison.OrdinalIgnoreCase), "Black Knight executable comes from recognized media, not a user-supplied replacement");
-    Check(destinations.Contains("version.dll") && destinations.Contains("version.json") && destinations.Contains("Licenses/SafeDiscLoader2-GPL-3.0.txt"), "Black Knight plan owns the exact internal compatibility bundle without a process-injection helper");
-    Check(!destinations.Contains("source.zip"), "Black Knight plan validates but does not install the corresponding-source archive");
+    var builder = new BlackKnightInstallPlanBuilder();
+    var overlay = builder.BuildOverlay(disc, preparedEula);
+    var destinations = overlay.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+    Check(destinations.Contains("MW4X/MW4X.exe"), "Black Knight overlay preserves the original MW4X subdirectory");
+    Check(overlay.Single(file => file.DestinationRelativePath.Equals("MW4X/MW4X.exe", StringComparison.OrdinalIgnoreCase)).SourceRelativePath.Equals("MW4X/MW4X.EXE", StringComparison.OrdinalIgnoreCase), "Black Knight executable comes from recognized media");
+    Check(!destinations.Contains("version.dll") && !destinations.Contains("version.json"), "Black Knight overlay does not ship the superseded retail loader experiment");
     Check(destinations.Contains("AutoConfigx.exe") && destinations.Contains("MissionLangx.dll") &&
         destinations.Contains("ScriptStringsx.dll") && destinations.Contains("servercyclex.txt"),
         "Black Knight plan restores expansion-specific root names");
-    Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("LANGUAGE.DLL") && destinations.Contains("DRVMGT.DLL"), "Black Knight plan copies game data and flattens required runtime files");
+    Check(destinations.Contains("FONTS/MECH.FNT") && destinations.Contains("MW4X/LANGUAGE.DLL") && destinations.Contains("MW4X/DRVMGT.DLL"), "Black Knight overlay keeps expansion runtime files in MW4X");
     Check(destinations.Contains("Content/GameTypesX.h") && destinations.Contains("Content/ShellScriptsX/Files/StutterShark_music.wav") &&
         destinations.Contains("Resource/Missions/volcan01_holdout.mw4") && destinations.Contains("Resource/texturesx.mw4"),
         "Black Knight plan restores long content and resource names from the original setup table");
-    Check(destinations.Contains("DSETUP.DLL"), "Black Knight plan retains the DirectX version-query runtime imported by the game executable");
-    Check(!destinations.Contains("SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight plan excludes legacy setup and the obsolete SafeDisc driver");
-    Check(destinations.Contains("Resource/textures.mw4"), "Black Knight plan includes the verified Vengeance base payload required by the expansion");
-
-    File.AppendAllText(baseTexture, "tampered");
-    var modifiedBaseRejected = false;
-    try
-    {
-        builder.Build(disc, vengeanceBase, preparedEula);
-    }
-    catch (InvalidDataException)
-    {
-        modifiedBaseRejected = true;
-    }
-    Check(modifiedBaseRejected, "Black Knight planning rejects a modified Vengeance dependency instead of copying it");
-    File.WriteAllText(baseTexture, "verified Vengeance base texture");
-
-    WriteFixture(compatibilityRoot, "unexpected.bin", "must not enter the bundle");
-    var compatibilityExtraRejected = false;
-    try
-    {
-        builder.Build(disc, vengeanceBase, preparedEula);
-    }
-    catch (InvalidDataException)
-    {
-        compatibilityExtraRejected = true;
-    }
-    Check(compatibilityExtraRejected, "Black Knight planning rejects unexpected compatibility-bundle files");
-    File.Delete(Path.Combine(compatibilityRoot, "unexpected.bin"));
-
-    Directory.CreateDirectory(Path.Combine(compatibilityRoot, "unexpected-directory"));
-    var compatibilityDirectoryRejected = false;
-    try
-    {
-        builder.Build(disc, vengeanceBase, preparedEula);
-    }
-    catch (InvalidDataException)
-    {
-        compatibilityDirectoryRejected = true;
-    }
-    Check(compatibilityDirectoryRejected, "Black Knight planning rejects unexpected compatibility-bundle directories");
-    Directory.Delete(Path.Combine(compatibilityRoot, "unexpected-directory"));
-
-    File.AppendAllText(Path.Combine(compatibilityRoot, "version.dll"), "tampered");
-    var compatibilityTamperRejected = false;
-    try
-    {
-        builder.Build(disc, vengeanceBase, preparedEula);
-    }
-    catch (InvalidDataException)
-    {
-        compatibilityTamperRejected = true;
-    }
-    Check(compatibilityTamperRejected, "Black Knight planning rejects a modified internal compatibility payload");
+    Check(destinations.Contains("MW4X/DSETUP.DLL"), "Black Knight overlay retains the DirectX runtime inside MW4X");
+    Check(!destinations.Contains("MW4X/SECDRV.SYS") && !destinations.Contains("SETUP.EXE"), "Black Knight overlay excludes legacy setup and the obsolete SafeDisc driver");
+    Check(destinations.Contains("MW4X/EBUEula.dll"), "Black Knight setup-time EULA state is installed beside the expansion executable");
 }
 finally
 {
@@ -809,20 +738,6 @@ void WriteFixture(string rootPath, string relativePath, string contents)
     var file = Path.Combine(rootPath, relativePath.Replace('/', Path.DirectorySeparatorChar));
     Directory.CreateDirectory(Path.GetDirectoryName(file)!);
     File.WriteAllText(file, contents);
-}
-
-QualifiedCompatibilityFile QualifiedFile(string rootPath, string sourceRelativePath, string destinationRelativePath)
-{
-    var path = Path.Combine(rootPath, sourceRelativePath.Replace('/', Path.DirectorySeparatorChar));
-    var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
-    return new QualifiedCompatibilityFile(sourceRelativePath, destinationRelativePath, hash);
-}
-
-QualifiedCompatibilitySupportFile QualifiedSupportFile(string rootPath, string sourceRelativePath)
-{
-    var path = Path.Combine(rootPath, sourceRelativePath.Replace('/', Path.DirectorySeparatorChar));
-    var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
-    return new QualifiedCompatibilitySupportFile(sourceRelativePath, hash);
 }
 
 sealed class RecordingProcessStarter : IProcessStarter

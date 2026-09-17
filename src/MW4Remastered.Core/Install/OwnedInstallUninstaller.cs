@@ -60,9 +60,23 @@ public sealed class OwnedInstallUninstaller
         var manifestPath = StagedInstallTransaction.ResolveContainedPath(root, InstallManifest.RelativePath);
         var manifest = ReadManifest(manifestPath, issues);
         if (manifest is null) return new InstallRemovalResult(InstallRemovalStatus.Blocked, Array.Empty<string>(), preserved, issues);
-        if (manifest.SchemaVersion != 1) issues.Add($"Unsupported ownership manifest schema: {manifest.SchemaVersion}");
+        if (manifest.SchemaVersion is not (1 or 2)) issues.Add($"Unsupported ownership manifest schema: {manifest.SchemaVersion}");
         if (string.IsNullOrWhiteSpace(manifest.ProductId)) issues.Add("Ownership manifest has no product id.");
         if (manifest.Files is null || manifest.Files.Count == 0) issues.Add("Ownership manifest contains no installed files.");
+        if (manifest.SchemaVersion == 2)
+        {
+            if (manifest.Components is null || manifest.Components.Count == 0)
+            {
+                issues.Add("Ownership manifest contains no components.");
+            }
+            else
+            {
+                if (manifest.Components.Any(string.IsNullOrWhiteSpace)) issues.Add("Ownership manifest contains an empty component id.");
+                if (manifest.Components.Distinct(StringComparer.OrdinalIgnoreCase).Count() != manifest.Components.Count)
+                    issues.Add("Ownership manifest contains duplicate component ids.");
+                if (!manifest.HasComponent(manifest.ProductId)) issues.Add("Ownership manifest does not include its physical product as a component.");
+            }
+        }
 
         var owned = new Dictionary<string, InstalledFile>(StringComparer.OrdinalIgnoreCase);
         foreach (var file in manifest.Files ?? Array.Empty<InstalledFile>())

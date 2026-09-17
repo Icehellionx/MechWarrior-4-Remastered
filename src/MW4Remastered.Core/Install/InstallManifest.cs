@@ -11,8 +11,16 @@ public sealed record InstalledFile(
 public sealed record InstallManifest(
     int SchemaVersion,
     string ProductId,
-    IReadOnlyList<InstalledFile> Files)
+    IReadOnlyList<InstalledFile> Files,
+    IReadOnlyList<string>? Components = null)
 {
     [JsonIgnore]
     public const string RelativePath = ".mw4-remastered/install-manifest.json";
+
+    public bool HasComponent(string componentId) =>
+        EffectiveComponents.Contains(componentId, StringComparer.OrdinalIgnoreCase);
+
+    [JsonIgnore]
+    public IReadOnlyList<string> EffectiveComponents =>
+        Components is { Count: > 0 } ? Components : new[] { ProductId };
 }

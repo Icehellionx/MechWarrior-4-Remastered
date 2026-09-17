@@ -52,23 +52,30 @@ public sealed class InstallStatusReader
             var packVerification = verifier.Verify(vengeanceRoot, InstallVerificationScope.OwnedFiles);
             var installed = packVerification.IsValid && packVerification.Manifest is not null &&
                 packVerification.Manifest.ProductId.Equals("vengeance", StringComparison.OrdinalIgnoreCase) &&
-                MechPakInstalledEvidence.IsPresent(packVerification.Manifest, product.Id);
+                (packVerification.Manifest.HasComponent(product.Id) || MechPakInstalledEvidence.IsPresent(packVerification.Manifest, product.Id));
             return installed
                 ? new ProductStatus(product, ProductInstallState.Ready, null, null, manualPath, vengeanceRoot, "Verified pack payload")
                 : new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null, "Pack payload not installed");
         }
 
-        var productRoot = Path.Combine(installationRoot, product.Id);
+        var physicalProductId = product.Id.Equals("black-knight", StringComparison.OrdinalIgnoreCase)
+            ? "vengeance"
+            : product.Id;
+        var productRoot = Path.Combine(installationRoot, physicalProductId);
         if (!Directory.Exists(productRoot))
         {
             return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null, "Game files not found");
         }
         var executable = product.ExecutableCandidates
-            .Select(name => Path.Combine(productRoot, name))
+            .Select(name => Path.Combine(productRoot,
+                name.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar)))
             .FirstOrDefault(File.Exists);
 
         var verification = verifier.Verify(productRoot, InstallVerificationScope.OwnedFiles);
-        if (executable is null || !verification.IsValid || !string.Equals(verification.Manifest?.ProductId, product.Id, StringComparison.OrdinalIgnoreCase))
+        var ownsComponent = verification.Manifest is not null && verification.Manifest.HasComponent(product.Id);
+        if (executable is null || !verification.IsValid ||
+            !string.Equals(verification.Manifest?.ProductId, physicalProductId, StringComparison.OrdinalIgnoreCase) ||
+            !ownsComponent)
         {
             var detail = executable is null ? "Game executable is missing"
                 : verification.Issues.FirstOrDefault() ?? "Ownership manifest identifies a different product";

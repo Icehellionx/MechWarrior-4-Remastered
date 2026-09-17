@@ -20,7 +20,7 @@ public static class ProductCatalog
         new ProductDefinition("vengeance", "Vengeance", ProductKind.Game,
             new[] { "MW4.exe" }, "MechWarrior 4 Vengeance Manual.pdf"),
         new ProductDefinition("black-knight", "Black Knight", ProductKind.Game,
-            new[] { "MW4X.exe" }, "MechWarrior 4 Black Knight Manual.pdf"),
+            new[] { "MW4X/MW4X.exe" }, "MechWarrior 4 Black Knight Manual.pdf"),
         new ProductDefinition("mercenaries", "Mercenaries", ProductKind.Game,
             new[] { "MW4Mercs.exe" }, "MechWarrior 4 Mercenaries Manual.pdf"),
         new ProductDefinition("inner-sphere", "Inner Sphere Mech Pak", ProductKind.OptionalPack,

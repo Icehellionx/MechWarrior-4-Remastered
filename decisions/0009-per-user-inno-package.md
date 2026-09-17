@@ -45,7 +45,7 @@ Remove the Inno script/build entry point and its package registration. Per-game 
 
 ```powershell
 & tests/PackagingContract.Tests.ps1
-& tools/package/build-release.ps1 -CompatibilityEvidenceDirectory <qualified-evidence> -OutputDirectory <new-output> -Version 0.1.0
+& tools/package/build-release.ps1 -OutputDirectory <new-output> -Version 0.1.0
 & tools/security/scan-with-defender.ps1 -Path <new-output>
 ```
 

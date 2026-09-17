@@ -64,12 +64,12 @@ internal sealed class InstallWorker
         try
         {
             using var media = sessionFactory.Open(selection.Current);
-            foreach (var product in plan.Products.Where(item => !alreadyReady.Contains(item.ProductId)))
+            foreach (var product in plan.Products.Where(item => item.EffectiveComponents.Any(component => !alreadyReady.Contains(component))))
             {
                 TryAppendLog(args.LogPath, $"Installing {product.DisplayName}.");
                 var progress = new Progress<GameInstallationProgress>(value =>
                     TryAppendLog(args.LogPath, $"{value.ProductId}: {value.Stage} - {value.Message}"));
-                coordinator.Install(CreateInstallRequest(product.ProductId, media, plan.RootPath), product.DestinationPath, progress);
+                coordinator.Install(CreateInstallRequest(product, media), product.DestinationPath, progress);
                 installedThisRun.Add(product.DestinationPath);
             }
         }
@@ -80,7 +80,7 @@ internal sealed class InstallWorker
         }
 
         var finalReady = GetReadyProductIds(plan.RootPath);
-        if (plan.Products.Any(item => !finalReady.Contains(item.ProductId)))
+        if (plan.Products.Any(item => item.EffectiveComponents.Any(component => !finalReady.Contains(component))))
         {
             RollBack(installedThisRun, args.LogPath);
             throw new InvalidDataException("One or more selected games failed final ownership verification.");
@@ -92,12 +92,12 @@ internal sealed class InstallWorker
         var registeredThisRun = new List<ProductStatus>();
         try
         {
-            foreach (var product in plan.Products)
+            foreach (var componentId in plan.Products.SelectMany(product => product.EffectiveComponents).Distinct(StringComparer.OrdinalIgnoreCase))
             {
-                var status = statuses[product.ProductId];
+                var status = statuses[componentId];
                 registration.Ensure(status);
                 registeredThisRun.Add(status);
-                TryAppendLog(args.LogPath, $"Registered {product.DisplayName} for non-elevated launch.");
+                TryAppendLog(args.LogPath, $"Registered {status.Product.DisplayName} for non-elevated launch.");
             }
         }
         catch
@@ -128,13 +128,14 @@ internal sealed class InstallWorker
             throw new InvalidDataException(string.Join("; ", plan.BlockedProducts.Select(item =>
                 $"{item.DisplayName} requires {string.Join(" + ", item.MissingDependencyIds)}")));
         if (!plan.HasEnoughSpace) throw new IOException("The selected installation destination does not have enough free space.");
-        if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "black-knight" or "mercenaries")))
+        if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "mercenaries")))
             throw new InvalidDataException("The media selection includes an unsupported game installation path.");
         var packSelected = selection.Capabilities.Any(item => item.Kind == ProductKind.OptionalPack && item.IsComplete);
         var vengeanceSelected = selection.Capabilities.Any(item => item.ProductId == "vengeance" && item.IsComplete);
         if (packSelected && !vengeanceSelected)
             throw new InvalidDataException("Mech Pak installation requires both Vengeance discs in the same setup run.");
-        var conflict = plan.Products.FirstOrDefault(item => !alreadyReady.Contains(item.ProductId) && File.Exists(item.DestinationPath));
+        var conflict = plan.Products.FirstOrDefault(item =>
+            item.EffectiveComponents.Any(component => !alreadyReady.Contains(component)) && File.Exists(item.DestinationPath));
         if (conflict is not null) throw new IOException($"The game destination is an existing file: {conflict.DestinationPath}");
     }
 
@@ -148,15 +149,15 @@ internal sealed class InstallWorker
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
     }
 
-    private static GameInstallRequest CreateInstallRequest(string productId, IMediaSelectionSession media, string installRoot) => productId switch
+    private static GameInstallRequest CreateInstallRequest(InstallDestinationProduct product, IMediaSelectionSession media) => product.ProductId switch
     {
         "vengeance" => new VengeanceInstallRequest(media.GetRoot("vengeance-disc-1"), media.GetRoot("vengeance-disc-2"),
-            new[] { "inner-sphere-mech-pak", "clan-mech-pak" }.Where(media.Layouts.ContainsKey).Select(media.GetRoot).ToArray()),
-        "black-knight" => new BlackKnightInstallRequest(
-            media.GetRoot("black-knight-disc-1"),
-            Path.Combine(Path.GetFullPath(installRoot), "vengeance")),
+            new[] { "inner-sphere-mech-pak", "clan-mech-pak" }.Where(media.Layouts.ContainsKey).Select(media.GetRoot).ToArray(),
+            product.EffectiveComponents.Contains("black-knight", StringComparer.OrdinalIgnoreCase)
+                ? media.GetRoot("black-knight-disc-1")
+                : null),
         "mercenaries" => new MercenariesInstallRequest(media.GetRoot("mercenaries-disc-1"), media.GetRoot("mercenaries-disc-2")),
-        _ => throw new InvalidOperationException($"Unsupported product: {productId}"),
+        _ => throw new InvalidOperationException($"Unsupported product: {product.ProductId}"),
     };
 
     private static HashSet<string> GetReadyProductIds(string root) => new InstallStatusReader(root).Read()

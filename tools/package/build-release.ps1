@@ -1,8 +1,6 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory)]
-    [string]$CompatibilityEvidenceDirectory,
-    [Parameter(Mandatory)]
     [string]$OutputDirectory,
     [string]$Version = '0.1.0',
     [string]$InnoCompilerPath,
@@ -78,15 +76,10 @@ try {
         if ($actualCoverHash -ne $manual.coverSha256) { throw "Qualified manual cover hash mismatch: $($manual.coverName)" }
         Copy-Item -LiteralPath $cover -Destination (Join-Path $manualDestination $manual.coverName)
     }
-    & (Join-Path $projectRoot 'tools/compatibility/assemble-black-knight-bundle.ps1') `
-        -EvidenceDirectory $CompatibilityEvidenceDirectory `
-        -OutputDirectory (Join-Path $payload 'Compatibility/BlackKnight')
-
     & (Join-Path $projectRoot 'tools/assert-release-tree.ps1') -Root $payload -AllowedExecutablePaths @(
         'MW4RemasteredInstallWorker.exe',
         'MW4RemasteredLauncher.exe',
-        'MW4RemasteredRtpPatchHost.exe',
-        'Compatibility/BlackKnight/version.dll'
+        'MW4RemasteredRtpPatchHost.exe'
     )
 
     if ($StageOnly) {

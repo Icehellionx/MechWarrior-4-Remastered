@@ -35,6 +35,8 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Prove official Vengeance Patch 3 applies directly to retail media, apply it through a constrained source-owned host, retain only exact qualified outputs, and remove the obsolete C-Dilla and ARTP imports/call sites from the generated executable.
 - [ ] Re-evaluate or replace the suspended Black Knight loader experiment against the official `45.30.04.1908` PR1 executable; the previous retail `45.05.10.0701` result is not product evidence.
 - [x] Apply official Black Knight PR1 and Mercenaries PR1 in contained reference trees and retain exact pre/post manifests as ignored evidence.
+- [x] Replace separate Vengeance/Black Knight destinations with one atomic schema-2 Vengeance-family manifest and preserve the original `MW4X` subdirectory.
+- [x] Remove the superseded retail Black Knight proxy DLL from production package staging and constrain the RTP host to the three qualified official-update hashes.
 
 ## 3. Launcher and user experience
 
@@ -79,7 +81,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 
 Outcome: a clean machine can install, launch, repair, and uninstall a trustworthy package.
 
-- [x] Build a byte-reproducible per-user setup from declared application and exact Black Knight compatibility inputs.
+- [ ] Build a byte-reproducible per-user setup only after the official PR1 transforms and runtime gate are complete; the superseded Black Knight loader input has been removed.
 - [ ] Smoke every available game/pack/media combination.
 - [x] Preserve saves/configuration through both ownership-safe game removal and standard shell-package uninstall smoke paths.
 - [x] Permit reinstall over manifestless residue preserved by safe uninstall without deleting user data; reject owned-path collisions without mutation and retain setup failure logs after the wizard closes.

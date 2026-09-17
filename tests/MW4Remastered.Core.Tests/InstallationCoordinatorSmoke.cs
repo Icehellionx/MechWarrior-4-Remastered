@@ -15,16 +15,16 @@ internal static class InstallationCoordinatorSmoke
             var coordinator = CreateCoordinator(inputs);
 
             var vengeance = coordinator.Install(
-                new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo),
+                new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo,
+                    BlackKnightDiscRoot: inputs.BlackKnightDisc),
                 Path.Combine(root, "installed", "vengeance"), progress);
-            Check(vengeance.Manifest.ProductId == "vengeance" && vengeance.Manifest.Files.Count > 0, "coordinator installs and verifies Vengeance", failures);
+            Check(vengeance.Manifest.ProductId == "vengeance" && vengeance.Manifest.Files.Count > 0 &&
+                vengeance.Manifest.HasComponent("black-knight"),
+                "coordinator atomically installs and verifies the Vengeance family", failures);
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".vengeance-transform-*").Any(),
                 "coordinator removes Vengeance transform scratch after success", failures);
-
-            var blackKnight = coordinator.Install(
-                new BlackKnightInstallRequest(inputs.BlackKnightDisc, vengeance.DestinationPath),
-                Path.Combine(root, "installed", "black-knight"), progress);
-            Check(blackKnight.Manifest.ProductId == "black-knight" && blackKnight.Manifest.Files.Count > 0, "coordinator installs and verifies Black Knight", failures);
+            Check(File.Exists(Path.Combine(vengeance.DestinationPath, "MW4X", "MW4X.exe")),
+                "coordinator preserves Black Knight under the shared MW4X directory", failures);
 
             var mercenaries = coordinator.Install(
                 new MercenariesInstallRequest(inputs.MercenariesDiscOne, inputs.MercenariesDiscTwo),
@@ -32,15 +32,16 @@ internal static class InstallationCoordinatorSmoke
             Check(mercenaries.Manifest.ProductId == "mercenaries" && mercenaries.Manifest.Files.Count > 0, "coordinator extracts, installs, and verifies Mercenaries", failures);
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".mercenaries-cabinet-*").Any(), "coordinator removes Mercenaries cabinet scratch after success", failures);
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".mercenaries-transform-*").Any(), "coordinator removes Mercenaries transform scratch after success", failures);
-            Check(progress.Events.Count(item => item.Stage == GameInstallationStage.Completed) == 3, "coordinator reports completion for all three games", failures);
+            Check(progress.Events.Count(item => item.Stage == GameInstallationStage.Completed) == 2, "coordinator reports completion for both physical game trees", failures);
 
             using var cancelledSource = new CancellationTokenSource();
             cancelledSource.Cancel();
-            var cancelledDestination = Path.Combine(root, "cancelled", "black-knight");
+            var cancelledDestination = Path.Combine(root, "cancelled", "vengeance");
             var cancellationObserved = false;
             try
             {
-                coordinator.Install(new BlackKnightInstallRequest(inputs.BlackKnightDisc, vengeance.DestinationPath), cancelledDestination,
+                coordinator.Install(new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo,
+                        BlackKnightDiscRoot: inputs.BlackKnightDisc), cancelledDestination,
                     cancellationToken: cancelledSource.Token);
             }
             catch (OperationCanceledException)
@@ -48,7 +49,7 @@ internal static class InstallationCoordinatorSmoke
                 cancellationObserved = true;
             }
             Check(cancellationObserved && !Directory.Exists(cancelledDestination),
-                "coordinator cancellation leaves no Black Knight destination", failures);
+                "coordinator cancellation leaves no Vengeance-family destination", failures);
 
             var escapedDestination = Path.Combine(root, "failed", "vengeance-escape");
             var escaped = false;
@@ -115,7 +116,7 @@ internal static class InstallationCoordinatorSmoke
         var inventory = new DirectoryMediaInventory();
         var plans = new GameInstallPlanFactory(
             new VengeanceInstallPlanBuilder(Hash(inputs.VengeanceExecutable), inspection, inventory),
-            new BlackKnightInstallPlanBuilder(CreateBlackKnightCompatibility(inputs.BlackKnightCompatibilityRoot), inspection, inventory),
+            new BlackKnightInstallPlanBuilder(inspection, inventory),
             new MercenariesInstallPlanBuilder(Hash(inputs.MercenariesExecutable), inspection, inventory));
         return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
             new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable),
@@ -144,14 +145,10 @@ internal static class InstallationCoordinatorSmoke
         ZipFile.CreateFromDirectory(cabinetSource, cabinet, CompressionLevel.NoCompression, includeBaseDirectory: false);
 
         var vengeanceExecutable = Write(root, "replacements/vengeance/MW4.exe", "vengeance executable");
-        var blackKnightCompatibility = Path.Combine(root, "compatibility", "black-knight");
-        Write(blackKnightCompatibility, "version.dll", "black knight loader");
-        Write(blackKnightCompatibility, "version.json", "black knight loader configuration");
-        Write(blackKnightCompatibility, "SafeDiscLoader2-LICENSE.txt", "black knight loader license");
         var mercenariesExecutable = Write(root, "replacements/mercenaries/MW4Mercs.exe", "mercenaries executable");
         return new FixtureInputs(
             vengeanceDiscOne, vengeanceDiscTwo, vengeanceExecutable,
-            blackKnightDisc, blackKnightCompatibility,
+            blackKnightDisc,
             mercenariesDiscOne, mercenariesDiscTwo, mercenariesExecutable);
     }
 
@@ -170,17 +167,6 @@ internal static class InstallationCoordinatorSmoke
 
     private static string Hash(string path) => Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(path))).ToLowerInvariant();
 
-    private static QualifiedCompatibilityPayload CreateBlackKnightCompatibility(string root) =>
-        new(root, new[]
-        {
-            Qualified(root, "version.dll", "version.dll"),
-            Qualified(root, "version.json", "version.json"),
-            Qualified(root, "SafeDiscLoader2-LICENSE.txt", "Licenses/SafeDiscLoader2-GPL-3.0.txt"),
-        });
-
-    private static QualifiedCompatibilityFile Qualified(string root, string source, string destination) =>
-        new(source, destination, Hash(Path.Combine(root, source.Replace('/', Path.DirectorySeparatorChar))));
-
     private static void Check(bool condition, string message, List<string> failures)
     {
         if (!condition) failures.Add("FAIL: " + message);
@@ -188,7 +174,7 @@ internal static class InstallationCoordinatorSmoke
 
     private sealed record FixtureInputs(
         string VengeanceDiscOne, string VengeanceDiscTwo, string VengeanceExecutable,
-        string BlackKnightDisc, string BlackKnightCompatibilityRoot,
+        string BlackKnightDisc,
         string MercenariesDiscOne, string MercenariesDiscTwo, string MercenariesExecutable);
 
     private sealed class RecordingProgress : IProgress<GameInstallationProgress>

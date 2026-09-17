@@ -42,7 +42,6 @@ Source: "{#PayloadRoot}\MW4RemasteredRtpPatchHost.exe"; DestDir: "{app}"; Flags:
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.pdf"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.cover.png"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
-Source: "{#PayloadRoot}\Compatibility\BlackKnight\*"; DestDir: "{app}\Compatibility\BlackKnight"; Flags: ignoreversion notimestamp recursesubdirs createallsubdirs
 
 [Icons]
 Name: "{group}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLauncher.exe"; WorkingDir: "{app}"
@@ -58,6 +57,15 @@ Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 
 [InstallDelete]
 ; Remove the obsolete second-installer shortcut created by builds before 0.5.0.
 Type: files; Name: "{group}\Install games from original media.lnk"
+; Remove the exact superseded Black Knight retail-loader bundle from older package
+; revisions. These are application-shell files, never user game data.
+Type: files; Name: "{app}\Compatibility\BlackKnight\version.dll"
+Type: files; Name: "{app}\Compatibility\BlackKnight\version.json"
+Type: files; Name: "{app}\Compatibility\BlackKnight\SafeDiscLoader2-LICENSE.txt"
+Type: files; Name: "{app}\Compatibility\BlackKnight\SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip"
+Type: files; Name: "{app}\Compatibility\BlackKnight\SafeDiscLoader2-MW4-BlackKnight.patch"
+Type: dirifempty; Name: "{app}\Compatibility\BlackKnight"
+Type: dirifempty; Name: "{app}\Compatibility"
 
 [UninstallDelete]
 ; Exact upgrade cleanup only. Media-derived game trees, saves, and configuration are

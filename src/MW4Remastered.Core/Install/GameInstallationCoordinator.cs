@@ -5,11 +5,9 @@ public abstract record GameInstallRequest(string ProductId);
 public sealed record VengeanceInstallRequest(
     string DiscOneRoot,
     string DiscTwoRoot,
-    IReadOnlyList<string>? MechPakRoots = null)
+    IReadOnlyList<string>? MechPakRoots = null,
+    string? BlackKnightDiscRoot = null)
     : GameInstallRequest("vengeance");
-
-public sealed record BlackKnightInstallRequest(string DiscRoot, string BaseVengeanceRoot)
-    : GameInstallRequest("black-knight");
 
 public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot)
     : GameInstallRequest("mercenaries");
@@ -74,10 +72,6 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             VengeanceInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.VengeanceExecutablePath) =>
                 BuildVengeance(input, preparedInputs),
             VengeanceInstallRequest => throw new ArgumentException("Vengeance installation requires an internally prepared executable.", nameof(preparedInputs)),
-            BlackKnightInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.BlackKnightEulaPath) =>
-                blackKnight.Build(input.DiscRoot, input.BaseVengeanceRoot, preparedInputs.BlackKnightEulaPath),
-            BlackKnightInstallRequest => throw new ArgumentException(
-                "Black Knight installation requires an internally prepared EULA module.", nameof(preparedInputs)),
             MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.MercenariesCabinetPayloadRoot) &&
                 !string.IsNullOrWhiteSpace(preparedInputs.MercenariesExecutablePath) =>
                 mercenaries.Build(
@@ -96,20 +90,19 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
     {
         var basePlan = vengeance.Build(input.DiscOneRoot, input.DiscTwoRoot, preparedInputs.VengeanceExecutablePath!);
         var packRoots = input.MechPakRoots?.Where(root => !string.IsNullOrWhiteSpace(root)).ToArray() ?? [];
-        if (packRoots.Length == 0)
-        {
-            return basePlan;
-        }
-        if (string.IsNullOrWhiteSpace(preparedInputs.VengeancePatch3PayloadRoot))
+        var files = basePlan.Files.ToList();
+        if (packRoots.Length > 0 && string.IsNullOrWhiteSpace(preparedInputs.VengeancePatch3PayloadRoot))
         {
             throw new ArgumentException("Vengeance Mech Paks require an internally prepared Patch 3 payload.", nameof(preparedInputs));
         }
-
-        var patchFiles = OfficialVengeancePatch3Transform.CreateInstallFiles(preparedInputs.VengeancePatch3PayloadRoot);
-        var patchDestinations = patchFiles.Select(file => file.DestinationRelativePath)
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var files = basePlan.Files.Where(file => !patchDestinations.Contains(file.DestinationRelativePath)).ToList();
-        files.AddRange(patchFiles);
+        if (packRoots.Length > 0)
+        {
+            var patchFiles = OfficialVengeancePatch3Transform.CreateInstallFiles(preparedInputs.VengeancePatch3PayloadRoot!);
+            var patchDestinations = patchFiles.Select(file => file.DestinationRelativePath)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            files = files.Where(file => !patchDestinations.Contains(file.DestinationRelativePath)).ToList();
+            files.AddRange(patchFiles);
+        }
 
         var installedPacks = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var packRoot in packRoots)
@@ -128,7 +121,26 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             files.AddRange(overlay.Files);
         }
 
-        return new InstallPlan("vengeance", files);
+        var components = new List<string> { "vengeance" };
+        components.AddRange(installedPacks);
+        if (!string.IsNullOrWhiteSpace(input.BlackKnightDiscRoot))
+        {
+            if (string.IsNullOrWhiteSpace(preparedInputs.BlackKnightEulaPath))
+            {
+                throw new ArgumentException("Black Knight requires an internally prepared EULA module.", nameof(preparedInputs));
+            }
+            var expansionFiles = blackKnight.BuildOverlay(input.BlackKnightDiscRoot, preparedInputs.BlackKnightEulaPath);
+            var collision = expansionFiles.FirstOrDefault(candidate => files.Any(existing =>
+                existing.DestinationRelativePath.Equals(candidate.DestinationRelativePath, StringComparison.OrdinalIgnoreCase)));
+            if (collision is not null)
+            {
+                throw new InvalidDataException($"Black Knight payload collides with the Vengeance family tree: {collision.DestinationRelativePath}");
+            }
+            files.AddRange(expansionFiles);
+            components.Add("black-knight");
+        }
+
+        return new InstallPlan("vengeance", files, components);
     }
 }
 
@@ -217,7 +229,7 @@ public sealed class GameInstallationCoordinator
                     Report(GameInstallationStage.Transforming, "Applying official Vengeance Patch 3 in contained scratch for the selected Mech Pak payload.");
                     vengeancePatch3Scratch = Path.Combine(parent, $".vengeance-patch3-{Guid.NewGuid():N}");
                     var retailPlan = plans.Build(
-                        vengeance with { MechPakRoots = null },
+                        vengeance with { MechPakRoots = null, BlackKnightDiscRoot = null },
                         new PreparedInstallInputs(VengeanceExecutablePath: vengeanceExecutable));
                     var retailInputs = vengeancePatch3Inputs.Build(
                         retailPlan,
@@ -232,15 +244,13 @@ public sealed class GameInstallationCoordinator
                         cancellationToken);
                     vengeancePatch3Payload = patchResult.PayloadRoot;
                 }
-            }
 
-            if (request is BlackKnightInstallRequest blackKnight)
-            {
-                Report(GameInstallationStage.Transforming, "Recording setup-time license acceptance for Black Knight.");
-                var parent = Directory.GetParent(destination)?.FullName
-                    ?? throw new InvalidDataException("Install destination must have a parent directory.");
-                blackKnightTransformScratch = Path.Combine(parent, $".black-knight-transform-{Guid.NewGuid():N}");
-                blackKnightEula = blackKnightEulaTransform.Transform(blackKnight.DiscRoot, blackKnightTransformScratch);
+                if (!string.IsNullOrWhiteSpace(vengeance.BlackKnightDiscRoot))
+                {
+                    Report(GameInstallationStage.Transforming, "Recording setup-time license acceptance for Black Knight.");
+                    blackKnightTransformScratch = Path.Combine(parent, $".black-knight-transform-{Guid.NewGuid():N}");
+                    blackKnightEula = blackKnightEulaTransform.Transform(vengeance.BlackKnightDiscRoot, blackKnightTransformScratch);
+                }
             }
 
             if (request is MercenariesInstallRequest mercenaries)

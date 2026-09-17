@@ -143,7 +143,7 @@ public sealed class OwnedInstallOverlayTransaction
         var allFiles = existing.Files.Concat(additions)
             .OrderBy(file => file.Path, StringComparer.OrdinalIgnoreCase)
             .ToArray();
-        return new PreparedOverlay(new InstallManifest(existing.SchemaVersion, existing.ProductId, allFiles), additions);
+        return new PreparedOverlay(new InstallManifest(existing.SchemaVersion, existing.ProductId, allFiles, existing.Components), additions);
     }
 
     private static string Normalize(string path) =>

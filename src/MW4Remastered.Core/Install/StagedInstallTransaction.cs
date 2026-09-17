@@ -69,7 +69,7 @@ public sealed class StagedInstallTransaction
 
             installedFiles.Sort((left, right) => StringComparer.OrdinalIgnoreCase.Compare(left.Path, right.Path));
             cancellationToken.ThrowIfCancellationRequested();
-            var manifest = new InstallManifest(1, plan.ProductId, installedFiles);
+            var manifest = new InstallManifest(2, plan.ProductId, installedFiles, plan.Components);
             var manifestPath = ResolveContainedPath(staging, InstallManifest.RelativePath);
             Directory.CreateDirectory(Path.GetDirectoryName(manifestPath)!);
             File.WriteAllText(manifestPath, JsonSerializer.Serialize(manifest, ManifestJson) + Environment.NewLine);

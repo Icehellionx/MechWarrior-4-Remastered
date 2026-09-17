@@ -6,7 +6,12 @@ namespace MW4Remastered.RtpPatchHost;
 internal static class Program
 {
     private const string EngineSha256 = "0ec6e25234ad74489eb1890d4de57bb6140bb8196bdc4a5dcac90dd9d16eb2dd";
-    private const string PatchSha256 = "caf43123e64be0a03083d4ae728b1314808569e8a7319fb35d140e20a51831c2";
+    private static readonly IReadOnlySet<string> QualifiedPatchSha256 = new HashSet<string>(StringComparer.Ordinal)
+    {
+        "caf43123e64be0a03083d4ae728b1314808569e8a7319fb35d140e20a51831c2", // Vengeance Patch 3
+        "5f3b6a383b7c1821e9f682ea3d6675818c23bf0138289e89a951256ecf2ab6ff", // Black Knight PR1
+        "d3ebf1c2dc098a8e55d7cbeb112426fb413dfd23595a1ed078cd35fe7a551a65", // Mercenaries PR1
+    };
 
     private static readonly byte[] ContinueBytes = "continue\0"u8.ToArray();
     private static readonly GCHandle ContinueHandle = GCHandle.Alloc(ContinueBytes, GCHandleType.Pinned);
@@ -17,12 +22,12 @@ internal static class Program
         {
             if (args.Length != 3)
             {
-                throw new ArgumentException("Usage: MW4RemasteredRtpPatchHost <PATCHW32.DLL> <scratch-tree> <MW4.RTP>");
+                throw new ArgumentException("Usage: MW4RemasteredRtpPatchHost <PATCHW32.DLL> <scratch-tree> <qualified-update.RTP>");
             }
 
-            var enginePath = RequireRegularFile(args[0], EngineSha256, "official Patch 3 engine");
+            var enginePath = RequireRegularFile(args[0], EngineSha256, "official RTPatch engine");
             var scratchTree = RequireScratchTree(args[1]);
-            var patchPath = RequireRegularFile(args[2], PatchSha256, "official Patch 3 payload");
+            var patchPath = RequireQualifiedPatch(args[2]);
 
             var library = NativeLibrary.Load(enginePath);
             try
@@ -34,7 +39,7 @@ internal static class Program
                 GC.KeepAlive(callback);
                 if (result != 0)
                 {
-                    throw new InvalidOperationException($"The official Patch 3 engine returned error {result}.");
+                    throw new InvalidOperationException($"The official RTPatch engine returned error {result}.");
                 }
             }
             finally
@@ -72,6 +77,24 @@ internal static class Program
             throw new InvalidDataException($"The {description} SHA-256 is not the qualified revision: {actual}");
         }
 
+        return path;
+    }
+
+    private static string RequireQualifiedPatch(string candidate)
+    {
+        var path = Path.GetFullPath(candidate);
+        var attributes = File.GetAttributes(path);
+        if ((attributes & (FileAttributes.Directory | FileAttributes.ReparsePoint)) != 0)
+        {
+            throw new InvalidDataException("The official update payload is not a regular file.");
+        }
+
+        using var stream = File.OpenRead(path);
+        var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+        if (!QualifiedPatchSha256.Contains(actual))
+        {
+            throw new InvalidDataException($"The official update payload SHA-256 is not a qualified revision: {actual}");
+        }
         return path;
     }
 
