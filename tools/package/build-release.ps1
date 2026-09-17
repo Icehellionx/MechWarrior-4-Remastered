@@ -6,6 +6,7 @@ param(
     [string]$InnoCompilerPath,
     [string]$SafeDiscLoader2SourceRoot,
     [string]$BlackKnightRuntimeBundle,
+    [string]$DDrawCompatBundle,
     [string]$MercenariesPr1Archive,
     [switch]$StageOnly
 )
@@ -62,6 +63,23 @@ try {
         if ($actual -ne $entry.Value) { throw "Black Knight runtime bundle hash mismatch for $($entry.Key): $actual" }
     }
 
+    if ([string]::IsNullOrWhiteSpace($DDrawCompatBundle)) {
+        throw 'Provide DDrawCompatBundle containing the pinned MW3 presentation build and corresponding source/notices.'
+    }
+    $DDrawCompatBundle = [IO.Path]::GetFullPath($DDrawCompatBundle)
+    $qualifiedPresentationFiles = [ordered]@{
+        'ddraw.dll' = 'b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509'
+        'DDrawCompat-LICENSE.txt' = 'd82c3e995bd48af26672368fa72ae397874b707abb012960eaef9987932bd6a8'
+        'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4.zip' = 'b09e5a8360c9b4ab866946919e9224a65ba1100eb4068dcae3aeea319675cc6c'
+        'DDrawCompat-MW4-Surface-Retry.patch' = 'ad88d82ae9ec03be4a85c7c08ae3dd1e3c9c47fc88821dafdbb2460a42e44d98'
+    }
+    foreach ($entry in $qualifiedPresentationFiles.GetEnumerator()) {
+        $path = Join-Path $DDrawCompatBundle $entry.Key
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Qualified DDrawCompat bundle file is missing: $($entry.Key)" }
+        $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -ne $entry.Value) { throw "DDrawCompat bundle hash mismatch for $($entry.Key): $actual" }
+    }
+
     $installerFiles = @(Get-ChildItem -LiteralPath $publishInstaller -File)
     $launcherFiles = @(Get-ChildItem -LiteralPath $publishLauncher -File)
     $patchHostFiles = @(Get-ChildItem -LiteralPath $publishPatchHost -File)
@@ -83,6 +101,12 @@ try {
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-LICENSE.txt') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch') -Destination $runtimeNotices
+    $presentationDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/DDrawCompat') -Force
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'ddraw.dll') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'assets/compatibility/DDrawCompat-MW4.ini') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-LICENSE.txt') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4.zip') -Destination $presentationDestination
+    Copy-Item -LiteralPath (Join-Path $DDrawCompatBundle 'DDrawCompat-MW4-Surface-Retry.patch') -Destination $presentationDestination
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
 
     if ([string]::IsNullOrWhiteSpace($MercenariesPr1Archive)) {
@@ -164,7 +188,8 @@ try {
         'MW4RemasteredInstallWorker.exe',
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
-        'BlackKnightRuntime.dll'
+        'BlackKnightRuntime.dll',
+        'Compatibility/DDrawCompat/ddraw.dll'
     )
 
     if ($StageOnly) {

@@ -41,6 +41,7 @@ Source: "{#PayloadRoot}\MW4RemasteredLauncher.exe"; DestDir: "{app}"; Flags: ign
 Source: "{#PayloadRoot}\MW4RemasteredRtpPatchHost.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\BlackKnightRuntime.dll"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Compatibility\BlackKnightRuntime\*"; DestDir: "{app}\Compatibility\BlackKnightRuntime"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\Compatibility\DDrawCompat\*"; DestDir: "{app}\Compatibility\DDrawCompat"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.pdf"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.cover.png"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp

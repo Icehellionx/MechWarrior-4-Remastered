@@ -55,7 +55,7 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 - [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
 - [x] Reproduce and fix the field-confirmed incorrect-install failures; candidate `0.6.7` installed and reached the real menu in all three titles.
-- [ ] Field-qualify `0.6.9` pilot creation after setup seeds the required title-specific graphics INI, plus 1920×1080 fullscreen and post-UAC topmost Setup behavior.
+- [ ] Field-qualify pilot creation after setup seeds and the bounded launch guard maintains each title's actual INI location; Vengeance/Mercenaries borderless 4:3 and all-title Alt-Tab are locally proven, while Black Knight intentionally remains windowed. Post-UAC topmost Setup behavior remains a user-visible gate.
 
 ## 4. Manuals
 
@@ -73,7 +73,8 @@ Outcome: readable manuals are generated reproducibly from user-local scans and p
 Outcome: all installed titles and optional packs work on supported modern Windows configurations.
 
 - [ ] Establish clean baselines for video, audio, input, movies, configuration, saves, and multiplayer behavior.
-- [ ] Evaluate maintained open-source wrappers/fixes with license and revision records.
+- [x] Pin, source-build, patch narrowly, and record the 0BSD DDrawCompat-MW3 r18 revision used for MW4 borderless presentation; two clean qualified builds are byte-identical.
+- [ ] Resolve legacy DirectShow movie-surface interoperability without a system codec pack; `/gosnovideo` remains the reversible baseline meanwhile.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
 - [x] Prove a non-elevating, disc-free Black Knight process/window launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Dialog-aware menu/gameplay confirmation remains open.
 - [x] Re-evaluate the locally patched Black Knight compatibility bundle against fresh officially patched reference trees before restoring only the exact PR1 path to installation policy.
@@ -98,7 +99,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: stop the whack-a-mole cycle by reproducing the established retail topology and official point-release state before changing compatibility code.
 Owning boundary: reference install/registry capture, official RTP application, staging parity, per-title launch contracts, and dialog-aware runtime proof.
-Smallest verifiable slice: candidate `0.6.9` replaces the skipped autoconfigurator's required INI contract for every ready title, requests 1920×1080 fullscreen, and makes Setup topmost after UAC. Next field-run pilot creation and one gameplay path in every title, then exercise unified uninstall; retail remains rejected pending its separate Patch 2 chain.
+Smallest verifiable slice: use internal `0.6.14` to prove pilot creation and one mission in every title, then exercise unified uninstall and interactive Setup foreground behavior. Preserve the exact-hash DDrawCompat boundary only for Vengeance/Mercenaries and Black Knight's no-proxy windowed fallback.
 Focused evidence: pre/post file and 32-bit registry manifests, exact official patch inputs/outputs, window text/class capture, process exit, and one menu/gameplay assertion.
 Smoke/regression evidence: previous responsive-window smokes are downgraded; no title currently has valid runtime qualification.
 Rollback or disable path: do not issue a replacement installer until reference parity and menu-level proof pass; never reintroduce injectors, opaque no-CD files, or Defender exclusions.

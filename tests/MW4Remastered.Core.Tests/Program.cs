@@ -349,6 +349,9 @@ try
         $"status reader exposes Black Knight from the shared Vengeance-family manifest and MW4X path ({installedStatuses["black-knight"].State}; {installedStatuses["black-knight"].LaunchPath}; {installedStatuses["black-knight"].Detail})");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
     var configuration = new LegacyGameConfiguration();
+    configuration.Ensure(installedStatuses["black-knight"]);
+    Check(File.Exists(Path.Combine(destination, "MW4X", "optionsx.ini")),
+        "shared-tree Black Knight configuration is seeded beside MW4X.exe rather than at the Vengeance root");
     File.WriteAllText(Path.Combine(destination, "options.ini"), "[joystick]" + Environment.NewLine + "BiThrottleCenter=0.300000" + Environment.NewLine);
     configuration.Ensure(installedStatuses["vengeance"]);
     var processStarter = new RecordingProcessStarter();
@@ -356,17 +359,29 @@ try
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
-    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1080", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
+    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosnovideo", "/gosNoJoystick" };
+    var blackKnightArguments = new[] { "-window", "-noautoconfigx", "/gosnovideo", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
-        "Vengeance launch bypasses legacy joystick enumeration and requests the qualified fullscreen resolution");
+        "Vengeance requests a 1024x768 fullscreen surface for DDrawCompat borderless presentation");
     var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
     Check(vengeanceOptions.Contains("[graphics options]", StringComparison.OrdinalIgnoreCase) &&
-          vengeanceOptions.Contains("screenwidth=1920", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("screenwidth=1024", StringComparison.OrdinalIgnoreCase) &&
           vengeanceOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration seeding preserves existing controls and adds the graphics page required by pilot scripts");
     configuration.Ensure(installedStatuses["vengeance"]);
     Check(File.ReadAllText(Path.Combine(destination, "options.ini")) == vengeanceOptions,
         "configuration seeding is byte-stable after the required graphics page exists");
+    File.WriteAllText(Path.Combine(destination, "options.ini"), vengeanceOptions
+        .Replace("screenwidth=1024", "ScreenWidth=800", StringComparison.OrdinalIgnoreCase)
+        .Replace("screenheight=768", "ScreenHeight=600", StringComparison.OrdinalIgnoreCase)
+        .Replace("bitdepth=32", "bitdepth=16", StringComparison.OrdinalIgnoreCase));
+    configuration.Ensure(installedStatuses["vengeance"]);
+    var repairedOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
+    Check(repairedOptions.Contains("ScreenWidth=1024", StringComparison.OrdinalIgnoreCase) &&
+          repairedOptions.Contains("ScreenHeight=768", StringComparison.OrdinalIgnoreCase) &&
+          repairedOptions.Contains("bitdepth=32", StringComparison.OrdinalIgnoreCase) &&
+          repairedOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
+        "configuration guard repairs the resolution page MW4 rewrites during startup without discarding controls");
     var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
     var mercenaryExecutable = Path.Combine(mercenaryRoot, "MW4Mercs.exe");
     File.WriteAllText(mercenaryExecutable, "synthetic executable");
@@ -390,8 +405,8 @@ try
     configuration.Ensure(blackKnightLaunchStatus);
     new LaunchOrchestrator(processStarter, gameRegistration).Launch(blackKnightLaunchStatus);
     Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
-        processStarter.LastStart.ArgumentList.SequenceEqual(modernArguments),
-        "Black Knight starts directly with its app-local compatibility DLL and fullscreen profile");
+        processStarter.LastStart.ArgumentList.SequenceEqual(blackKnightArguments),
+        "Black Knight starts directly with its title-specific minimal windowed fallback and no process-injection helper");
     Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Black Knight receives its title-specific required optionsx graphics page");
 
@@ -447,8 +462,8 @@ try
         blackKnightProduct, ProductInstallState.Ready, blackKnightExecutable, null,
         null, destination, "synthetic"));
     Check(processStarter.LastStart?.FileName == blackKnightExecutable &&
-        processStarter.LastStart.ArgumentList.SequenceEqual(modernArguments),
-        "Black Knight launch does not use the process-injection helper");
+        processStarter.LastStart.ArgumentList.SequenceEqual(blackKnightArguments),
+        "Black Knight launch uses its title-specific autoconfig bypass without a process-injection helper");
 
     WriteFixture(destination, "Saves/pilot.sav", "user-owned save");
     Check(new InstallManifestVerifier().Verify(destination, InstallVerificationScope.OwnedFiles).IsValid, "owned-file verification permits unowned user data");
@@ -838,9 +853,10 @@ sealed class RecordingProcessStarter : IProcessStarter
 {
     public System.Diagnostics.ProcessStartInfo? LastStart { get; private set; }
 
-    public void Start(System.Diagnostics.ProcessStartInfo startInfo)
+    public int Start(System.Diagnostics.ProcessStartInfo startInfo)
     {
         LastStart = startInfo;
+        return 4242;
     }
 }
 

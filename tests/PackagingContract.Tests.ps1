@@ -40,6 +40,8 @@ Assert-True (($inno | Select-String -Pattern 'SetForegroundWindow\(WizardForm\.H
 Assert-True ($inno -match 'WizardForm\.FormStyle\s*:=\s*fsStayOnTop') 'Setup must remain above ordinary windows because Windows can reject foreground activation after elevation.'
 Assert-True ($build -match 'Pr1Runtime' -and $inno -match 'BlackKnightRuntime\.dll') 'Package must include the source-built app-local Black Knight runtime without an injector or helper.'
 Assert-True ($build -match 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8\.zip' -and $inno -match 'Compatibility\\BlackKnightRuntime') 'Package must accompany the GPL runtime DLL with exact corresponding source and notices.'
+Assert-True ($build -match 'DDrawCompatBundle' -and $build -match 'b589c27402c283f699857aec26948b33595ee93f645891ec4f9607254148b509') 'Package must exact-hash the qualified MW4 presentation DLL.'
+Assert-True ($build -match 'DDrawCompat-MW3-source-73ac0f47af16a1d28dcda25c3228053beb3eb5f4\.zip' -and $inno -match 'Compatibility\\DDrawCompat') 'Package must install the wrapper profile and exact corresponding source/notices.'
 Assert-True ($build -match 'BlackKnightRuntimeBundle' -and $build -match [regex]::Escape('f534b642defe15ea234988ba0b3b8f1a467aa76ee478cd3e862e6265bbd8bb1c')) 'A hosted Black Knight runtime bundle must be exact-hash validated before packaging.'
 Assert-True ($build -notmatch 'BlackKnightCaptureHost|BlackKnightPr1Capture') 'Package build must not compile or stage the retired capture/injection boundary.'
 Assert-True ($build -match 'manuals\.lock\.json' -and $build -match 'output/pdf' -and $inno -match 'Manuals\\\*\.pdf') 'Package must exact-hash and install all three cleaned manuals.'

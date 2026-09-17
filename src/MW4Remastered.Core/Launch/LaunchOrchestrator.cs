@@ -4,7 +4,7 @@ namespace MW4Remastered.Core.Launch;
 
 public interface IProcessStarter
 {
-    void Start(ProcessStartInfo startInfo);
+    int Start(ProcessStartInfo startInfo);
 }
 
 public interface IGameProcessState
@@ -46,9 +46,11 @@ public sealed class SystemGameProcessState : IGameProcessState
 
 public sealed class SystemProcessStarter : IProcessStarter
 {
-    public void Start(ProcessStartInfo startInfo)
+    public int Start(ProcessStartInfo startInfo)
     {
-        Process.Start(startInfo);
+        using var process = Process.Start(startInfo)
+            ?? throw new InvalidOperationException($"Windows did not start {startInfo.FileName}.");
+        return process.Id;
     }
 }
 
@@ -57,15 +59,21 @@ public sealed class LaunchOrchestrator
     private readonly IProcessStarter processStarter;
     private readonly ILegacyGameRegistration gameRegistration;
     private readonly IGameProcessState gameProcessState;
+    private readonly ILegacyGameConfiguration gameConfiguration;
+    private readonly IGameConfigurationGuard gameConfigurationGuard;
 
     public LaunchOrchestrator(
         IProcessStarter processStarter,
         ILegacyGameRegistration gameRegistration,
-        IGameProcessState? gameProcessState = null)
+        IGameProcessState? gameProcessState = null,
+        ILegacyGameConfiguration? gameConfiguration = null,
+        IGameConfigurationGuard? gameConfigurationGuard = null)
     {
         this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
         this.gameProcessState = gameProcessState ?? new SystemGameProcessState();
+        this.gameConfiguration = gameConfiguration ?? new LegacyGameConfiguration();
+        this.gameConfigurationGuard = gameConfigurationGuard ?? new LegacyGameConfigurationGuard(this.gameConfiguration);
     }
 
     public void Launch(ProductStatus status)
@@ -82,8 +90,11 @@ public sealed class LaunchOrchestrator
         {
             throw new InvalidOperationException($"{status.Product.DisplayName} is already running.");
         }
-        // Setup owns registry mutation. Normal launch only validates the record.
+        // Setup owns registry mutation. Normal launch only validates the record,
+        // but configuration remains user-owned and MW4 can erase its graphics
+        // page while booting when the obsolete autoconfigurator is bypassed.
         gameRegistration.ValidateOwned(status);
+        gameConfiguration.Ensure(status);
         var workingDirectory = Path.GetDirectoryName(executable)!;
         var startInfo = new ProcessStartInfo
         {
@@ -93,15 +104,29 @@ public sealed class LaunchOrchestrator
         };
         if (status.Product.Id is "vengeance" or "black-knight" or "mercenaries")
         {
-            AddModernWindowsArguments(startInfo);
+            AddModernWindowsArguments(startInfo, status.Product.Id);
         }
-        processStarter.Start(startInfo);
+        var processId = processStarter.Start(startInfo);
+        gameConfigurationGuard.Protect(status, processId);
     }
 
-    private static void AddModernWindowsArguments(ProcessStartInfo startInfo)
+    private static void AddModernWindowsArguments(ProcessStartInfo startInfo, string productId)
     {
-        // Keep the legacy renderer in its qualified 32-bit OpenGL/windowed path,
-        // skip startup movies, and avoid current DirectInput enumeration.
+        if (productId == "black-knight")
+        {
+            // Black Knight's source-built SafeDisc PR1 runtime exits with FEEDFACE
+            // when any app-local ddraw proxy is present. Native exclusive mode also
+            // raises a hardware error on current Windows, so keep this title on its
+            // independently proven minimal windowed path until a compatible scaler exists.
+            startInfo.ArgumentList.Add("-window");
+            startInfo.ArgumentList.Add("-noautoconfigx");
+            startInfo.ArgumentList.Add("/gosnovideo");
+            startInfo.ArgumentList.Add("/gosNoJoystick");
+            return;
+        }
+
+        // Let DDrawCompat virtualize the game's fullscreen request as a normal
+        // borderless presentation. The desktop never enters exclusive mode.
         startInfo.ArgumentList.Add("-32");
         startInfo.ArgumentList.Add("-noautoconfig");
         startInfo.ArgumentList.Add("-f");

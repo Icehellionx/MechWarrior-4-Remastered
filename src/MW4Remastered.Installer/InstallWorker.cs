@@ -75,7 +75,7 @@ internal sealed class InstallWorker
                 TryAppendLog(args.LogPath, $"Installing {product.DisplayName}.");
                 var progress = new Progress<GameInstallationProgress>(value =>
                     TryAppendLog(args.LogPath, $"{value.ProductId}: {value.Stage} - {value.Message}"));
-                coordinator.Install(CreateInstallRequest(product, media), product.DestinationPath, progress);
+                coordinator.Install(CreateInstallRequest(product, media, args.DestinationPath), product.DestinationPath, progress);
                 installedThisRun.Add(product.DestinationPath);
             }
         }
@@ -168,17 +168,22 @@ internal sealed class InstallWorker
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException) { }
     }
 
-    private static GameInstallRequest CreateInstallRequest(InstallDestinationProduct product, IMediaSelectionSession media) => product.ProductId switch
+    private static GameInstallRequest CreateInstallRequest(
+        InstallDestinationProduct product,
+        IMediaSelectionSession media,
+        string applicationRoot) => product.ProductId switch
     {
         "vengeance" => new VengeanceInstallRequest(media.GetRoot("vengeance-disc-1"), media.GetRoot("vengeance-disc-2"),
             new[] { "inner-sphere-mech-pak", "clan-mech-pak" }.Where(media.Layouts.ContainsKey).Select(media.GetRoot).ToArray(),
             product.EffectiveComponents.Contains("black-knight", StringComparer.OrdinalIgnoreCase)
                 ? media.GetRoot("black-knight-disc-1")
-                : null),
+                : null,
+            Path.Combine(applicationRoot, "Compatibility", "DDrawCompat")),
         "mercenaries" => new MercenariesInstallRequest(
             media.GetRoot("mercenaries-disc-1"),
             media.GetRoot("mercenaries-disc-2"),
-            media.GetRoot("mercenaries-pr1")),
+            media.GetRoot("mercenaries-pr1"),
+            Path.Combine(applicationRoot, "Compatibility", "DDrawCompat")),
         _ => throw new InvalidOperationException($"Unsupported product: {product.ProductId}"),
     };
 

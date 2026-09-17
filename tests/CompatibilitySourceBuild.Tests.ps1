@@ -7,6 +7,8 @@ $workflowPath = Join-Path $root '.github/workflows/compatibility-build.yml'
 $blackKnightBuilderPath = Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightInstallPlanBuilder.cs'
 $patchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
 $runtimePatchPath = Join-Path $root 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch'
+$presentationBuildPath = Join-Path $root 'tools/compatibility/build-ddrawcompat-mw4.ps1'
+$presentationLockPath = Join-Path $root 'third_party/DDrawCompat-MW3.lock.json'
 
 $lock = Get-Content -LiteralPath $lockPath -Raw | ConvertFrom-Json
 $script = Get-Content -LiteralPath $scriptPath -Raw
@@ -15,6 +17,8 @@ $workflow = Get-Content -LiteralPath $workflowPath -Raw
 $blackKnightBuilder = Get-Content -LiteralPath $blackKnightBuilderPath -Raw
 $patchHash = (Get-FileHash -LiteralPath $patchPath -Algorithm SHA256).Hash.ToLowerInvariant()
 $runtimePatchHash = (Get-FileHash -LiteralPath $runtimePatchPath -Algorithm SHA256).Hash.ToLowerInvariant()
+$presentationBuild = Get-Content -LiteralPath $presentationBuildPath -Raw
+$presentationLock = Get-Content -LiteralPath $presentationLockPath -Raw | ConvertFrom-Json
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -47,5 +51,9 @@ Assert-True ($bundleScript -match [regex]::Escape($lock.qualifiedSourceBuild.ver
 Assert-True ($bundleScript -match [regex]::Escape($patchHash)) 'Bundle assembly must require the exact local patch.'
 Assert-True ($bundleScript -match [regex]::Escape($lock.licenseSha256)) 'Bundle assembly must require the qualified license hash.'
 Assert-True ($bundleScript -match [regex]::Escape($lock.qualifiedSourceBuild.correspondingSourceArchiveSha256)) 'Bundle assembly must require the corresponding-source archive hash.'
+Assert-True ($presentationLock.commit -eq '73ac0f47af16a1d28dcda25c3228053beb3eb5f4' -and $presentationLock.license -eq '0BSD') 'Presentation compatibility must pin the public MW3 fork revision and permissive license.'
+Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.commit) -and $presentationBuild -match [regex]::Escape($presentationLock.dllSha256)) 'Presentation build must enforce the pinned source tag and qualified DLL hash.'
+Assert-True ($presentationBuild -match [regex]::Escape($presentationLock.mw4PatchSha256) -and $presentationBuild -match 'Clear-PeTimestamps' -and $presentationBuild -match '/Brepro') 'Presentation build must apply the exact patch and normalize compiler/linker variability.'
+Assert-True ($presentationBuild -match 'git .* archive --format=zip') 'Presentation build must emit exact corresponding source.'
 
 Write-Host 'Compatibility source-build contract tests passed.'

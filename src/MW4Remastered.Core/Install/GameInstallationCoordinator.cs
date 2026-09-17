@@ -6,10 +6,15 @@ public sealed record VengeanceInstallRequest(
     string DiscOneRoot,
     string DiscTwoRoot,
     IReadOnlyList<string>? MechPakRoots = null,
-    string? BlackKnightDiscRoot = null)
+    string? BlackKnightDiscRoot = null,
+    string? PresentationCompatibilityRoot = null)
     : GameInstallRequest("vengeance");
 
-public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot, string? PointReleaseRoot = null)
+public sealed record MercenariesInstallRequest(
+    string DiscOneRoot,
+    string DiscTwoRoot,
+    string? PointReleaseRoot = null,
+    string? PresentationCompatibilityRoot = null)
     : GameInstallRequest("mercenaries");
 
 public enum GameInstallationStage
@@ -91,12 +96,18 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             input.DiscTwoRoot,
             preparedInputs.MercenariesCabinetPayloadRoot!,
             preparedInputs.MercenariesExecutablePath!);
-        if (string.IsNullOrWhiteSpace(preparedInputs.MercenariesPr1PayloadRoot)) return basePlan;
-
-        var patchFiles = OfficialMercenariesPr1Transform.CreateInstallFiles(preparedInputs.MercenariesPr1PayloadRoot);
-        var destinations = patchFiles.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var files = basePlan.Files.Where(file => !destinations.Contains(file.DestinationRelativePath)).ToList();
-        files.AddRange(patchFiles);
+        var files = basePlan.Files.ToList();
+        if (!string.IsNullOrWhiteSpace(preparedInputs.MercenariesPr1PayloadRoot))
+        {
+            var patchFiles = OfficialMercenariesPr1Transform.CreateInstallFiles(preparedInputs.MercenariesPr1PayloadRoot);
+            var destinations = patchFiles.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            files = files.Where(file => !destinations.Contains(file.DestinationRelativePath)).ToList();
+            files.AddRange(patchFiles);
+        }
+        if (!string.IsNullOrWhiteSpace(input.PresentationCompatibilityRoot))
+        {
+            files.AddRange(LegacyPresentationCompatibility.CreateMercenariesFiles(input.PresentationCompatibilityRoot));
+        }
         return new InstallPlan(basePlan.ProductId, files, basePlan.Components);
     }
 
@@ -162,6 +173,11 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
                 .ToHashSet(StringComparer.OrdinalIgnoreCase);
             files = files.Where(file => !patchDestinations.Contains(file.DestinationRelativePath)).ToList();
             files.AddRange(preparedInputs.BlackKnightCompatibilityFiles);
+        }
+
+        if (!string.IsNullOrWhiteSpace(input.PresentationCompatibilityRoot))
+        {
+            files.AddRange(LegacyPresentationCompatibility.CreateVengeanceFiles(input.PresentationCompatibilityRoot));
         }
 
         return new InstallPlan("vengeance", files, components);
