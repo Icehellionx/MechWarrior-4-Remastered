@@ -126,10 +126,37 @@ finally
     if (Directory.Exists(mercenariesTransformRejectionRoot)) Directory.Delete(mercenariesTransformRejectionRoot, true);
 }
 
+var mercenariesPr1TransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-mercenaries-pr1-transform-rejection-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(mercenariesPr1TransformRejectionRoot);
+    File.WriteAllText(Path.Combine(mercenariesPr1TransformRejectionRoot, "MW4Mercs.exe"), "unsupported PR1 loader");
+    File.WriteAllText(Path.Combine(mercenariesPr1TransformRejectionRoot, "MW4MERCS.ICD"), "unsupported PR1 image");
+    File.WriteAllText(Path.Combine(mercenariesPr1TransformRejectionRoot, "DPLAYERX.DLL"), "unsupported player");
+    var rejected = false;
+    try
+    {
+        new MercenariesPr1ExecutableTransform().Transform(
+            mercenariesPr1TransformRejectionRoot,
+            Path.Combine(mercenariesPr1TransformRejectionRoot, "scratch"));
+    }
+    catch (InvalidDataException exception)
+    {
+        rejected = exception.Message.Contains("Unsupported SafeDisc input MW4Mercs.exe SHA-256", StringComparison.Ordinal);
+    }
+    Check(rejected, "Mercenaries PR1 transform rejects inputs outside the qualified revision");
+    Check(!Directory.Exists(Path.Combine(mercenariesPr1TransformRejectionRoot, "scratch")),
+        "Mercenaries PR1 transform writes nothing after input validation fails");
+}
+finally
+{
+    if (Directory.Exists(mercenariesPr1TransformRejectionRoot)) Directory.Delete(mercenariesPr1TransformRejectionRoot, true);
+}
+
 Check(ProductCatalog.All.Count == 5, "catalog contains exactly three games and two packs");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.Game) == 3, "catalog contains three games");
 Check(ProductCatalog.All.Count(item => item.Kind == ProductKind.OptionalPack) == 2, "catalog contains two optional packs");
-Check(MediaCatalog.Layouts.Count == 7, "media catalog contains seven disc/pack layouts");
+Check(MediaCatalog.Layouts.Count == 8, "media catalog contains seven disc/pack layouts plus the qualified Mercenaries PR1 source");
 Check(ProductDependencies.AreSatisfied("vengeance", Array.Empty<string>()), "Vengeance has no base-game dependency");
 Check(!ProductDependencies.AreSatisfied("black-knight", Array.Empty<string>()) &&
     ProductDependencies.AreSatisfied("black-knight", new[] { "vengeance" }), "Black Knight requires Vengeance");
@@ -704,6 +731,7 @@ InstallationCoordinatorSmoke.Run(failures);
 InstallDestinationPlannerSmoke.Run(failures);
 IsoMediaSessionSmoke.Run(failures);
 IsoArchiveExtractorSmoke.Run(failures);
+MercenariesPr1ArchiveExtractorSmoke.Run(failures);
 MediaSourceInspectorSmoke.Run(failures);
 MediaSelectionSetSmoke.Run(failures);
 MediaSourceSessionSmoke.Run(failures);

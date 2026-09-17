@@ -153,7 +153,7 @@ begin
   MediaFiles.CaseSensitive := False;
   AddCommandLineMedia(ExpandConstant('{param:MEDIAFILES|}'));
   MediaPage := CreateCustomPage(wpWelcome, 'Choose original game media',
-    'Add every MechWarrior 4 ISO or ISO-containing ZIP you want Setup to validate.');
+    'Add every MechWarrior 4 ISO or ISO-containing ZIP. For Mercenaries, also add the supported fix ZIP containing the official mercpr1.exe update.');
   LicensePage := CreateInputOptionPage(MediaPage.ID, 'Original game license',
     'Accept the license terms included with your selected original media',
     'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
@@ -190,7 +190,7 @@ begin
   Result := True;
   if (CurPageID = MediaPage.ID) and (MediaFiles.Count = 0) then
   begin
-    MsgBox('Add at least one original MechWarrior 4 ISO or ISO-containing ZIP before continuing.', mbError, MB_OK);
+    MsgBox('Add at least one original MechWarrior 4 ISO, ISO-containing ZIP, or supported official-update ZIP before continuing.', mbError, MB_OK);
     Result := False;
   end;
   if (CurPageID = LicensePage.ID) and (not LicensePage.Values[0]) then

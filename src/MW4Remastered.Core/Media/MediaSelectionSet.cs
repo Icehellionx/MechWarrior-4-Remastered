@@ -62,7 +62,7 @@ public sealed class MediaSelectionSet
     {
         if (inspection.Items.Count == 0)
         {
-            throw new InvalidDataException("The selected source does not contain any ISO media to inspect.");
+            throw new InvalidDataException("The selected source does not contain any recognized media to inspect.");
         }
 
         var accepted = new List<SelectedMediaLayout>(inspection.Items.Count);

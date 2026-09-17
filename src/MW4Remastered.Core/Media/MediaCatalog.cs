@@ -46,6 +46,12 @@ public static class MediaCatalog
             1,
             "Clan Mech Pak",
             new[] { "MPCSETUP.DLL", "RESOURCE/MAPS/FACT01.MW4", "RESOURCE/MAPS/NGOTH.MW4", "GOODIES/PATCH3/MW4P3/ENGLISH/MW4.RTP" }),
+        new MediaLayoutDefinition(
+            "mercenaries-pr1",
+            MediaProduct.MercenariesPointRelease1,
+            1,
+            "Mercenaries Point Release 1",
+            new[] { "PATCHW32.DLL", "ENGLISH/MW4MERCS.RTP" }),
     };
 
     public static IReadOnlySet<string> ForbiddenRootNames { get; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase)

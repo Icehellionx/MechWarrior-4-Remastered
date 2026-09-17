@@ -2,6 +2,12 @@
   "schemaVersion": 1,
   "product": "MechWarrior 4: Mercenaries Point Release 1 (English)",
   "classification": "exact user-supplied official update input and local compatibility evidence; redistribution not authorized",
+  "recognizedContainer": {
+    "pathWithinCommonFixArchive": "MW4 - NoCD/mercpr1.exe",
+    "size": 5376000,
+    "sha256": "0c3d0094448e6fe5d2a30fb9ebb24001e8e8c03b39aff9232856bd30000efb30",
+    "policy": "extract only this exact official self-extracting update; exclude the adjacent NOCD payload"
+  },
   "inputs": [
     {
       "path": "Patchw32.dll",
@@ -31,5 +37,13 @@
       { "path": "RESOURCE/props.mw4", "size": 178114343, "sha256": "9facd9753aa5336d320a5ec280bc063ed38cd2be7e0315fa147972f8cd91fb6c" },
       { "path": "ScriptStrings_MERCS.dll", "size": 307200, "sha256": "588114d0ce5a8956785df13093276bafb617ad8ac1d2a271c3f1362dd9dd2620" }
     ]
+  },
+  "derivedExecutable": {
+    "transformId": "mercenaries-pr1-50.07.01.2105-sd15020-v1",
+    "path": "MW4Mercs.exe",
+    "version": "50.07.01.2105",
+    "size": 3915776,
+    "sha256": "7a806308fb3ebdaf1270845faa518d2ad708dce85f6c747ab9d9331c3ea505b5",
+    "policy": "deterministically derived from the exact PR1 loader, ICD, and original qualified DPLAYERX.DLL; not redistributed as an opaque input"
   }
 }

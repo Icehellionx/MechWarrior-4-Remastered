@@ -9,7 +9,7 @@ public sealed record VengeanceInstallRequest(
     string? BlackKnightDiscRoot = null)
     : GameInstallRequest("vengeance");
 
-public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot)
+public sealed record MercenariesInstallRequest(string DiscOneRoot, string DiscTwoRoot, string? PointReleaseRoot = null)
     : GameInstallRequest("mercenaries");
 
 public enum GameInstallationStage
@@ -32,7 +32,8 @@ public sealed record PreparedInstallInputs(
     string? VengeancePatch3PayloadRoot = null,
     string? MercenariesCabinetPayloadRoot = null,
     string? MercenariesExecutablePath = null,
-    string? BlackKnightEulaPath = null);
+    string? BlackKnightEulaPath = null,
+    string? MercenariesPr1PayloadRoot = null);
 
 public interface IGameInstallPlanFactory
 {
@@ -74,16 +75,28 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
             VengeanceInstallRequest => throw new ArgumentException("Vengeance installation requires an internally prepared executable.", nameof(preparedInputs)),
             MercenariesInstallRequest input when !string.IsNullOrWhiteSpace(preparedInputs?.MercenariesCabinetPayloadRoot) &&
                 !string.IsNullOrWhiteSpace(preparedInputs.MercenariesExecutablePath) =>
-                mercenaries.Build(
-                    input.DiscOneRoot,
-                    input.DiscTwoRoot,
-                    preparedInputs.MercenariesCabinetPayloadRoot,
-                    preparedInputs.MercenariesExecutablePath),
+                BuildMercenaries(input, preparedInputs),
             MercenariesInstallRequest => throw new ArgumentException(
                 "Mercenaries installation requires an extracted cabinet payload and internally prepared executable.",
                 nameof(preparedInputs)),
             _ => throw new ArgumentException($"Unsupported game install request: {request.GetType().Name}", nameof(request)),
         };
+    }
+
+    private InstallPlan BuildMercenaries(MercenariesInstallRequest input, PreparedInstallInputs preparedInputs)
+    {
+        var basePlan = mercenaries.Build(
+            input.DiscOneRoot,
+            input.DiscTwoRoot,
+            preparedInputs.MercenariesCabinetPayloadRoot!,
+            preparedInputs.MercenariesExecutablePath!);
+        if (string.IsNullOrWhiteSpace(preparedInputs.MercenariesPr1PayloadRoot)) return basePlan;
+
+        var patchFiles = OfficialMercenariesPr1Transform.CreateInstallFiles(preparedInputs.MercenariesPr1PayloadRoot);
+        var destinations = patchFiles.Select(file => file.DestinationRelativePath).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var files = basePlan.Files.Where(file => !destinations.Contains(file.DestinationRelativePath)).ToList();
+        files.AddRange(patchFiles);
+        return new InstallPlan(basePlan.ProductId, files, basePlan.Components);
     }
 
     private InstallPlan BuildVengeance(VengeanceInstallRequest input, PreparedInstallInputs preparedInputs)
@@ -154,13 +167,14 @@ public sealed class GameInstallationCoordinator
     private readonly IMercenariesExecutableTransform mercenariesTransform;
     private readonly OfficialVengeancePatch3Transform vengeancePatch3Transform;
     private readonly VengeancePatch3RetailInputBuilder vengeancePatch3Inputs;
+    private readonly OfficialMercenariesPr1Transform mercenariesPr1Transform;
     private readonly IBlackKnightEulaTransform blackKnightEulaTransform;
     private readonly string patchHostPath;
 
     public GameInstallationCoordinator()
         : this(new GameInstallPlanFactory(), new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
             new VengeanceRetailExecutableTransform(), new MercenariesRetailExecutableTransform(),
-            new OfficialVengeancePatch3Transform(), new VengeancePatch3RetailInputBuilder())
+            new OfficialVengeancePatch3Transform(), new VengeancePatch3RetailInputBuilder(), new OfficialMercenariesPr1Transform())
     {
     }
 
@@ -173,6 +187,7 @@ public sealed class GameInstallationCoordinator
         IMercenariesExecutableTransform? mercenariesTransform = null,
         OfficialVengeancePatch3Transform? vengeancePatch3Transform = null,
         VengeancePatch3RetailInputBuilder? vengeancePatch3Inputs = null,
+        OfficialMercenariesPr1Transform? mercenariesPr1Transform = null,
         string? patchHostPath = null,
         IBlackKnightEulaTransform? blackKnightEulaTransform = null)
     {
@@ -184,6 +199,7 @@ public sealed class GameInstallationCoordinator
         this.mercenariesTransform = mercenariesTransform ?? new MercenariesRetailExecutableTransform();
         this.vengeancePatch3Transform = vengeancePatch3Transform ?? new OfficialVengeancePatch3Transform();
         this.vengeancePatch3Inputs = vengeancePatch3Inputs ?? new VengeancePatch3RetailInputBuilder();
+        this.mercenariesPr1Transform = mercenariesPr1Transform ?? new OfficialMercenariesPr1Transform();
         this.blackKnightEulaTransform = blackKnightEulaTransform ?? new BlackKnightEulaTransform();
         this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
     }
@@ -207,6 +223,8 @@ public sealed class GameInstallationCoordinator
         string? vengeancePatch3Payload = null;
         string? mercenariesTransformScratch = null;
         string? mercenariesExecutable = null;
+        string? mercenariesPr1Scratch = null;
+        string? mercenariesPr1Payload = null;
         string? blackKnightTransformScratch = null;
         string? blackKnightEula = null;
         try
@@ -273,6 +291,25 @@ public sealed class GameInstallationCoordinator
                 cabinetPayload = Path.Combine(parent, $".mercenaries-cabinet-{Guid.NewGuid():N}");
                 var cabinet = Path.Combine(Path.GetFullPath(mercenaries.DiscOneRoot), "MSGAME.CAB");
                 cabinetExtractor.ExtractGamePayload(cabinet, cabinetPayload, cancellationToken);
+
+                if (!string.IsNullOrWhiteSpace(mercenaries.PointReleaseRoot))
+                {
+                    Report(GameInstallationStage.Transforming, "Applying official Mercenaries Point Release 1 in contained scratch.");
+                    mercenariesPr1Scratch = Path.Combine(parent, $".mercenaries-pr1-{Guid.NewGuid():N}");
+                    var retailPlan = plans.Build(
+                        mercenaries with { PointReleaseRoot = null },
+                        new PreparedInstallInputs(
+                            MercenariesCabinetPayloadRoot: cabinetPayload,
+                            MercenariesExecutablePath: mercenariesExecutable));
+                    var patchResult = mercenariesPr1Transform.Transform(
+                        retailPlan,
+                        mercenaries.DiscOneRoot,
+                        mercenaries.PointReleaseRoot,
+                        patchHostPath,
+                        mercenariesPr1Scratch,
+                        cancellationToken);
+                    mercenariesPr1Payload = patchResult.PayloadRoot;
+                }
             }
 
             cancellationToken.ThrowIfCancellationRequested();
@@ -282,7 +319,8 @@ public sealed class GameInstallationCoordinator
                 vengeancePatch3Payload,
                 cabinetPayload,
                 mercenariesExecutable,
-                blackKnightEula));
+                blackKnightEula,
+                mercenariesPr1Payload));
             if (!string.Equals(plan.ProductId, request.ProductId, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException($"Install plan product '{plan.ProductId}' does not match request '{request.ProductId}'.");
@@ -307,6 +345,7 @@ public sealed class GameInstallationCoordinator
         {
             if (cabinetPayload is not null) RemoveScratchTree(cabinetPayload);
             if (mercenariesTransformScratch is not null) RemoveScratchTree(mercenariesTransformScratch);
+            if (mercenariesPr1Scratch is not null) RemoveScratchTree(mercenariesPr1Scratch);
             if (vengeancePatch3Scratch is not null) RemoveScratchTree(vengeancePatch3Scratch);
             if (vengeanceTransformScratch is not null) RemoveScratchTree(vengeanceTransformScratch);
             if (blackKnightTransformScratch is not null) RemoveScratchTree(blackKnightTransformScratch);

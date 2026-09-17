@@ -13,16 +13,21 @@ public sealed class MediaSourceSessionFactory
 {
     private readonly OwnedIsoMediaSessionFactory isoSessions;
     private readonly IsoArchiveExtractor archives;
+    private readonly MercenariesPr1ArchiveExtractor mercenariesPr1;
 
     public MediaSourceSessionFactory()
-        : this(new OwnedIsoMediaSessionFactory(new PowerShellDiskImageBackend()), new IsoArchiveExtractor())
+        : this(new OwnedIsoMediaSessionFactory(new PowerShellDiskImageBackend()), new IsoArchiveExtractor(), new MercenariesPr1ArchiveExtractor())
     {
     }
 
-    public MediaSourceSessionFactory(OwnedIsoMediaSessionFactory isoSessions, IsoArchiveExtractor archives)
+    public MediaSourceSessionFactory(
+        OwnedIsoMediaSessionFactory isoSessions,
+        IsoArchiveExtractor archives,
+        MercenariesPr1ArchiveExtractor? mercenariesPr1 = null)
     {
         this.isoSessions = isoSessions ?? throw new ArgumentNullException(nameof(isoSessions));
         this.archives = archives ?? throw new ArgumentNullException(nameof(archives));
+        this.mercenariesPr1 = mercenariesPr1 ?? new MercenariesPr1ArchiveExtractor();
     }
 
     public IMediaSourceSession Open(string sourcePath, CancellationToken cancellationToken = default)
@@ -65,6 +70,20 @@ public sealed class MediaSourceSessionFactory
         var owned = new List<IDisposable>();
         try
         {
+            if (mercenariesPr1.TryExtract(
+                    archivePath,
+                    Path.Combine(scratch, "mercenaries-pr1"),
+                    out var update,
+                    cancellationToken))
+            {
+                return new MediaSourceSession(
+                    MediaSourceKind.Zip,
+                    new[] { new OpenMediaItem(null, update!.DestinationRoot) },
+                    update.ExcludedEntries,
+                    owned,
+                    scratch);
+            }
+
             var extraction = archives.Extract(archivePath, Path.Combine(scratch, "media"), cancellationToken);
             var items = new List<OpenMediaItem>(extraction.IsoRelativePaths.Count);
             foreach (var relativePath in extraction.IsoRelativePaths)

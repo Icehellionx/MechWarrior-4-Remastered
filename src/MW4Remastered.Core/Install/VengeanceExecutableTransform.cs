@@ -20,6 +20,7 @@ internal enum SafeDisc15020TitlePatch
     Vengeance,
     VengeancePatch3,
     Mercenaries,
+    MercenariesPr1,
 }
 
 public sealed class UnavailableVengeanceExecutableTransform : IVengeanceExecutableTransform
@@ -115,7 +116,7 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                 image.AsSpan(section.RawOffset, section.RawSize),
                 section.VirtualSize,
                 cipherKey,
-                titlePatch == SafeDisc15020TitlePatch.Mercenaries
+                IsMercenaries(titlePatch)
                     ? SafeDisc15020SecondLayerProfile.Mercenaries
                     : SafeDisc15020SecondLayerProfile.Vengeance);
         }
@@ -384,10 +385,10 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
                     continue;
                 }
                 var localOffset = checked((uint)(opcodeOffset - section.RawOffset));
-                var mixed = (titlePatch == SafeDisc15020TitlePatch.Mercenaries
+                var mixed = (IsMercenaries(titlePatch)
                     ? MercenariesRepairFilterSecond(localOffset)
                     : RepairFilterSecond(localOffset)) ^ localOffset;
-                mixed = (titlePatch == SafeDisc15020TitlePatch.Mercenaries
+                mixed = (IsMercenaries(titlePatch)
                     ? MercenariesRepairFilterFirst(mixed)
                     : RepairFilterFirst(mixed)) ^ mixed;
                 if ((mixed & 3) >= 2)
@@ -668,10 +669,16 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             case SafeDisc15020TitlePatch.Mercenaries:
                 PatchMercenariesEntitlement(image, pe);
                 break;
+            case SafeDisc15020TitlePatch.MercenariesPr1:
+                PatchMercenariesPr1LegacyClients(image, pe);
+                break;
             default:
                 throw new InvalidDataException($"Unsupported SafeDisc title patch: {titlePatch}");
         }
     }
+
+    private static bool IsMercenaries(SafeDisc15020TitlePatch titlePatch) =>
+        titlePatch is SafeDisc15020TitlePatch.Mercenaries or SafeDisc15020TitlePatch.MercenariesPr1;
 
     private static void PatchDiscCheck(Span<byte> image, int rawEnd)
     {
@@ -739,6 +746,58 @@ public sealed class VengeanceRetailExecutableTransform : IVengeanceExecutableTra
             "Mercenaries retry installed-media validation call");
 
         RemoveImportDescriptors(image, pe, "CdaC14BA.dll");
+    }
+
+    private static void PatchMercenariesPr1LegacyClients(Span<byte> image, MutablePe32 pe)
+    {
+        // PR1 contains two copies of the C-Dilla setup gate, selected by its
+        // caller with mode 1 or 2. Both gates have the same success branch and
+        // both must be bypassed before the obsolete import can be removed.
+        foreach (var mode in new byte[] { 0x01, 0x02 })
+        {
+            var gatePattern = Convert.FromHexString(
+                $"A144AB7D008B0081EC800200005657330540AB7D008B480C6A{mode:X2}81F131957385");
+            var gate = FindUniquePattern(image[..pe.RawEnd], gatePattern, $"Mercenaries PR1 mode-{mode} entitlement gate");
+            Convert.FromHexString("E946000000").CopyTo(image[(gate + 0x15)..]);
+        }
+
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("8B44241C8B4C24145051E81DF7FFFF83C40884C0"),
+            Convert.FromHexString("8B44241C8B4C24145051B00190909083C40884C0"),
+            expectedCount: 1,
+            "Mercenaries PR1 primary EULA/setup validation call");
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("8B4424148B4C24185051E88622D2FF83C40884C0"),
+            Convert.FromHexString("8B4424148B4C24185051B00190909083C40884C0"),
+            expectedCount: 1,
+            "Mercenaries PR1 mirrored EULA/setup validation call");
+
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("B301E8A4F8FFFF"),
+            Convert.FromHexString("B301B001909090"),
+            expectedCount: 1,
+            "Mercenaries PR1 primary installed-media validation call");
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("E883F8FFFF84C074DF"),
+            Convert.FromHexString("B00190909084C074DF"),
+            expectedCount: 1,
+            "Mercenaries PR1 retry installed-media validation call");
+
+        // PR1 has already been applied by setup. Its two AutoRTPatch callers
+        // treat zero as the no-update/success path and perform their own stack
+        // cleanup, so return zero locally and do not load the legacy client.
+        ReplaceAllExact(
+            image[..pe.RawEnd],
+            Convert.FromHexString("FF1538B07600"),
+            Convert.FromHexString("33C090909090"),
+            expectedCount: 2,
+            "Mercenaries PR1 AutoRTPatch calls");
+
+        RemoveImportDescriptors(image, pe, "CdaC14BA.dll", "ARTPCLNT.dll");
     }
 
     private static void RemoveImportDescriptors(Span<byte> image, MutablePe32 pe, params string[] libraryNames)

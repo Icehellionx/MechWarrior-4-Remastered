@@ -6,7 +6,8 @@ public enum MediaProduct
     BlackKnight,
     Mercenaries,
     InnerSphereMechPak,
-    ClanMechPak
+    ClanMechPak,
+    MercenariesPointRelease1
 }
 
 public sealed record MediaLayoutDefinition(

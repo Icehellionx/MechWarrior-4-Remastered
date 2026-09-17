@@ -27,6 +27,17 @@ internal static class MediaSelectionSetSmoke
         Check(Capability(withArchive, "clan").IsComplete, "optional pack presence is tracked independently", failures);
         Check(withArchive.ExcludedContentCount == 4, "archive and recognized-disc exclusions are both counted", failures);
 
+        var withPointRelease = selection.Add("mercenaries-fix.zip", new MediaSourceInspection(
+            MediaSourceKind.Zip,
+            new[] { Item("mercenaries-pr1", null) },
+            new[] { "MW4 - NoCD/MechWarrior 4 Mercenaries No-CD.exe" }));
+        Check(withPointRelease.Layouts.Any(item => item.Layout.Id == "mercenaries-pr1"),
+            "the qualified Mercenaries PR1 payload is retained as transaction evidence", failures);
+        Check(Capability(withPointRelease, "mercenaries").IsComplete,
+            "the PR1 payload supplements rather than replaces complete Mercenaries disc readiness", failures);
+        Check(withPointRelease.ExcludedContentCount == 5,
+            "the historical no-CD file adjacent to the official update remains excluded and visible", failures);
+
         var beforeFailure = selection.Current;
         var mixed = new MediaSourceInspection(
             MediaSourceKind.Zip,

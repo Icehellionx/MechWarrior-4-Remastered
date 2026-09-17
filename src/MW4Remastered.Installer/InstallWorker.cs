@@ -134,6 +134,9 @@ internal sealed class InstallWorker
         var vengeanceSelected = selection.Capabilities.Any(item => item.ProductId == "vengeance" && item.IsComplete);
         if (packSelected && !vengeanceSelected)
             throw new InvalidDataException("Mech Pak installation requires both Vengeance discs in the same setup run.");
+        var mercenariesSelected = selection.Capabilities.Any(item => item.ProductId == "mercenaries" && item.IsComplete);
+        if (mercenariesSelected && !selection.Layouts.Any(item => item.Layout.Id.Equals("mercenaries-pr1", StringComparison.OrdinalIgnoreCase)))
+            throw new InvalidDataException("Mercenaries installation requires the official Point Release 1 update. Add a supported archive containing mercpr1.exe.");
         var conflict = plan.Products.FirstOrDefault(item =>
             item.EffectiveComponents.Any(component => !alreadyReady.Contains(component)) && File.Exists(item.DestinationPath));
         if (conflict is not null) throw new IOException($"The game destination is an existing file: {conflict.DestinationPath}");
@@ -156,7 +159,10 @@ internal sealed class InstallWorker
             product.EffectiveComponents.Contains("black-knight", StringComparer.OrdinalIgnoreCase)
                 ? media.GetRoot("black-knight-disc-1")
                 : null),
-        "mercenaries" => new MercenariesInstallRequest(media.GetRoot("mercenaries-disc-1"), media.GetRoot("mercenaries-disc-2")),
+        "mercenaries" => new MercenariesInstallRequest(
+            media.GetRoot("mercenaries-disc-1"),
+            media.GetRoot("mercenaries-disc-2"),
+            media.GetRoot("mercenaries-pr1")),
         _ => throw new InvalidOperationException($"Unsupported product: {product.ProductId}"),
     };
 
