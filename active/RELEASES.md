@@ -3,12 +3,12 @@
 ## Current baseline
 
 - Public release: none.
-- Product source/build: internal `0.5.7` is invalid and must not be distributed; its wizard has a field-confirmed startup failure. Source contains the page-lifecycle correction, but no replacement candidate will be built until runtime reference parity passes.
+- Product source/build: internal `0.5.7` is invalid and must not be distributed. Internal candidate `0.6.1` compiles with the corrected page lifecycle and Black Knight runtime path, but still requires packaged media-flow/uninstall and interactive menu/gameplay acceptance before distribution.
 - GitHub remote: `https://github.com/Icehellionx/MechWarrior-4-Remastered`; `main` is the initial development branch.
-- Media support: all seven supplied ISO layouts are structurally recognized and install transactions verify structurally, but no title currently has a qualified runtime path. Field testing reached the incorrect-install dialog in all three games.
-- Compatibility: exact-input transform and source-build work remains reproducible research evidence. Established implementations show the missing qualification order: reference install state, official Vengeance Patch 3 / Black Knight PR1 / Mercenaries PR1, disc-check handling, then renderer/input fixes. The former responsive-window evidence is downgraded because the error dialog met that gate.
-- Packaging: pinned Inno Setup 7.1.0 builds one media-first wizard. The `0.5.7` binary (SHA-256 `493c08007885c34cc8035ed96627b44a73ba971c8b563a7cf8af509922f3a787`) is retained only as failed evidence and must not be offered to users. The source page-lifecycle fix requires static/package verification after runtime qualification.
-- Antivirus: the exact `0.5.7` setup, staged application payload, and fresh three-game/two-pack installed tree passed bounded Defender scans with engine `1.1.26080.3` and intelligence `1.459.239.0`; no matching detection or remediation event was created. Signing/SmartScreen reputation, repair UI, wider hardware, joystick compatibility, and in-game pack visibility remain open.
+- Media support: all seven supplied ISO layouts are structurally recognized. Fresh Vengeance Patch 3/Inner Sphere/Black Knight PR1 coordinator output exact-verified; Vengeance and Black Knight each produced their correctly titled windows when launched with installer-owned 32-bit registration. Mercenaries PR1 has prior production-worker evidence but needs a fresh packaged rerun.
+- Compatibility: Black Knight's invalid mapped-image/static-PE experiment is removed. Exact protected retail/PR1 executables now use hosted source-built app-local DLL `f534b642…`, with no injector/helper/UAC; retail and interactive menu/gameplay qualification remain.
+- Packaging: pinned Inno Setup 7.1.0 built internal `0.6.1` SHA-256 `b226b6c08b9049dcdb69fef5be42588077779182690477c0e9c7e2bcb356a091`. It remains internal until the complete media-first setup, repair, unified uninstall, and dialog-aware three-game acceptance path passes.
+- Antivirus: the hosted Black Knight runtime, fresh complete Vengeance/Black Knight/Inner Sphere installed tree, staged application payload, and exact `0.6.1` setup passed Defender engine `1.1.26080.3`, intelligence `1.459.239.0`, with no new detection/remediation event. Signing/SmartScreen reputation, repair UI, wider hardware, joystick compatibility, and in-game pack visibility remain open.
 
 ## Release checklist
 

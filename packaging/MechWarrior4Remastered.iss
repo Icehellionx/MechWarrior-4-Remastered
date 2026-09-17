@@ -39,9 +39,8 @@ VersionInfoVersion={#AppVersion}
 Source: "{#PayloadRoot}\MW4RemasteredInstallWorker.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredRtpPatchHost.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
-Source: "{#PayloadRoot}\MW4RemasteredBlackKnightCaptureHost.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
-Source: "{#PayloadRoot}\BlackKnightPr1Capture.dll"; DestDir: "{app}"; Flags: ignoreversion notimestamp
-Source: "{#PayloadRoot}\Compatibility\BlackKnightPr1Capture\*"; DestDir: "{app}\Compatibility\BlackKnightPr1Capture"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\BlackKnightRuntime.dll"; DestDir: "{app}"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\Compatibility\BlackKnightRuntime\*"; DestDir: "{app}\Compatibility\BlackKnightRuntime"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.pdf"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.cover.png"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
@@ -68,6 +67,12 @@ Type: files; Name: "{app}\Compatibility\BlackKnight\SafeDiscLoader2-LICENSE.txt"
 Type: files; Name: "{app}\Compatibility\BlackKnight\SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip"
 Type: files; Name: "{app}\Compatibility\BlackKnight\SafeDiscLoader2-MW4-BlackKnight.patch"
 Type: dirifempty; Name: "{app}\Compatibility\BlackKnight"
+; Remove the setup-only capture experiment shipped by internal pre-0.6 builds.
+Type: files; Name: "{app}\MW4RemasteredBlackKnightCaptureHost.exe"
+Type: files; Name: "{app}\BlackKnightPr1Capture.dll"
+Type: files; Name: "{app}\Compatibility\BlackKnightPr1Capture\SafeDiscLoader2-LICENSE.txt"
+Type: files; Name: "{app}\Compatibility\BlackKnightPr1Capture\SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip"
+Type: files; Name: "{app}\Compatibility\BlackKnightPr1Capture\SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch"
 Type: dirifempty; Name: "{app}\Compatibility"
 
 [UninstallDelete]
@@ -162,6 +167,7 @@ begin
     'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
     True, False);
   LicensePage.Add('I accept the original Microsoft license terms included with the media I selected.');
+  LicensePage.Values[0] := ExpandConstant('{param:ACCEPTLICENSE|0}') = '1';
 
   MediaList := TNewListBox.Create(MediaPage);
   MediaList.Parent := MediaPage.Surface;
@@ -220,6 +226,9 @@ var
 begin
   if CurStep <> ssPostInstall then
     exit;
+
+  if not LicensePage.Values[0] then
+    RaiseException('Original game license acceptance is required. Interactive setup records it on the license page; unattended setup must pass /ACCEPTLICENSE=1.');
 
   WorkerLog := ExpandConstant('{app}\Logs\InstallWorker.log');
   WizardForm.StatusLabel.Caption := 'Installing and verifying selected MechWarrior 4 games...';

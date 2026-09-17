@@ -121,7 +121,8 @@ internal static class InstallationCoordinatorSmoke
         return new GameInstallationCoordinator(plans, new CabinetPayloadExtractor(), new StagedInstallTransaction(), new InstallManifestVerifier(),
             new FixtureVengeanceTransform(inputs.VengeanceExecutable), new FixtureMercenariesTransform(inputs.MercenariesExecutable),
             blackKnightEulaTransform: new FixtureBlackKnightEulaTransform(),
-            blackKnightPr1Transform: new FixtureBlackKnightPr1Transform());
+            blackKnightPr1Transform: new FixtureBlackKnightPr1Transform(),
+            blackKnightRuntimeCompatibility: new FixtureBlackKnightRuntimeCompatibility());
     }
 
     private static FixtureInputs PrepareInputs(string root)
@@ -248,10 +249,10 @@ sealed class FixtureBlackKnightPr1Transform : IBlackKnightPr1Transform
 {
     public PreparedBlackKnightPr1Payload Transform(
         InstallPlan aggregateRetailPlan,
+        string officialVengeancePatch3Root,
         string patchMediaRoot,
         string patchHostPath,
-        string captureHostPath,
-        string captureDllPath,
+        string runtimeDllPath,
         string scratchDirectory,
         CancellationToken cancellationToken = default)
     {
@@ -262,5 +263,32 @@ sealed class FixtureBlackKnightPr1Transform : IBlackKnightPr1Transform
         File.WriteAllText(executable, "synthetic Black Knight PR1 executable");
         IReadOnlyList<InstallFile> files = [new InstallFile(payload, "MW4X/MW4x.exe", "MW4X/MW4x.exe")];
         return new PreparedBlackKnightPr1Payload(payload, "synthetic-black-knight-pr1", files);
+    }
+}
+
+sealed class FixtureBlackKnightRuntimeCompatibility : IBlackKnightRuntimeCompatibility
+{
+    public PreparedBlackKnightRuntimePayload Prepare(
+        string runtimeDllPath,
+        string scratchDirectory,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var payload = Path.Combine(scratchDirectory, "payload");
+        Write(payload, "MW4X/version.dll", "synthetic runtime");
+        Write(payload, "MW4X/version.json", "synthetic configuration");
+        IReadOnlyList<InstallFile> files =
+        [
+            new(payload, "MW4X/version.dll", "MW4X/version.dll"),
+            new(payload, "MW4X/version.json", "MW4X/version.json"),
+        ];
+        return new PreparedBlackKnightRuntimePayload(payload, files);
+    }
+
+    private static void Write(string root, string relativePath, string content)
+    {
+        var path = Path.Combine(root, relativePath.Replace('/', Path.DirectorySeparatorChar));
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, content);
     }
 }

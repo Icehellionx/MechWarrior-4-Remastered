@@ -34,7 +34,7 @@ Outcome: user media becomes a verified, rollback-safe installation without invok
 - [x] Remove the caller-supplied Mercenaries replacement executable; derive its disc-free executable from exact original-media inputs inside coordinator-owned scratch and fail closed on unknown revisions or output hashes.
 - [x] Prove official Vengeance Patch 3 applies directly to retail media, apply it through a constrained source-owned host, retain only exact qualified outputs, and remove the obsolete C-Dilla and ARTP imports/call sites from the generated executable.
 - [x] Recognize the exact official Mercenaries PR1 updater from the supported fix ZIP, exclude its adjacent historical no-CD payload, apply PR1 in contained scratch, and derive an exact-hash source-owned `50.07.01.2105` executable before commit.
-- [x] Replace the suspended retail Black Knight loader path with an exact-input setup-only capture plus deterministic managed static transform for official `45.30.04.1908`; keep hosted capture-byte, Defender, and full-package runtime qualification open.
+- [x] Retire the invalid static PR1 rebuild and replace it with an exact-hash, source-built app-local runtime for both retail and official `45.30.04.1908`; hosted build, Defender, and fresh full-coordinator PR1 launch smokes pass.
 - [x] Apply official Black Knight PR1 and Mercenaries PR1 in contained reference trees and retain exact pre/post manifests as ignored evidence.
 - [x] Replace separate Vengeance/Black Knight destinations with one atomic schema-2 Vengeance-family manifest and preserve the original `MW4X` subdirectory.
 - [x] Remove the superseded retail Black Knight proxy DLL from production package staging and constrain the RTP host to the three qualified official-update hashes.
@@ -72,7 +72,7 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [ ] Establish clean baselines for video, audio, input, movies, configuration, saves, and multiplayer behavior.
 - [ ] Evaluate maintained open-source wrappers/fixes with license and revision records.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.
-- [ ] Prove a non-elevating, disc-free Black Knight launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Prior responsive-window evidence did not exclude an error dialog.
+- [x] Prove a non-elevating, disc-free Black Knight process/window launch after reproducing the official shared Vengeance/`MW4X` topology and Black Knight PR1 state. Dialog-aware menu/gameplay confirmation remains open.
 - [ ] Re-evaluate the locally patched Black Knight compatibility bundle against a known-good officially patched reference tree before restoring it to installation policy.
 - [ ] Replace timed responsive-process checks with dialog-aware menu and gameplay assertions for all three titles.
 - [ ] Qualify fresh Vengeance and Mercenaries media-only coordinator installs through setup-state parity, menu/gameplay checks, exact verification, Defender scan, and ownership-safe uninstall.
@@ -95,7 +95,7 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: stop the whack-a-mole cycle by reproducing the established retail topology and official point-release state before changing compatibility code.
 Owning boundary: reference install/registry capture, official RTP application, staging parity, per-title launch contracts, and dialog-aware runtime proof.
-Smallest verifiable slice: the Black Knight PR1 managed transform now reproduces exact SHA-256 `22620369…` across four independent captures and is wired into aggregate setup orchestration. Next obtain the pinned hosted capture DLL, run the full seven-media worker/setup path, scan exact package/install bytes, and prove actual menus rather than dialogs.
+Smallest verifiable slice: the hosted Black Knight runtime DLL and fresh full coordinator tree pass exact hashing and Defender, and PR1 opens a responsive titled window without helper/UAC. Next build the complete package, run the seven-media setup/repair/uninstall path, smoke retail Black Knight, and prove actual menus rather than dialogs.
 Focused evidence: pre/post file and 32-bit registry manifests, exact official patch inputs/outputs, window text/class capture, process exit, and one menu/gameplay assertion.
 Smoke/regression evidence: previous responsive-window smokes are downgraded; no title currently has valid runtime qualification.
 Rollback or disable path: do not issue a replacement installer until reference parity and menu-level proof pass; never reintroduce injectors, opaque no-CD files, or Defender exclusions.

@@ -4,8 +4,8 @@ param(
     [string]$OutputDirectory,
     [string]$Version = '0.1.0',
     [string]$InnoCompilerPath,
-    [Parameter(Mandatory)]
     [string]$SafeDiscLoader2SourceRoot,
+    [string]$BlackKnightRuntimeBundle,
     [switch]$StageOnly
 )
 
@@ -20,8 +20,11 @@ $payload = Join-Path $scratch 'payload'
 $publishInstaller = Join-Path $scratch 'installer'
 $publishLauncher = Join-Path $scratch 'launcher'
 $publishPatchHost = Join-Path $scratch 'patch-host'
-$publishCaptureHost = Join-Path $scratch 'black-knight-capture-host'
-$captureBundle = Join-Path $scratch 'black-knight-capture-bundle'
+$runtimeBundle = if ([string]::IsNullOrWhiteSpace($BlackKnightRuntimeBundle)) {
+    Join-Path $scratch 'black-knight-runtime-bundle'
+} else {
+    [IO.Path]::GetFullPath($BlackKnightRuntimeBundle)
+}
 try {
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
     & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.Installer/MW4Remastered.Installer.csproj') `
@@ -36,19 +39,31 @@ try {
         --configuration Release --runtime win-x86 --self-contained true `
         -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishPatchHost
     if ($LASTEXITCODE -ne 0) { throw "Patch host publish failed with exit code $LASTEXITCODE." }
-    & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.BlackKnightCaptureHost/MW4Remastered.BlackKnightCaptureHost.csproj') `
-        --configuration Release --runtime win-x86 --self-contained true `
-        -p:PublishSingleFile=true -p:PublishTrimmed=true -p:TrimMode=full `
-        -p:DebugType=None -p:DebugSymbols=false --output $publishCaptureHost
-    if ($LASTEXITCODE -ne 0) { throw "Black Knight capture host publish failed with exit code $LASTEXITCODE." }
-    & (Join-Path $projectRoot 'tools/compatibility/build-safedisc-loader2.ps1') `
-        -SourceRoot $SafeDiscLoader2SourceRoot -OutputDirectory $captureBundle -Mode Pr1Capture
-    if ($LASTEXITCODE -ne 0) { throw "Black Knight capture DLL build failed with exit code $LASTEXITCODE." }
+    if ([string]::IsNullOrWhiteSpace($BlackKnightRuntimeBundle)) {
+        if ([string]::IsNullOrWhiteSpace($SafeDiscLoader2SourceRoot)) {
+            throw 'Provide either SafeDiscLoader2SourceRoot for a source build or BlackKnightRuntimeBundle for an exact qualified hosted build.'
+        }
+        & (Join-Path $projectRoot 'tools/compatibility/build-safedisc-loader2.ps1') `
+            -SourceRoot $SafeDiscLoader2SourceRoot -OutputDirectory $runtimeBundle -Mode Pr1Runtime
+        if ($LASTEXITCODE -ne 0) { throw "Black Knight runtime DLL build failed with exit code $LASTEXITCODE." }
+    }
+
+    $qualifiedRuntimeFiles = [ordered]@{
+        'version.dll' = 'f534b642defe15ea234988ba0b3b8f1a467aa76ee478cd3e862e6265bbd8bb1c'
+        'SafeDiscLoader2-LICENSE.txt' = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
+        'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip' = '78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17'
+        'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch' = 'e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce'
+    }
+    foreach ($entry in $qualifiedRuntimeFiles.GetEnumerator()) {
+        $path = Join-Path $runtimeBundle $entry.Key
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Qualified Black Knight runtime bundle file is missing: $($entry.Key)" }
+        $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -ne $entry.Value) { throw "Black Knight runtime bundle hash mismatch for $($entry.Key): $actual" }
+    }
 
     $installerFiles = @(Get-ChildItem -LiteralPath $publishInstaller -File)
     $launcherFiles = @(Get-ChildItem -LiteralPath $publishLauncher -File)
     $patchHostFiles = @(Get-ChildItem -LiteralPath $publishPatchHost -File)
-    $captureHostFiles = @(Get-ChildItem -LiteralPath $publishCaptureHost -File)
     if ($installerFiles.Count -ne 1 -or $installerFiles[0].Name -ne 'MW4RemasteredInstallWorker.exe') {
         throw 'Install worker publish must produce exactly one self-contained executable.'
     }
@@ -58,19 +73,15 @@ try {
     if ($patchHostFiles.Count -ne 1 -or $patchHostFiles[0].Name -ne 'MW4RemasteredRtpPatchHost.exe') {
         throw 'Patch host publish must produce exactly one self-contained executable.'
     }
-    if ($captureHostFiles.Count -ne 1 -or $captureHostFiles[0].Name -ne 'MW4RemasteredBlackKnightCaptureHost.exe') {
-        throw 'Black Knight capture host publish must produce exactly one self-contained executable.'
-    }
 
     Copy-Item -LiteralPath $installerFiles[0].FullName -Destination (Join-Path $payload $installerFiles[0].Name)
     Copy-Item -LiteralPath $launcherFiles[0].FullName -Destination (Join-Path $payload $launcherFiles[0].Name)
     Copy-Item -LiteralPath $patchHostFiles[0].FullName -Destination (Join-Path $payload $patchHostFiles[0].Name)
-    Copy-Item -LiteralPath $captureHostFiles[0].FullName -Destination (Join-Path $payload $captureHostFiles[0].Name)
-    Copy-Item -LiteralPath (Join-Path $captureBundle 'BlackKnightPr1Capture.dll') -Destination (Join-Path $payload 'BlackKnightPr1Capture.dll')
-    $captureNotices = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/BlackKnightPr1Capture') -Force
-    Copy-Item -LiteralPath (Join-Path $captureBundle 'SafeDiscLoader2-LICENSE.txt') -Destination $captureNotices
-    Copy-Item -LiteralPath (Join-Path $captureBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $captureNotices
-    Copy-Item -LiteralPath (Join-Path $captureBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch') -Destination $captureNotices
+    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'version.dll') -Destination (Join-Path $payload 'BlackKnightRuntime.dll')
+    $runtimeNotices = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/BlackKnightRuntime') -Force
+    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-LICENSE.txt') -Destination $runtimeNotices
+    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip') -Destination $runtimeNotices
+    Copy-Item -LiteralPath (Join-Path $runtimeBundle 'SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch') -Destination $runtimeNotices
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
 
     $manualSource = Join-Path $projectRoot 'output/pdf'
@@ -102,8 +113,7 @@ try {
         'MW4RemasteredInstallWorker.exe',
         'MW4RemasteredLauncher.exe',
         'MW4RemasteredRtpPatchHost.exe',
-        'MW4RemasteredBlackKnightCaptureHost.exe',
-        'BlackKnightPr1Capture.dll'
+        'BlackKnightRuntime.dll'
     )
 
     if ($StageOnly) {

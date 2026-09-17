@@ -10,7 +10,6 @@ on:
       - 'src/MW4Remastered.Installer/**'
       - 'src/MW4Remastered.Launcher/**'
       - 'src/MW4Remastered.RtpPatchHost/**'
-      - 'src/MW4Remastered.BlackKnightCaptureHost/**'
       - 'tests/**'
       - 'third_party/*.lock.json'
       - 'tools/assert-release-tree.ps1'
@@ -24,7 +23,6 @@ on:
       - 'src/MW4Remastered.Installer/**'
       - 'src/MW4Remastered.Launcher/**'
       - 'src/MW4Remastered.RtpPatchHost/**'
-      - 'src/MW4Remastered.BlackKnightCaptureHost/**'
       - 'tests/**'
       - 'third_party/*.lock.json'
       - 'tools/assert-release-tree.ps1'
@@ -60,7 +58,6 @@ jobs:
           dotnet build src/MW4Remastered.Installer/MW4Remastered.Installer.csproj --configuration Release
           dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
           dotnet build src/MW4Remastered.RtpPatchHost/MW4Remastered.RtpPatchHost.csproj --configuration Release
-          dotnet build src/MW4Remastered.BlackKnightCaptureHost/MW4Remastered.BlackKnightCaptureHost.csproj --configuration Release
 
       - name: Validate security and packaging contracts
         shell: pwsh

@@ -8,7 +8,6 @@ on:
       - 'global.json'
       - 'third_party/SafeDiscLoader2.lock.json'
       - 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight.patch'
-      - 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch'
       - 'third_party/patches/SafeDiscLoader2-MW4-BlackKnight-PR1-Runtime.patch'
       - 'tools/compatibility/build-safedisc-loader2.ps1'
       - 'tests/CompatibilitySourceBuild.Tests.ps1'
@@ -37,7 +36,6 @@ jobs:
         shell: pwsh
         run: |
           ./tools/compatibility/build-safedisc-loader2.ps1 -SourceRoot vendor/SafeDiscLoader2 -OutputDirectory artifacts/SafeDiscLoader2-Retail
-          ./tools/compatibility/build-safedisc-loader2.ps1 -SourceRoot vendor/SafeDiscLoader2 -OutputDirectory artifacts/SafeDiscLoader2-Pr1Capture -Mode Pr1Capture
           ./tools/compatibility/build-safedisc-loader2.ps1 -SourceRoot vendor/SafeDiscLoader2 -OutputDirectory artifacts/SafeDiscLoader2-Pr1Runtime -Mode Pr1Runtime
 
       - name: Upload evidence artifact

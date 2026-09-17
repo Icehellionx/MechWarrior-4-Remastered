@@ -4,7 +4,10 @@ using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Core.Install;
 
-public sealed record PreparedVengeancePatch3Payload(string PayloadRoot, string TransformId);
+public sealed record PreparedVengeancePatch3Payload(
+    string PayloadRoot,
+    string OfficialPayloadRoot,
+    string TransformId);
 
 public sealed class OfficialVengeancePatch3Transform
 {
@@ -121,7 +124,7 @@ public sealed class OfficialVengeancePatch3Transform
 
             _ = executableTransform.Transform(workRoot, outputRoot, cancellationToken);
             VerifyRetainedPayload(outputRoot);
-            return new PreparedVengeancePatch3Payload(outputRoot, TransformId);
+            return new PreparedVengeancePatch3Payload(outputRoot, workRoot, TransformId);
         }
         catch
         {

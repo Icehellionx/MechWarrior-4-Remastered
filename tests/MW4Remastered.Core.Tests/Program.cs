@@ -153,26 +153,24 @@ finally
     if (Directory.Exists(mercenariesPr1TransformRejectionRoot)) Directory.Delete(mercenariesPr1TransformRejectionRoot, true);
 }
 
-var blackKnightPr1TransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-black-knight-pr1-transform-rejection-" + Guid.NewGuid().ToString("N"));
+var blackKnightPr1TransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-black-knight-runtime-rejection-" + Guid.NewGuid().ToString("N"));
 try
 {
     Directory.CreateDirectory(blackKnightPr1TransformRejectionRoot);
-    var protectedPath = Path.Combine(blackKnightPr1TransformRejectionRoot, "MW4x.exe");
-    var mappedPath = Path.Combine(blackKnightPr1TransformRejectionRoot, "mapped.bin");
-    var outputPath = Path.Combine(blackKnightPr1TransformRejectionRoot, "output", "MW4x.exe");
-    File.WriteAllText(protectedPath, "unsupported Black Knight PR1 executable");
-    File.WriteAllText(mappedPath, "unsupported mapped image");
+    var runtimePath = Path.Combine(blackKnightPr1TransformRejectionRoot, "version.dll");
+    var outputPath = Path.Combine(blackKnightPr1TransformRejectionRoot, "output");
+    File.WriteAllText(runtimePath, "unsupported Black Knight runtime");
     var rejected = false;
     try
     {
-        new BlackKnightPr1ExecutableTransform().Transform(protectedPath, mappedPath, outputPath);
+        new BlackKnightRuntimeCompatibility().Prepare(runtimePath, outputPath);
     }
     catch (InvalidDataException exception)
     {
-        rejected = exception.Message.Contains("Unsupported Black Knight PR1 executable revision", StringComparison.Ordinal);
+        rejected = exception.Message.Contains("Unsupported Black Knight runtime DLL", StringComparison.Ordinal);
     }
-    Check(rejected, "Black Knight PR1 transform rejects inputs outside the qualified revision");
-    Check(!File.Exists(outputPath), "Black Knight PR1 transform writes nothing after input validation fails");
+    Check(rejected, "Black Knight runtime rejects inputs outside the qualified source build");
+    Check(!Directory.Exists(outputPath), "Black Knight runtime removes partial output after input validation fails");
 }
 finally
 {

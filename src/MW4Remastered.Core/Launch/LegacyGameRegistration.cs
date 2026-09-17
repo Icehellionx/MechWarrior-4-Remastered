@@ -65,13 +65,17 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
 
         var view = registration.Use32BitView ? RegistryView.Registry32 : RegistryView.Default;
         using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
+        var removeEmptyKey = false;
         using (var key = currentUser.OpenSubKey(registration.KeyPath, writable: true))
         {
             if (key is null || !PathsEqual(key.GetValue("EXE Path") as string, registration.ExecutablePath)) return;
             key.DeleteValue("CDPath", throwOnMissingValue: false);
             key.DeleteValue("EXE Path", throwOnMissingValue: false);
             key.DeleteValue("Version", throwOnMissingValue: false);
+            key.DeleteValue("FIRSTRUN", throwOnMissingValue: false);
+            removeEmptyKey = key.ValueCount == 0 && key.SubKeyCount == 0;
         }
+        if (removeEmptyKey) currentUser.DeleteSubKey(registration.KeyPath, throwOnMissingSubKey: false);
     }
 
     internal static LegacyRegistrationDescription? Describe(ProductStatus status)

@@ -36,15 +36,17 @@
     "runtimeQualified": false,
     "notes": "Hosted compilation and provenance checks passed. Different compiler bytes are recorded but are not substituted for the locally runtime- and Defender-qualified payload."
   },
-  "pr1Capture": {
-    "purpose": "setup-only mapped-image capture for the exact Black Knight PR1 executable; never used by launcher or normal game launch",
-    "localPatchSha256": "e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6",
-    "outputQualification": "pending clean hosted source build, Defender scan, and complete installer smoke"
-  },
   "pr1Runtime": {
-    "purpose": "app-local Black Knight PR1 loader; no injector, helper process, elevation, logging, or research dumps",
+    "purpose": "app-local Black Knight retail/PR1 loader; no injector, helper process, elevation, logging, or research dumps",
     "localPatchSha256": "e89e14e6986d7246990f6787e5515b6429242c9e115793af14b682c6cb8238ce",
-    "outputQualification": "pending clean hosted source build, exact artifact hash, Defender scan, and complete installer smoke"
+    "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35182493117",
+    "msbuildVersion": "17.14.51.32402",
+    "versionDllSha256": "f534b642defe15ea234988ba0b3b8f1a467aa76ee478cd3e862e6265bbd8bb1c",
+    "versionDllSize": 92160,
+    "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
+    "defenderResult": "no threats with engine 1.1.26080.3 and intelligence 1.459.239.0",
+    "blackKnightPr1Smoke": "exact official protected PR1 executable stayed alive and responsive for 40 seconds with a MechWarrior Black Knight window, no injector, and no launch elevation",
+    "outputQualification": "hosted source build, exact artifact hash, Defender scan, and direct PR1 launch smoke passed; retail and complete packaged installer smokes remain"
   },
   "includedProjects": [
     "version-proxy.vcxproj"
