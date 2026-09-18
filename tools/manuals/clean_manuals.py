@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import argparse
 import io
-import math
 from pathlib import Path
 
 import numpy as np
@@ -71,12 +70,19 @@ def clean_black_knight(source_path: Path, output_path: Path) -> None:
     source.close()
 
 
-def last_horizontal_detail_row(page: pymupdf.Page) -> int:
-    pixmap = page.get_pixmap(matrix=pymupdf.Matrix(1, 1), alpha=False, colorspace=pymupdf.csGRAY)
-    pixels = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width).astype(np.int16)
-    horizontal_edges = np.abs(np.diff(pixels, axis=1)).mean(axis=1)
-    rows = np.where(horizontal_edges > 1.5)[0]
-    return int(rows[-1]) if len(rows) else -1
+def vengeance_cover_height(page: pymupdf.Page) -> float:
+    """Find the cover-to-white-canvas boundary at half-point precision."""
+    pixmap = page.get_pixmap(matrix=pymupdf.Matrix(2, 2), alpha=False, colorspace=pymupdf.csGRAY)
+    pixels = np.frombuffer(pixmap.samples, dtype=np.uint8).reshape(pixmap.height, pixmap.width)
+    row_means = pixels.mean(axis=1)
+    changes = np.diff(row_means)
+    first_reviewed_row = 300 * 2
+    last_reviewed_row = 340 * 2
+    reviewed = changes[first_reviewed_row:last_reviewed_row]
+    boundary_row = first_reviewed_row + int(np.argmax(reviewed)) + 1
+    if changes[boundary_row - 1] < 50:
+        raise ValueError("Vengeance cover does not contain the reviewed scan-to-white boundary")
+    return boundary_row / 2.0
 
 
 def clean_vengeance(source_path: Path, output_path: Path) -> tuple[float, int]:
@@ -87,10 +93,12 @@ def clean_vengeance(source_path: Path, output_path: Path) -> tuple[float, int]:
     if len(sizes) != 1:
         raise ValueError(f"Vengeance pages do not share one source size: {sorted(sizes)}")
 
-    detail_rows = [last_horizontal_detail_row(page) for page in source]
-    if min(detail_rows) < 300 or max(detail_rows) > 360:
-        raise ValueError(f"Vengeance content boundary is outside the reviewed range: {min(detail_rows)}..{max(detail_rows)}")
-    crop_height = int(math.ceil((max(detail_rows) + 4) / 2) * 2)
+    # Page one visibly establishes the physical sheet boundary. The source PDF
+    # has scanner noise well below it, so deriving the crop from every page's
+    # last horizontal edge retained a false 19-point white strip.
+    crop_height = vengeance_cover_height(source[0])
+    if crop_height != 323.0:
+        raise ValueError(f"Unexpected Vengeance cover boundary: {crop_height}")
     crop_width = source[0].rect.width * VENGEANCE_PAGE_WIDTH_FRACTION
 
     output = pymupdf.open()

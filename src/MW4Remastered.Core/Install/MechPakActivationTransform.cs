@@ -23,6 +23,18 @@ public sealed class MechPakActivationTransform
             "ad045a0a2026408ecaf22ea739a53812803a91464d647f87a8d3e90b92ba1421",
         };
 
+    private static readonly IReadOnlySet<string> SupportedExecutableHashes =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            // Final Vengeance Patch 3, Black Knight PR1, and Mercenaries PR1
+            // executables emitted by this install pipeline. Referencing the
+            // owning transforms prevents accidentally approving an earlier
+            // intermediate reconstruction rather than the committed file.
+            VengeancePatch3ExecutableTransform.OutputSha256,
+            BlackKnightPr1ExecutableTransform.OutputSha256,
+            MercenariesPr1ExecutableTransform.OutputSha256,
+        };
+
     private static readonly IReadOnlyDictionary<string, uint> PackFlags =
         new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase)
         {
@@ -38,15 +50,19 @@ public sealed class MechPakActivationTransform
         };
 
     private readonly IReadOnlySet<string> supportedArchiveHashes;
+    private readonly IReadOnlySet<string> supportedExecutableHashes;
 
     public MechPakActivationTransform()
-        : this(SupportedArchiveHashes)
+        : this(SupportedArchiveHashes, SupportedExecutableHashes)
     {
     }
 
-    internal MechPakActivationTransform(IReadOnlySet<string> supportedArchiveHashes)
+    internal MechPakActivationTransform(
+        IReadOnlySet<string> supportedArchiveHashes,
+        IReadOnlySet<string>? supportedExecutableHashes = null)
     {
         this.supportedArchiveHashes = supportedArchiveHashes ?? throw new ArgumentNullException(nameof(supportedArchiveHashes));
+        this.supportedExecutableHashes = supportedExecutableHashes ?? new HashSet<string>();
     }
 
     public InstallPlan TransformPlan(
@@ -74,6 +90,7 @@ public sealed class MechPakActivationTransform
 
         var files = plan.Files.ToList();
         var transformed = 0;
+        var executableTransforms = 0;
         for (var index = 0; index < files.Count; index++)
         {
             cancellationToken.ThrowIfCancellationRequested();
@@ -99,7 +116,64 @@ public sealed class MechPakActivationTransform
 
         if (transformed == 0)
             throw new InvalidDataException("The install plan did not contain a qualified Mech Pak activation archive.");
+
+        for (var index = 0; index < files.Count; index++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var candidate = files[index];
+            var destination = candidate.DestinationRelativePath.Replace('/', '\\');
+            if (!destination.Equals("MW4.exe", StringComparison.OrdinalIgnoreCase) &&
+                !destination.Equals("MW4X\\MW4X.exe", StringComparison.OrdinalIgnoreCase) &&
+                !destination.Equals("MW4Mercs.exe", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            var source = ResolveRegularSource(candidate);
+            var hash = HashFile(source);
+            if (!supportedExecutableHashes.Contains(hash))
+                throw new InvalidDataException($"Unsupported Mech Pak activation executable SHA-256 for {destination}: {hash}");
+
+            var outputName = $"{transformed + executableTransforms:D2}-{Path.GetFileName(destination)}";
+            var output = Path.Combine(scratch, outputName);
+            TransformExecutable(source, output);
+            files[index] = new InstallFile(scratch, outputName, candidate.DestinationRelativePath);
+            executableTransforms++;
+        }
+
+        if (supportedExecutableHashes.Count > 0 && executableTransforms == 0)
+            throw new InvalidDataException("The install plan did not contain a qualified Mech Pak activation executable.");
         return new InstallPlan(plan.ProductId, files, plan.Components);
+    }
+
+    private static void TransformExecutable(string sourcePath, string outputPath)
+    {
+        var bytes = File.ReadAllBytes(sourcePath);
+        var match = -1;
+        for (var index = 0; index <= bytes.Length - 22; index++)
+        {
+            if (bytes[index] != 0xe8 ||
+                !bytes.AsSpan(index + 5, 4).SequenceEqual(new byte[] { 0x85, 0xc0, 0x75, 0x37 }) ||
+                !bytes.AsSpan(index + 9, 2).SequenceEqual(new byte[] { 0x8b, 0x15 }) ||
+                !bytes.AsSpan(index + 15, 7).SequenceEqual(new byte[] { 0x50, 0x68, 0x87, 0x17, 0x00, 0x00, 0x52 }))
+            {
+                continue;
+            }
+            if (match >= 0)
+                throw new InvalidDataException("Mech Pak ownership selection gate is not unique.");
+            match = index;
+        }
+        if (match < 0)
+            throw new InvalidDataException("Mech Pak ownership selection gate was not found.");
+
+        // The original client has already recognized the installed pack data,
+        // then calls its obsolete SafeCast PID validator immediately before
+        // allowing selection. Setup has independently validated the user's
+        // corresponding pack media, so retain the call for compatibility but
+        // make its existing success branch unconditional.
+        bytes[match + 7] = 0xeb;
+        Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
+        File.WriteAllBytes(outputPath, bytes);
     }
 
     private static void TransformArchive(

@@ -13,24 +13,36 @@ internal static class MechPakActivationTransformSmoke
             var source = Path.Combine(root, "source");
             Directory.CreateDirectory(source);
             var archive = Path.Combine(source, "core.mw4");
+            var executable = Path.Combine(source, "MW4.exe");
             WriteArchive(archive);
+            WriteExecutable(executable);
             var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
-            var transform = new MechPakActivationTransform(new HashSet<string>(StringComparer.OrdinalIgnoreCase) { hash });
+            var executableHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(executable))).ToLowerInvariant();
+            var transform = new MechPakActivationTransform(
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { hash },
+                new HashSet<string>(StringComparer.OrdinalIgnoreCase) { executableHash });
             var plan = new InstallPlan("vengeance", new[]
             {
                 new InstallFile(source, "core.mw4", "RESOURCE/core.mw4"),
+                new InstallFile(source, "MW4.exe", "MW4.exe"),
             }, new[] { "vengeance", "clan" });
 
             var clanPlan = transform.TransformPlan(plan, new[] { "clan" }, Path.Combine(root, "clan"));
-            var clanArchive = Resolve(clanPlan.Files.Single());
+            var clanArchive = Resolve(clanPlan.Files.Single(file =>
+                file.DestinationRelativePath.EndsWith("core.mw4", StringComparison.OrdinalIgnoreCase)));
             Check(ReadFlags(clanArchive).All(flags => flags.Count(flag => flag == 0) == 5 &&
                 flags.Count(flag => flag == 2) == 4 && flags.All(flag => flag is 0 or 2)),
                 "Mech Pak activation unlocks only the selected Clan records", failures);
             Check(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).Equals(hash, StringComparison.OrdinalIgnoreCase),
                 "Mech Pak activation produces a transformed archive rather than mutating source media", failures);
+            var clanExecutable = File.ReadAllBytes(Resolve(clanPlan.Files.Single(file =>
+                file.DestinationRelativePath.Equals("MW4.exe", StringComparison.OrdinalIgnoreCase))));
+            Check(clanExecutable[7] == 0xeb,
+                "Mech Pak activation bypasses only the obsolete post-recognition PID selection failure", failures);
 
             var bothPlan = transform.TransformPlan(plan, new[] { "clan", "inner-sphere" }, Path.Combine(root, "both"));
-            Check(ReadFlags(Resolve(bothPlan.Files.Single())).All(flags => flags.All(flag => flag == 0)),
+            Check(ReadFlags(Resolve(bothPlan.Files.Single(file =>
+                file.DestinationRelativePath.EndsWith("core.mw4", StringComparison.OrdinalIgnoreCase)))).All(flags => flags.All(flag => flag == 0)),
                 "Mech Pak activation unlocks all eight official records when both packs are selected", failures);
 
             var rejected = false;
@@ -44,6 +56,44 @@ internal static class MechPakActivationTransformSmoke
                 rejected = exception.Message.Contains("Unsupported Mech Pak activation archive SHA-256", StringComparison.Ordinal);
             }
             Check(rejected, "Mech Pak activation rejects unqualified resource archive revisions", failures);
+
+            var executableRejected = false;
+            try
+            {
+                _ = new MechPakActivationTransform(
+                        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { hash },
+                        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { new string('0', 64) })
+                    .TransformPlan(plan, new[] { "clan" }, Path.Combine(root, "rejected-executable"));
+            }
+            catch (InvalidDataException exception)
+            {
+                executableRejected = exception.Message.Contains("Unsupported Mech Pak activation executable SHA-256", StringComparison.Ordinal);
+            }
+            Check(executableRejected, "Mech Pak activation rejects unqualified final executables", failures);
+
+            var duplicateExecutable = Path.Combine(source, "MW4Mercs.exe");
+            File.WriteAllBytes(duplicateExecutable, File.ReadAllBytes(executable).Concat(File.ReadAllBytes(executable)).ToArray());
+            var duplicateHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(duplicateExecutable))).ToLowerInvariant();
+            var duplicatePlan = new InstallPlan(
+                plan.ProductId,
+                [
+                    plan.Files[0],
+                    new InstallFile(source, "MW4Mercs.exe", "MW4Mercs.exe"),
+                ],
+                plan.Components);
+            var duplicateRejected = false;
+            try
+            {
+                _ = new MechPakActivationTransform(
+                        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { hash },
+                        new HashSet<string>(StringComparer.OrdinalIgnoreCase) { duplicateHash })
+                    .TransformPlan(duplicatePlan, new[] { "clan" }, Path.Combine(root, "duplicate-gate"));
+            }
+            catch (InvalidDataException exception)
+            {
+                duplicateRejected = exception.Message.Contains("not unique", StringComparison.Ordinal);
+            }
+            Check(duplicateRejected, "Mech Pak activation rejects executables with a non-unique ownership gate", failures);
 
             var unknownPackRejected = false;
             try
@@ -97,6 +147,17 @@ internal static class MechPakActivationTransformSmoke
             dataOffset += checked((uint)table.Value.Length);
         }
         File.WriteAllBytes(path, stream.ToArray());
+    }
+
+    private static void WriteExecutable(string path)
+    {
+        File.WriteAllBytes(path,
+        [
+            0xe8, 0x11, 0x22, 0x33, 0x44,
+            0x85, 0xc0, 0x75, 0x37,
+            0x8b, 0x15, 0x55, 0x66, 0x77, 0x88,
+            0x50, 0x68, 0x87, 0x17, 0x00, 0x00, 0x52,
+        ]);
     }
 
     private static byte[] CreateTable()

@@ -14,7 +14,7 @@ from PIL import Image
 MANUALS = (
     ("Mechwarrior 4 Black Knight Manual.pdf", (327.14, 510.36), None),
     ("Mechwarrior 4 Mercenaries Manual.pdf", (652.12, 510.26), None),
-    ("Mechwarrior 4 Vengeance Manual.pdf", (509.80, 342.00), None),
+    ("Mechwarrior 4 Vengeance Manual.pdf", (509.80, 323.00), None),
 )
 
 

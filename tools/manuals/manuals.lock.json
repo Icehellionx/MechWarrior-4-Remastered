@@ -22,11 +22,11 @@
     {
       "name": "Mechwarrior 4 Vengeance Manual.pdf",
       "inputSha256": "66abae75727a5d144782cb656fb5d8e5510e2665185079682ec441e2f24d690c",
-      "outputSha256": "014045979f743eb3a0a9967855101f6928069949d2b2fbc6912b4409b234951b",
+      "outputSha256": "0343f4682f6f9f131c2d3be6473a330ccf5bbf516ae63126c72b44d2c1d68054",
       "coverName": "Mechwarrior 4 Vengeance Manual.cover.png",
-      "coverSha256": "90e87a2dc600fc645f7d9559a57de8cff1c626b213597e9a782c67e9c9c93678",
+      "coverSha256": "222ac9f3cdf37740e7ea3ef05418366e49fe69ac9692926453010c818f2b74c5",
       "pageCount": 98,
-      "pageSizes": [[509.8, 342.0]]
+      "pageSizes": [[509.8, 323.0]]
     }
   ]
 }
