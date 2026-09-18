@@ -119,9 +119,9 @@ Outcome: a clean machine can install, launch, repair, and uninstall a trustworth
 ```text
 User-facing goal: preserve the proven all-playable baseline while correcting presentation and making validated Mech Paks genuinely selectable.
 Owning boundary: exact manual geometry, dgVoodoo aspect/upscale profile, exact-hash archive flags, post-recognition executable ownership gate, and field-visible game behavior.
-Smallest verifiable slice: field-run `0.6.24`, confirm strict 4:3 outside Vengeance's intro, compare 3D edges against `0.6.22`, and select one Inner Sphere and one Clan chassis in each title.
+Smallest verifiable slice: field-run `0.6.25`, confirm strict 4:3 outside Vengeance's intro, compare 3D edges against `0.6.22`, and select one Inner Sphere and one Clan chassis in each title.
 Focused evidence: no Vengeance-manual bottom stripe; circles/character art remain undistorted; installed profiles report `stretched_4_3`, desktop resolution, 4x MSAA and 16x filtering; all three final executables contain one `0xeb` ownership-success branch; selected chassis enter MechLab or Instant Action without a purchase dialog.
-Smoke/regression evidence: `0.6.23` was field-rejected for a 342-point manual crop, global 16:9 stretching, and table-visible but PID-gated pack chassis. `0.6.24` corrects those contracts and completed a seven-ISO exact-verified install plus current Defender scans; interactive visual and roster-selection proof remains open.
+Smoke/regression evidence: `0.6.23` was field-rejected for a 342-point manual crop, global 16:9 stretching, and table-visible but PID-gated pack chassis. `0.6.24` corrected those contracts but was blocked at the real destination by dead project registration values. `0.6.25` safely reclaims only coherent missing-executable registrations and completed a controlled stale-state seven-ISO default-path install plus current Defender scans; interactive visual and roster-selection proof remains open.
 Rollback or disable path: retain the last title-specific DDrawCompat payloads only as A/B evidence; never restore `/gosnovideo` as a release default or introduce injectors, opaque no-CD files, codec packs, or Defender exclusions.
 Hardware coverage gap: only this NVIDIA/Windows multi-monitor device is available; gameplay, input, audio completeness, saves, multiplayer, and additional GPUs remain unqualified.
 ```

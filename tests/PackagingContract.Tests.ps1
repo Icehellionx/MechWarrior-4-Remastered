@@ -27,6 +27,7 @@ Assert-True ($inno -match '\{param:ACCEPTLICENSE\|0\}' -and $inno -match '/ACCEP
 Assert-True ($inno -match '\{app\}\\Logs\\InstallWorker\.log' -and $inno -notmatch '\{tmp\}\\MW4RemasteredInstallWorker\.log') 'Worker failures must retain their diagnostic log outside Inno temporary cleanup.'
 Assert-True ($inno -match 'Type:\s*files;\s*Name:\s*"\{app\}\\Logs\\InstallWorker\.log"' -and $inno -match 'Type:\s*dirifempty;\s*Name:\s*"\{app\}\\Logs"') 'The standard uninstaller must remove only the exact project-owned worker log and its empty directory.'
 Assert-True ($inno -match 'GetMediaParameters' -and $inno -match '--install-worker' -and $inno -match '--media') 'Setup must forward every selected media path to its contained worker.'
+Assert-True ($inno -match [regex]::Escape('{localappdata}\MechWarrior 4 Remastered\Logs\InstallWorker.log') -and $inno -match 'CopyFile\(WorkerLog, RetainedWorkerLog, False\)') 'Setup failure must preserve its diagnostic log outside the rollback-owned application directory.'
 Assert-True (($inno | Select-String -Pattern 'Source:' -AllMatches).Matches.Count -eq ($inno | Select-String -Pattern 'notimestamp' -AllMatches).Matches.Count) 'Every packaged source must omit source timestamps for reproducibility.'
 Assert-True ($build -match '--self-contained true' -and $build -match 'PublishSingleFile=true') 'Installer and launcher publishes must remain self-contained single files.'
 Assert-True ($build -match 'assert-release-tree\.ps1') 'Staged package payload must pass the release-tree allowlist gate.'

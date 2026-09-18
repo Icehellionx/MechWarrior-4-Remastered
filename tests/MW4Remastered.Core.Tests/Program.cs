@@ -219,7 +219,7 @@ Check(ProductDependencies.AreSatisfied("mercenaries", Array.Empty<string>()), "M
 Check(!ProductDependencies.AreSatisfied("inner-sphere", Array.Empty<string>()) &&
     !ProductDependencies.AreSatisfied("clan", Array.Empty<string>()), "both retail Mech Paks require the Vengeance base");
 
-var registrationRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-registration-contract");
+var registrationRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-registration-contract-" + Guid.NewGuid().ToString("N"));
 var vengeanceRegistration = LegacyGameRegistration.Describe(new ProductStatus(
     ProductCatalog.All.Single(item => item.Id == "vengeance"), ProductInstallState.Ready,
     Path.Combine(registrationRoot, "vengeance", "MW4.exe"), null, null,
@@ -252,6 +252,26 @@ Check(!LegacyGameRegistration.ValuesMatchOrWereConsumed(
         qualifiedVengeanceRegistration, qualifiedVengeanceRegistration.CdPath,
         qualifiedVengeanceRegistration.ExecutablePath, qualifiedVengeanceRegistration.Version + 1),
     "launch validation rejects a registration with another version");
+var staleVengeanceExecutable = Path.Combine(registrationRoot, "stale", "MW4.exe");
+Check(LegacyGameRegistration.CanReplaceStaleRegistration(
+        qualifiedVengeanceRegistration, Path.GetDirectoryName(staleVengeanceExecutable),
+        staleVengeanceExecutable, qualifiedVengeanceRegistration.Version),
+    "setup can reclaim a coherent project registration whose prior executable no longer exists");
+Directory.CreateDirectory(Path.GetDirectoryName(staleVengeanceExecutable)!);
+File.WriteAllText(staleVengeanceExecutable, "live owner");
+Check(!LegacyGameRegistration.CanReplaceStaleRegistration(
+        qualifiedVengeanceRegistration, Path.GetDirectoryName(staleVengeanceExecutable),
+        staleVengeanceExecutable, qualifiedVengeanceRegistration.Version),
+    "setup never reclaims a registration whose prior executable still exists");
+File.Delete(staleVengeanceExecutable);
+Check(!LegacyGameRegistration.CanReplaceStaleRegistration(
+        qualifiedVengeanceRegistration, Path.Combine(registrationRoot, "wrong-media"),
+        staleVengeanceExecutable, qualifiedVengeanceRegistration.Version),
+    "setup does not reclaim an incoherent stale media path");
+Check(!LegacyGameRegistration.CanReplaceStaleRegistration(
+        qualifiedVengeanceRegistration, Path.GetDirectoryName(staleVengeanceExecutable),
+        Path.Combine(registrationRoot, "stale", "other.exe"), qualifiedVengeanceRegistration.Version),
+    "setup does not reclaim a stale registration for a different executable name");
 
 foreach (var (productId, executableName, productKey) in new[]
 {

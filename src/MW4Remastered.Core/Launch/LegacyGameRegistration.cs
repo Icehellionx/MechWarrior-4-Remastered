@@ -24,7 +24,12 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
             throw new UnauthorizedAccessException("Windows did not permit the per-user MechWarrior 4 compatibility registration.");
         var existingExecutable = key.GetValue("EXE Path") as string;
         if (!string.IsNullOrWhiteSpace(existingExecutable) &&
-            !PathsEqual(existingExecutable, registration.ExecutablePath))
+            !PathsEqual(existingExecutable, registration.ExecutablePath) &&
+            !CanReplaceStaleRegistration(
+                registration,
+                key.GetValue("CDPath") as string,
+                existingExecutable,
+                key.GetValue("Version")))
         {
             throw new InvalidOperationException(
                 $"A different {status.Product.DisplayName} installation already owns the per-user compatibility registration: {existingExecutable}");
@@ -115,6 +120,44 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
                    Convert.ToInt32(version) == registration.Version;
         }
         catch (Exception error) when (error is FormatException or InvalidCastException or OverflowException)
+        {
+            return false;
+        }
+    }
+
+    internal static bool CanReplaceStaleRegistration(
+        LegacyRegistrationDescription registration,
+        string? existingCdPath,
+        string? existingExecutablePath,
+        object? existingVersion)
+    {
+        ArgumentNullException.ThrowIfNull(registration);
+        if (string.IsNullOrWhiteSpace(existingCdPath) || string.IsNullOrWhiteSpace(existingExecutablePath) ||
+            !Path.IsPathFullyQualified(existingExecutablePath) || File.Exists(existingExecutablePath))
+        {
+            return false;
+        }
+
+        try
+        {
+            if (Convert.ToInt32(existingVersion) != registration.Version ||
+                !string.Equals(
+                    Path.GetFileName(existingExecutablePath),
+                    Path.GetFileName(registration.ExecutablePath),
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            // Black Knight historically records its media path as L:\ even
+            // though its executable lives in the shared Vengeance tree. The
+            // other titles must describe the executable's containing folder.
+            return registration.KeyPath.EndsWith("MechWarrior Black Knight", StringComparison.OrdinalIgnoreCase)
+                ? PathsEqual(existingCdPath, @"L:\")
+                : PathsEqual(existingCdPath, Path.GetDirectoryName(existingExecutablePath));
+        }
+        catch (Exception error) when (error is ArgumentException or NotSupportedException or PathTooLongException or
+                                           FormatException or InvalidCastException or OverflowException)
         {
             return false;
         }

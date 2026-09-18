@@ -300,6 +300,7 @@ procedure CurStepChanged(CurStep: TSetupStep);
 var
   ResultCode: Integer;
   WorkerLog: String;
+  RetainedWorkerLog: String;
 begin
   if CurStep <> ssPostInstall then
     exit;
@@ -313,7 +314,13 @@ begin
     ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
     RaiseException('Setup could not start its contained game-installation worker.');
   if ResultCode <> 0 then
-    RaiseException('Selected game installation failed safely. The retained diagnostic log is available at: ' + WorkerLog);
+  begin
+    RetainedWorkerLog := ExpandConstant('{localappdata}\MechWarrior 4 Remastered\Logs\InstallWorker.log');
+    ForceDirectories(ExtractFileDir(RetainedWorkerLog));
+    if not CopyFile(WorkerLog, RetainedWorkerLog, False) then
+      RetainedWorkerLog := WorkerLog;
+    RaiseException('Selected game installation failed safely. The retained diagnostic log is available at: ' + RetainedWorkerLog);
+  end;
 
   RemovePrivateFirewallRule('MechWarrior 4 Remastered - Vengeance');
   RemovePrivateFirewallRule('MechWarrior 4 Remastered - Black Knight');
