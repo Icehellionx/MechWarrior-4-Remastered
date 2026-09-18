@@ -124,6 +124,7 @@ try {
     }
     Copy-Item -LiteralPath $dgVoodooProfile -Destination (Join-Path $presentationDestination 'dgVoodoo.conf')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
+    Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/DiscUtils-LICENSE.txt') -Destination (Join-Path $payload 'DiscUtils-LICENSE.txt')
 
     if ([string]::IsNullOrWhiteSpace($MercenariesPr1Archive)) {
         $MercenariesPr1Archive = Join-Path $projectRoot 'Installation Files/MechWarrior-4-Mercenaries_Fix_Win_EN.zip'

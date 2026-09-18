@@ -47,6 +47,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Internal compatibility bundles require exact inventory and hashes for installed binaries/notices plus any distribution-only corresponding source; extra files fail even when installed destinations are otherwise allowlisted.
 - Extraction prevents traversal, links/reparse escape, device paths, and writes outside staging.
 - Media selected during intake is re-opened and structurally re-recognized under the install transaction lifetime; changed or missing sources fail before mutation and release earlier resources.
+- Supported Mech Pak ZIPs must never materialize or mount the contained full ISO. Synthetic projection includes legacy setup/DRM decoys and proves they do not leave the image; the real-media gate scans the projected allowlist and the complete generated install tree, then rejects any new Defender detection/remediation event.
 - Cancellation is cooperative at bounded copy/mount/inspection boundaries and must release owned mounts and scratch before completion is reported.
 - Install commits atomically where practical and removes partial state after failure.
 - Reinstall after ownership-safe uninstall must preserve non-colliding logs, settings, saves, screenshots, and mods byte-for-byte while atomically committing a fresh owned payload. A preserved path that collides with an owned payload path must fail before mutation.

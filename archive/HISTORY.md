@@ -250,6 +250,15 @@ Completed implementation, verification, durable decisions, and disproven investi
 - Deferred only the compiled-package seven-media smoke because an unrelated active VS Code/Inno updater held Inno's setup gate; the unrelated process was not terminated.
 - Passed hosted application contracts run `35158374157` and patched-source build run `35158191892`; recorded the newer hosted-toolset DLL separately instead of treating different compiler bytes as the runtime-qualified release payload.
 
+## Mech Pak container detection and selective projection — 2026-09-18
+
+- Field setup `0.6.26` installed and exact-verified both physical game trees, then failed during media cleanup. The retained worker log recorded `Get-DiskImage` error `0x800700E1`; Defender metadata identified the temporary extracted Inner Sphere ISO itself as `Trojan:Win32/Vigorf.A`.
+- The setup executable and generated game files were not the detected resource. Scanning only the 15 pack resources/official update inputs required by the product produced zero detections.
+- Replaced whole-ISO ZIP extraction/mounting for supported Mech Paks with pinned MIT DiscUtils 0.16.13 and an in-memory, size-bounded ISO9660/Joliet projection. Legacy setup, autorun, serial, and DRM files never reach disk or execution.
+- A real five-ZIP install completed Vengeance, Black Knight, Mercenaries, both pack overlays, registration, graphics configuration, and exact verification. Defender scanned the projected Inner Sphere tree and complete disposable install tree with no threat under engine `1.1.26080.3`, signatures `1.459.256.0`.
+- Two clean `0.6.27` package builds were byte-identical at 173,061,612 bytes and SHA-256 `b58f6ac75c4b5f465582deaf23314ac3899643ea03819194ba1f12bec88807fe`; release-tree policy and the exact-setup Defender gate passed. NuGet's current audit reported no vulnerable dependency.
+- The failed `0.6.26` ISO remains locked in its exact project-owned Temp session until Windows releases it/reboots. No quarantine restoration, antivirus exclusion, security downgrade, or detection suppression was used.
+
 ## Scaffold origin
 
 - The document layout and agentic workflow were adapted from the MechWarrior 3 Remastered project.

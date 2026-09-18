@@ -1,10 +1,14 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="MW4Remastered.Core.Tests" />
     <EmbeddedResource Include="..\..\assets\compatibility\black-knight-pr1-static-transform.json"
                       LogicalName="MW4Remastered.Core.BlackKnightPr1StaticTransform.json" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="DiscUtils.Iso9660" Version="[0.16.13]" />
   </ItemGroup>
 </Project>

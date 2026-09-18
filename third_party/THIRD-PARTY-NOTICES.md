@@ -32,6 +32,16 @@ The all-in-one Windows setup is compiled with Inno Setup 7.1.0 by Jordan Russell
 - Copyright: Jordan Russell and Martijn Laan
 - Version used for the current internal package line: 7.1.0
 
+## DiscUtils
+
+Setup uses the MIT-licensed DiscUtils ISO9660 reader only for supported Mech Pak media. It reads the user-supplied image in memory and writes only the exact allowlisted resources and official update inputs; the legacy disc installer, autorun, serial, and DRM files are not materialized or executed.
+
+- Project: <https://github.com/DiscUtils/DiscUtils>
+- Version: 0.16.13
+- Evaluated revision: `59d7cadab839c6d8dfcf52f8be5efe6d2ced190f`
+- License: MIT; packaged as `DiscUtils-LICENSE.txt`
+- Exact package hashes: `third_party/DiscUtils.lock.json`
+
 ## Build-time tools
 
 The reproducible manual-cleanup pipeline uses PyMuPDF 1.28.2, Pillow 12.3.0, and NumPy 2.3.4. These tools produce the cleaned local PDF and thumbnail artifacts but are not installed with the launcher. Their respective upstream licenses and package metadata remain with the pinned local build environment.

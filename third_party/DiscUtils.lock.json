@@ -1,0 +1,14 @@
+{
+  "name": "DiscUtils ISO9660",
+  "upstream": "https://github.com/DiscUtils/DiscUtils",
+  "version": "0.16.13",
+  "revision": "59d7cadab839c6d8dfcf52f8be5efe6d2ced190f",
+  "license": "MIT",
+  "packages": {
+    "DiscUtils.Iso9660": "a4c010c2bbea87338e68040285dc6a3cdc3c5f1f583fad0f36c7ad3d114dbe6d",
+    "DiscUtils.Core": "10c97c55cd6704e88f1b48a51cbc1aaff507d8916e98f119d67b2dd38f5eb7e0",
+    "DiscUtils.Streams": "0d27ad1c0e7a33f18b83471784c8cb264f063d16b94c089e69749b396adf9f0f"
+  },
+  "use": "Read supported Mech Pak ISO9660/Joliet filesystems without mounting or materializing the complete legacy disc image; project only exact allowlisted resources and official patch inputs.",
+  "qualification": "Synthetic selective-projection regression, real Inner Sphere ZIP projection, full five-media install, and current Defender scan of the projected and complete installed trees."
+}

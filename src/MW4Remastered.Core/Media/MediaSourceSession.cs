@@ -14,20 +14,23 @@ public sealed class MediaSourceSessionFactory
     private readonly OwnedIsoMediaSessionFactory isoSessions;
     private readonly IsoArchiveExtractor archives;
     private readonly MercenariesPr1ArchiveExtractor mercenariesPr1;
+    private readonly MechPakIsoProjection mechPakProjection;
 
     public MediaSourceSessionFactory()
-        : this(new OwnedIsoMediaSessionFactory(new PowerShellDiskImageBackend()), new IsoArchiveExtractor(), new MercenariesPr1ArchiveExtractor())
+        : this(new OwnedIsoMediaSessionFactory(new PowerShellDiskImageBackend()), new IsoArchiveExtractor(), new MercenariesPr1ArchiveExtractor(), new MechPakIsoProjection())
     {
     }
 
     public MediaSourceSessionFactory(
         OwnedIsoMediaSessionFactory isoSessions,
         IsoArchiveExtractor archives,
-        MercenariesPr1ArchiveExtractor? mercenariesPr1 = null)
+        MercenariesPr1ArchiveExtractor? mercenariesPr1 = null,
+        MechPakIsoProjection? mechPakProjection = null)
     {
         this.isoSessions = isoSessions ?? throw new ArgumentNullException(nameof(isoSessions));
         this.archives = archives ?? throw new ArgumentNullException(nameof(archives));
         this.mercenariesPr1 = mercenariesPr1 ?? new MercenariesPr1ArchiveExtractor();
+        this.mechPakProjection = mechPakProjection ?? new MechPakIsoProjection();
     }
 
     public IMediaSourceSession Open(string sourcePath, CancellationToken cancellationToken = default)
@@ -48,6 +51,25 @@ public sealed class MediaSourceSessionFactory
 
         if (string.Equals(Path.GetExtension(source), ".iso", StringComparison.OrdinalIgnoreCase))
         {
+            var scratch = Path.Combine(Path.GetTempPath(), "mw4-media-session-" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                if (mechPakProjection.TryProjectImage(source, Path.Combine(scratch, "mech-pak"), cancellationToken))
+                {
+                    return new MediaSourceSession(
+                        MediaSourceKind.Iso,
+                        new[] { new OpenMediaItem(null, Path.Combine(scratch, "mech-pak")) },
+                        Array.Empty<string>(),
+                        Array.Empty<IDisposable>(),
+                        scratch);
+                }
+            }
+            catch
+            {
+                if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
+                throw;
+            }
+            if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
             var session = isoSessions.Open(source, cancellationToken);
             return new MediaSourceSession(
                 MediaSourceKind.Iso,
@@ -80,6 +102,21 @@ public sealed class MediaSourceSessionFactory
                     MediaSourceKind.Zip,
                     new[] { new OpenMediaItem(null, update!.DestinationRoot) },
                     update.ExcludedEntries,
+                    owned,
+                    scratch);
+            }
+
+            if (mechPakProjection.TryProjectArchive(
+                    archivePath,
+                    Path.Combine(scratch, "mech-pak"),
+                    out var projectedItems,
+                    out var projectedExcluded,
+                    cancellationToken))
+            {
+                return new MediaSourceSession(
+                    MediaSourceKind.Zip,
+                    projectedItems,
+                    projectedExcluded,
                     owned,
                     scratch);
             }

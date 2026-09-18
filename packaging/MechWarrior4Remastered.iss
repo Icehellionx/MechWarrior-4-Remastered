@@ -43,6 +43,7 @@ Source: "{#PayloadRoot}\BlackKnightPr1Capture.dll"; DestDir: "{app}"; Flags: ign
 Source: "{#PayloadRoot}\Compatibility\BlackKnightPr1Capture\*"; DestDir: "{app}\Compatibility\BlackKnightPr1Capture"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Compatibility\dgVoodoo2\*"; DestDir: "{app}\Compatibility\dgVoodoo2"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\THIRD-PARTY-NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion notimestamp
+Source: "{#PayloadRoot}\DiscUtils-LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.pdf"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Manuals\*.cover.png"; DestDir: "{app}\Manuals"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\Updates\MercenariesPR1\Patchw32.dat"; DestDir: "{app}\Updates\MercenariesPR1"; DestName: "Patchw32.dll"; Flags: ignoreversion notimestamp

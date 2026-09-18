@@ -926,6 +926,7 @@ MediaSourceInspectorSmoke.Run(failures);
 MediaSelectionSetSmoke.Run(failures);
 MediaSourceSessionSmoke.Run(failures);
 MediaSelectionSessionSmoke.Run(failures);
+MechPakIsoProjectionSmoke.Run(failures);
 MechPakResourceOverlayPlanSmoke.Run(failures);
 MechPakActivationTransformSmoke.Run(failures);
 OwnedInstallOverlayTransactionSmoke.Run(failures);
