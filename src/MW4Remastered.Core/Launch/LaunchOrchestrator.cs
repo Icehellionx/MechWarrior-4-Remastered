@@ -108,13 +108,16 @@ public sealed class LaunchOrchestrator
         };
         if (status.Product.Id is "vengeance" or "black-knight" or "mercenaries")
         {
-            AddModernWindowsArguments(startInfo, status.Product.Id);
+            AddModernWindowsArguments(startInfo, status.Product.Id, gameConfiguration.Resolution);
         }
         var processId = processStarter.Start(startInfo);
         gameConfigurationGuard.Protect(status, processId);
     }
 
-    private static void AddModernWindowsArguments(ProcessStartInfo startInfo, string productId)
+    private static void AddModernWindowsArguments(
+        ProcessStartInfo startInfo,
+        string productId,
+        GameResolution resolution)
     {
         if (productId == "black-knight")
         {
@@ -130,7 +133,7 @@ public sealed class LaunchOrchestrator
         startInfo.ArgumentList.Add("-32");
         startInfo.ArgumentList.Add("-noautoconfig");
         startInfo.ArgumentList.Add("-f");
-        startInfo.ArgumentList.Add($"{LegacyGameConfiguration.DefaultWidth}x{LegacyGameConfiguration.DefaultHeight}");
+        startInfo.ArgumentList.Add(resolution.ToString());
         startInfo.ArgumentList.Add("-gl");
         startInfo.ArgumentList.Add("-GameTime.MaxVariableFps");
         startInfo.ArgumentList.Add("60");

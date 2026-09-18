@@ -398,7 +398,7 @@ try
         string.Equals(installedStatuses["black-knight"].LaunchPath, Path.Combine(destination, "MW4X", "MW4X.EXE"), StringComparison.OrdinalIgnoreCase),
         $"status reader exposes Black Knight from the shared Vengeance-family manifest and MW4X path ({installedStatuses["black-knight"].State}; {installedStatuses["black-knight"].LaunchPath}; {installedStatuses["black-knight"].Detail})");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
-    var configuration = new LegacyGameConfiguration();
+    var configuration = new LegacyGameConfiguration(new FixedGameResolutionProvider(1920, 1440));
     configuration.Ensure(installedStatuses["black-knight"]);
     Check(File.Exists(Path.Combine(destination, "MW4X", "optionsx.ini")),
         "shared-tree Black Knight configuration is seeded beside MW4X.exe for bootstrap");
@@ -408,29 +408,31 @@ try
     configuration.Ensure(installedStatuses["vengeance"]);
     var processStarter = new RecordingProcessStarter();
     var gameRegistration = new RecordingGameRegistration();
-    new LaunchOrchestrator(processStarter, gameRegistration).Launch(installedStatuses["vengeance"]);
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
+        .Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
-    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1024x768", "-gl", "-GameTime.MaxVariableFps", "60", "/gosNoJoystick" };
+    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1440", "-gl", "-GameTime.MaxVariableFps", "60", "/gosNoJoystick" };
     var blackKnightArguments = new[] { "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
-        "Vengeance requests a 1024x768 fullscreen surface for dgVoodoo presentation");
+        "Vengeance requests the monitor-height 4:3 surface for aspect-preserving dgVoodoo presentation");
     var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
     Check(vengeanceOptions.Contains("[graphics options]", StringComparison.OrdinalIgnoreCase) &&
-          vengeanceOptions.Contains("screenwidth=1024", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("screenwidth=1920", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("screenheight=1440", StringComparison.OrdinalIgnoreCase) &&
           vengeanceOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration seeding preserves existing controls and adds the graphics page required by pilot scripts");
     configuration.Ensure(installedStatuses["vengeance"]);
     Check(File.ReadAllText(Path.Combine(destination, "options.ini")) == vengeanceOptions,
         "configuration seeding is byte-stable after the required graphics page exists");
     File.WriteAllText(Path.Combine(destination, "options.ini"), vengeanceOptions
-        .Replace("screenwidth=1024", "ScreenWidth=800", StringComparison.OrdinalIgnoreCase)
-        .Replace("screenheight=768", "ScreenHeight=600", StringComparison.OrdinalIgnoreCase)
+        .Replace("screenwidth=1920", "ScreenWidth=800", StringComparison.OrdinalIgnoreCase)
+        .Replace("screenheight=1440", "ScreenHeight=600", StringComparison.OrdinalIgnoreCase)
         .Replace("bitdepth=32", "bitdepth=16", StringComparison.OrdinalIgnoreCase));
     configuration.Ensure(installedStatuses["vengeance"]);
     var repairedOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
-    Check(repairedOptions.Contains("ScreenWidth=1024", StringComparison.OrdinalIgnoreCase) &&
-          repairedOptions.Contains("ScreenHeight=768", StringComparison.OrdinalIgnoreCase) &&
+    Check(repairedOptions.Contains("ScreenWidth=1920", StringComparison.OrdinalIgnoreCase) &&
+          repairedOptions.Contains("ScreenHeight=1440", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("bitdepth=32", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration guard repairs the resolution page MW4 rewrites during startup without discarding controls");
@@ -441,7 +443,8 @@ try
     var mercenaryStatus = new ProductStatus(
         mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic");
     configuration.Ensure(mercenaryStatus);
-    new LaunchOrchestrator(processStarter, gameRegistration).Launch(mercenaryStatus);
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
+        .Launch(mercenaryStatus);
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Mercenaries launch seeds configuration and bypasses legacy joystick enumeration");
     Check(File.ReadAllText(Path.Combine(mercenaryRoot, "options.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
@@ -455,7 +458,8 @@ try
         blackKnightLaunchProduct, ProductInstallState.Ready, blackKnightLaunchExecutable, null, null,
         blackKnightRoot, "synthetic");
     configuration.Ensure(blackKnightLaunchStatus);
-    new LaunchOrchestrator(processStarter, gameRegistration).Launch(blackKnightLaunchStatus);
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
+        .Launch(blackKnightLaunchStatus);
     Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
         processStarter.LastStart.ArgumentList.SequenceEqual(blackKnightArguments),
         "Black Knight starts directly through dgVoodoo fullscreen presentation with no process-injection helper");
@@ -970,6 +974,11 @@ sealed class RecordingProcessStarter : IProcessStarter
         LastStart = startInfo;
         return 4242;
     }
+}
+
+sealed class FixedGameResolutionProvider(int width, int height) : IGameResolutionProvider
+{
+    public GameResolution GetResolution() => new(width, height);
 }
 
 sealed class RecordingGameRegistration : ILegacyGameRegistration

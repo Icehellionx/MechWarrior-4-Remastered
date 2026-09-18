@@ -185,9 +185,9 @@ begin
   LicensePage.Values[0] := ExpandConstant('{param:ACCEPTLICENSE|0}') = '1';
   FirewallPage := CreateInputOptionPage(LicensePage.ID, 'Multiplayer network access',
     'Choose whether setup prepares Windows Defender Firewall now',
-    'This prevents a Windows firewall prompt from interrupting first launch. Rules apply only to installed game executables on private networks and are removed by uninstall.',
+    'This prevents a Windows firewall prompt from interrupting first launch. Setup allows the exact installed game executables on private networks and explicitly blocks inbound access on public networks. Uninstall removes both rules.',
     True, False);
-  FirewallPage.Add('Allow installed MechWarrior 4 games through Windows Defender Firewall on private networks.');
+  FirewallPage.Add('Prepare safe private/public firewall rules for the installed MechWarrior 4 games.');
   if ExpandConstant('{param:ALLOWPRIVATEFIREWALL|}') = '1' then
     FirewallPage.Values[0] := True
   else if ExpandConstant('{param:ALLOWPRIVATEFIREWALL|}') = '0' then
@@ -266,7 +266,18 @@ begin
     Result := Result + ' --media "' + MediaFiles[Index] + '"';
 end;
 
-function ConfigurePrivateFirewallRule(RuleName: String; ExecutablePath: String): Boolean;
+procedure RemoveFirewallRules(RuleName: String);
+var
+  ResultCode: Integer;
+begin
+  { A missing rule is harmless. Exact project names make reinstall opt-out and
+    uninstall cleanup idempotent without touching unrelated firewall state. }
+  Exec(ExpandConstant('{sys}\netsh.exe'),
+    'advfirewall firewall delete rule name="' + RuleName + '"', '',
+    SW_HIDE, ewWaitUntilTerminated, ResultCode);
+end;
+
+function ConfigureFirewallRules(RuleName: String; ExecutablePath: String): Boolean;
 var
   ResultCode: Integer;
   Parameters: String;
@@ -281,20 +292,20 @@ begin
   Result := Exec(ExpandConstant('{sys}\netsh.exe'), Parameters, '',
     SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
   if Result then
-    Log('Configured private-network firewall rule: ' + RuleName)
+  begin
+    Parameters := 'advfirewall firewall add rule name="' + RuleName +
+      '" dir=in action=block program="' + ExecutablePath +
+      '" enable=yes profile=public edge=no protocol=any';
+    Result := Exec(ExpandConstant('{sys}\netsh.exe'), Parameters, '',
+      SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
+  end;
+  if Result then
+    Log('Configured private allow and public block firewall rules: ' + RuleName)
   else
-    Log('Could not configure private-network firewall rule: ' + RuleName);
-end;
-
-procedure RemovePrivateFirewallRule(RuleName: String);
-var
-  ResultCode: Integer;
-begin
-  { A missing rule is harmless. Exact project names make reinstall opt-out and
-    uninstall cleanup idempotent without touching unrelated firewall state. }
-  Exec(ExpandConstant('{sys}\netsh.exe'),
-    'advfirewall firewall delete rule name="' + RuleName + '"', '',
-    SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  begin
+    Log('Could not configure complete firewall policy: ' + RuleName);
+    RemoveFirewallRules(RuleName);
+  end;
 end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -323,19 +334,19 @@ begin
     RaiseException('Selected game installation failed safely. The retained diagnostic log is available at: ' + RetainedWorkerLog);
   end;
 
-  RemovePrivateFirewallRule('MechWarrior 4 Remastered - Vengeance');
-  RemovePrivateFirewallRule('MechWarrior 4 Remastered - Black Knight');
-  RemovePrivateFirewallRule('MechWarrior 4 Remastered - Mercenaries');
+  RemoveFirewallRules('MechWarrior 4 Remastered - Vengeance');
+  RemoveFirewallRules('MechWarrior 4 Remastered - Black Knight');
+  RemoveFirewallRules('MechWarrior 4 Remastered - Mercenaries');
   if FirewallPage.Values[0] then
   begin
     FirewallWarning := '';
-    if not ConfigurePrivateFirewallRule('MechWarrior 4 Remastered - Vengeance',
+    if not ConfigureFirewallRules('MechWarrior 4 Remastered - Vengeance',
       ExpandConstant('{app}\vengeance\MW4.exe')) then
       FirewallWarning := 'Setup could not prepare the Vengeance private-network firewall rule.';
-    if not ConfigurePrivateFirewallRule('MechWarrior 4 Remastered - Black Knight',
+    if not ConfigureFirewallRules('MechWarrior 4 Remastered - Black Knight',
       ExpandConstant('{app}\vengeance\MW4X\MW4X.exe')) then
       FirewallWarning := FirewallWarning + #13#10 + 'Setup could not prepare the Black Knight private-network firewall rule.';
-    if not ConfigurePrivateFirewallRule('MechWarrior 4 Remastered - Mercenaries',
+    if not ConfigureFirewallRules('MechWarrior 4 Remastered - Mercenaries',
       ExpandConstant('{app}\mercenaries\MW4Mercs.exe')) then
       FirewallWarning := FirewallWarning + #13#10 + 'Setup could not prepare the Mercenaries private-network firewall rule.';
     if FirewallWarning <> '' then

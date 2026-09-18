@@ -1,20 +1,60 @@
 using System.Text;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using MW4Remastered.Core.Install;
 
 namespace MW4Remastered.Core.Launch;
 
 public interface ILegacyGameConfiguration
 {
+    GameResolution Resolution { get; }
     void Ensure(ProductStatus status);
+}
+
+public readonly record struct GameResolution(int Width, int Height)
+{
+    public override string ToString() => $"{Width}x{Height}";
+}
+
+public interface IGameResolutionProvider
+{
+    GameResolution GetResolution();
+}
+
+public sealed class PrimaryDisplayResolutionProvider : IGameResolutionProvider
+{
+    private const int SmCxScreen = 0;
+    private const int SmCyScreen = 1;
+
+    public GameResolution GetResolution()
+    {
+        if (!OperatingSystem.IsWindows()) return new GameResolution(1024, 768);
+
+        var desktopWidth = GetSystemMetrics(SmCxScreen);
+        var desktopHeight = GetSystemMetrics(SmCyScreen);
+        if (desktopWidth < 800 || desktopHeight < 600) return new GameResolution(1024, 768);
+
+        // MW4's UI and artwork are authored for 4:3. Use the full display height
+        // and the largest matching width, so a 2560x1440 monitor renders at
+        // 1920x1440 and dgVoodoo pillarboxes it without stretching anything.
+        var height = desktopHeight - desktopHeight % 4;
+        var width = Math.Min(desktopWidth, height * 4 / 3);
+        width -= width % 4;
+        height = width * 3 / 4;
+        return width >= 800 && height >= 600
+            ? new GameResolution(width, height)
+            : new GameResolution(1024, 768);
+    }
+
+    [DllImport("user32.dll")]
+    private static extern int GetSystemMetrics(int nIndex);
 }
 
 public sealed class LegacyGameConfiguration : ILegacyGameConfiguration
 {
-    internal const int DefaultWidth = 1024;
-    internal const int DefaultHeight = 768;
+    public GameResolution Resolution { get; }
 
-    private const string GraphicsPage = """
+    private const string GraphicsPageTemplate = """
 [graphics options]
 VideoDriverIndex=0
 DetailTexture=true
@@ -34,8 +74,8 @@ fontmedium=-2
 fontlarge=-2
 fontlarge2=-2
 fontlarge3=-2
-screenwidth=1024
-screenheight=768
+screenwidth={0}
+screenheight={1}
 bitdepth=32
 FancyWater=true
 MovieTextures=true
@@ -58,6 +98,13 @@ AutoTorsoCenter=0
 HudDamageMode=false
 HudTargetDamageMode=false
 """;
+
+    public LegacyGameConfiguration(IGameResolutionProvider? resolutionProvider = null)
+    {
+        Resolution = (resolutionProvider ?? new PrimaryDisplayResolutionProvider()).GetResolution();
+        if (Resolution.Width < 800 || Resolution.Height < 600 || Resolution.Width * 3 != Resolution.Height * 4)
+            throw new InvalidOperationException($"Invalid 4:3 game resolution: {Resolution}.");
+    }
 
     public void Ensure(ProductStatus status)
     {
@@ -90,7 +137,7 @@ HudTargetDamageMode=false
         if (!installRoot.Equals(executableRoot, StringComparison.OrdinalIgnoreCase)) yield return installRoot;
     }
 
-    private static void EnsureFile(string root, string fileName)
+    private void EnsureFile(string root, string fileName)
     {
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Verified game root is missing: {root}");
         if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
@@ -101,7 +148,9 @@ HudTargetDamageMode=false
         var updated = HasGraphicsPage(existing)
             ? EnsureRequiredResolution(existing)
             : existing + (existing.Length == 0 || existing.EndsWith('\n') ? string.Empty : Environment.NewLine)
-                + (existing.Length == 0 ? string.Empty : Environment.NewLine) + GraphicsPage + Environment.NewLine;
+                + (existing.Length == 0 ? string.Empty : Environment.NewLine)
+                + string.Format(System.Globalization.CultureInfo.InvariantCulture, GraphicsPageTemplate,
+                    Resolution.Width, Resolution.Height) + Environment.NewLine;
         updated = NormalizeWindowsLineEndings(updated);
         if (updated.Equals(existing, StringComparison.Ordinal)) return;
         var temporary = Path.Combine(root, $".{fileName}.mw4-remastered-{Guid.NewGuid():N}.tmp");
@@ -136,7 +185,7 @@ HudTargetDamageMode=false
         return false;
     }
 
-    private static string EnsureRequiredResolution(string value)
+    private string EnsureRequiredResolution(string value)
     {
         var lines = value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Split('\n').ToList();
         var inGraphics = false;
@@ -165,12 +214,12 @@ HudTargetDamageMode=false
             var key = trimmed[..separator].Trim();
             if (key.Equals("screenwidth", StringComparison.OrdinalIgnoreCase))
             {
-                lines[index] = $"ScreenWidth={DefaultWidth}";
+                lines[index] = $"ScreenWidth={Resolution.Width}";
                 foundWidth = true;
             }
             else if (key.Equals("screenheight", StringComparison.OrdinalIgnoreCase))
             {
-                lines[index] = $"ScreenHeight={DefaultHeight}";
+                lines[index] = $"ScreenHeight={Resolution.Height}";
                 foundHeight = true;
             }
             else if (key.Equals("bitdepth", StringComparison.OrdinalIgnoreCase))
@@ -181,8 +230,8 @@ HudTargetDamageMode=false
         }
 
         var missing = new List<string>(3);
-        if (!foundWidth) missing.Add($"ScreenWidth={DefaultWidth}");
-        if (!foundHeight) missing.Add($"ScreenHeight={DefaultHeight}");
+        if (!foundWidth) missing.Add($"ScreenWidth={Resolution.Width}");
+        if (!foundHeight) missing.Add($"ScreenHeight={Resolution.Height}");
         if (!foundDepth) missing.Add("bitdepth=32");
         if (missing.Count > 0) lines.InsertRange(sectionEnd, missing);
         return string.Join(Environment.NewLine, lines);

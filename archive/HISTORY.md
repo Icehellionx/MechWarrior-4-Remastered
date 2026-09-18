@@ -2,6 +2,13 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## Selective Mech Pak intake and 0.6.27 presentation rejection — 2026-09-18
+
+- Replaced whole-disc Mech Pak ZIP extraction with pinned DiscUtils ISO reading and a 15-file exact allowlist. The obsolete setup, autorun, serial, and DRM surface that Defender identified as `Trojan:Win32/Vigorf.A` is no longer materialized or mounted. Real Inner Sphere projection, a complete five-ZIP install, release-tree policy, current Defender scans, and two byte-identical `0.6.27` builds passed.
+- Field launch then rejected `0.6.27`: the launcher and 30-second INI guard still forced 1024x768 while dgVoodoo forced `Resolution=max`, yielding the observed low-resolution stretched output. Static profile assertions had been promoted beyond their evidence.
+- The same field run exposed a separate firewall contract error. Setup created Private-profile allow rules, but the active Windows connection was Public, leaving the executable undecided on that profile and triggering the normal inbound-listener security prompt.
+- The successor source derives a monitor-height 4:3 surface (`1920x1440` on the current 2560x1440 display), synchronizes launch arguments and guarded INIs, leaves wrapper resolution unforced, advertises `max_4_3`, and retains aspect-preserving scaling. Firewall ownership now pairs exact-executable Private allow with Public inbound block rules under removable project names. Two clean `0.6.28` packages are byte-identical at SHA-256 `ec4d3d5b0a6be6776c4f08fd8d3b7c90d33d2b3280174bf4c3fcdacf7d021539`; release-tree policy and an exact setup Defender scan pass. Interactive geometry and prompt-free launch remain field gates.
+
 ## First all-three-games-playable field baseline — 2026-09-17
 
 - Field testing rejected `0.6.25` as a polish candidate: every title/screen was widened, the pack chassis still raised the purchase prompt, and Alt-Tab still minimized. dgVoodoo's documentation identified `Resolution=desktop` as the aspect-discarding renderer setting. Binary tracing identified the missed script-facing `ShellCheckClanPak`/`ShellCheckISPak` ownership layer. These failures are retained so static configuration and byte-presence checks cannot be promoted as interactive proof again.
