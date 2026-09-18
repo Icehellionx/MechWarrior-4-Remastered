@@ -39,11 +39,19 @@ internal static class MechPakActivationTransformSmoke
                 file.DestinationRelativePath.Equals("MW4.exe", StringComparison.OrdinalIgnoreCase))));
             Check(clanExecutable[7] == 0xeb,
                 "Mech Pak activation bypasses only the obsolete post-recognition PID selection failure", failures);
+            Check(clanExecutable.AsSpan(22, 8).SequenceEqual(new byte[] { 0xb8, 1, 0, 0, 0, 0xc2, 0x0c, 0 }),
+                "Mech Pak activation makes the Clan shell ownership callback usable after validated media setup", failures);
+            Check(clanExecutable[46] == 0xa1,
+                "Mech Pak activation leaves the unselected Inner Sphere shell ownership callback unchanged", failures);
 
             var bothPlan = transform.TransformPlan(plan, new[] { "clan", "inner-sphere" }, Path.Combine(root, "both"));
             Check(ReadFlags(Resolve(bothPlan.Files.Single(file =>
                 file.DestinationRelativePath.EndsWith("core.mw4", StringComparison.OrdinalIgnoreCase)))).All(flags => flags.All(flag => flag == 0)),
                 "Mech Pak activation unlocks all eight official records when both packs are selected", failures);
+            var bothExecutable = File.ReadAllBytes(Resolve(bothPlan.Files.Single(file =>
+                file.DestinationRelativePath.Equals("MW4.exe", StringComparison.OrdinalIgnoreCase))));
+            Check(bothExecutable[22] == 0xb8 && bothExecutable[46] == 0xb8,
+                "Mech Pak activation enables both script-facing ownership callbacks when both media are selected", failures);
 
             var rejected = false;
             try
@@ -157,6 +165,12 @@ internal static class MechPakActivationTransformSmoke
             0x85, 0xc0, 0x75, 0x37,
             0x8b, 0x15, 0x55, 0x66, 0x77, 0x88,
             0x50, 0x68, 0x87, 0x17, 0x00, 0x00, 0x52,
+            0xa1, 0x0c, 0x7c, 0x81, 0x00,
+            0x8b, 0x08, 0x33, 0x0d, 0x08, 0x7c, 0x81, 0x00,
+            0x8b, 0x41, 0x3c, 0x35, 0x31, 0x95, 0x73, 0x85, 0xc2, 0x0c, 0x00,
+            0xa1, 0x0c, 0x7c, 0x81, 0x00,
+            0x8b, 0x08, 0x33, 0x0d, 0x08, 0x7c, 0x81, 0x00,
+            0x8b, 0x41, 0x48, 0x35, 0x31, 0x95, 0x73, 0x85, 0xc2, 0x0c, 0x00,
         ]);
     }
 

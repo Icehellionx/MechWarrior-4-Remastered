@@ -4,6 +4,9 @@ Completed implementation, verification, durable decisions, and disproven investi
 
 ## First all-three-games-playable field baseline — 2026-09-17
 
+- Field testing rejected `0.6.25` as a polish candidate: every title/screen was widened, the pack chassis still raised the purchase prompt, and Alt-Tab still minimized. dgVoodoo's documentation identified `Resolution=desktop` as the aspect-discarding renderer setting. Binary tracing identified the missed script-facing `ShellCheckClanPak`/`ShellCheckISPak` ownership layer. These failures are retained so static configuration and byte-presence checks cannot be promoted as interactive proof again.
+- The first post-rejection correction exact-pins `Resolution=max`, `stretched_ar`, fake fullscreen, and `dgVoodooWatermark=false`; adds selected-media replacements for both script-facing pack callbacks; passes focused contracts and exact transforms of all three final executables; and yields two byte-identical 21-file private stages. It remains unqualified until visible aspect, watermark, Alt-Tab, and chassis-selection tests pass.
+
 - The user confirmed setup `0.6.22` installs and reaches playable state in Vengeance, Black Knight, and Mercenaries, including the original startup presentation and successful pilot/account creation.
 - Mech Pak research localized the eight original roster gates in both `mechtable.mpt` and `mechchassistable.mpt` across the qualified Vengeance, Black Knight, and Mercenaries archives. A narrow exact-input transform now activates selected packs for both install families without shipping a community crack or invoking C-Dilla/SafeCast; runtime roster confirmation remains open.
 - This closes the primary modern-Windows execution blocker on the current NVIDIA/Windows system. It does not qualify Mech Pak visibility, polished scaling/quality, Alt-Tab presentation, repair/uninstall, other GPUs, signing, or public redistribution.

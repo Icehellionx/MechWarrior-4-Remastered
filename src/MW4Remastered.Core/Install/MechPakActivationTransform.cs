@@ -136,7 +136,7 @@ public sealed class MechPakActivationTransform
 
             var outputName = $"{transformed + executableTransforms:D2}-{Path.GetFileName(destination)}";
             var output = Path.Combine(scratch, outputName);
-            TransformExecutable(source, output);
+            TransformExecutable(source, output, enabledFlags, hash);
             files[index] = new InstallFile(scratch, outputName, candidate.DestinationRelativePath);
             executableTransforms++;
         }
@@ -146,7 +146,11 @@ public sealed class MechPakActivationTransform
         return new InstallPlan(plan.ProductId, files, plan.Components);
     }
 
-    private static void TransformExecutable(string sourcePath, string outputPath)
+    private static void TransformExecutable(
+        string sourcePath,
+        string outputPath,
+        IReadOnlySet<uint> enabledFlags,
+        string sourceHash)
     {
         var bytes = File.ReadAllBytes(sourcePath);
         var match = -1;
@@ -172,8 +176,60 @@ public sealed class MechPakActivationTransform
         // corresponding pack media, so retain the call for compatibility but
         // make its existing success branch unconditional.
         bytes[match + 7] = 0xeb;
+
+        // The shell has a second, independent ownership layer. AskUpdate.script
+        // calls ShellCheckClanPak/ShellCheckISPak before it permits a listed
+        // chassis to be selected. Those callbacks return obfuscated runtime
+        // pointers that the obsolete SafeCast installer initialized. The media
+        // workflow intentionally does not run SafeCast, so make only the
+        // callbacks backed by validated selected media report present. This is
+        // separate from the global PID dialog branch above.
+        foreach (var enabledFlag in enabledFlags)
+        {
+            var mercenaries = sourceHash.Equals(
+                MercenariesPr1ExecutableTransform.OutputSha256,
+                StringComparison.OrdinalIgnoreCase);
+            var runtimeSlot = enabledFlag switch
+            {
+                1 => mercenaries ? (byte)0x4c : (byte)0x3c, // Clan Pak
+                2 => mercenaries ? (byte)0x58 : (byte)0x48, // Inner Sphere Pak
+                _ => throw new InvalidDataException($"Unsupported Mech Pak activation flag: {enabledFlag}"),
+            };
+            var callback = FindPackPresenceCallback(bytes, runtimeSlot);
+            // mov eax,1; ret 0x0c. The registered shell callback uses the
+            // engine's three-argument callee-clean convention.
+            bytes[callback] = 0xb8;
+            BinaryPrimitives.WriteUInt32LittleEndian(bytes.AsSpan(callback + 1, 4), 1);
+            bytes[callback + 5] = 0xc2;
+            bytes[callback + 6] = 0x0c;
+            bytes[callback + 7] = 0x00;
+            bytes.AsSpan(callback + 8, 16).Fill(0x90);
+        }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
         File.WriteAllBytes(outputPath, bytes);
+    }
+
+    private static int FindPackPresenceCallback(byte[] bytes, byte runtimeSlot)
+    {
+        var match = -1;
+        for (var index = 0; index <= bytes.Length - 24; index++)
+        {
+            if (bytes[index] != 0xa1 ||
+                !bytes.AsSpan(index + 5, 3).SequenceEqual(new byte[] { 0x8b, 0x08, 0x33 }) ||
+                bytes[index + 8] != 0x0d ||
+                !bytes.AsSpan(index + 13, 3).SequenceEqual(new byte[] { 0x8b, 0x41, runtimeSlot }) ||
+                bytes[index + 16] != 0x35 ||
+                !bytes.AsSpan(index + 21, 3).SequenceEqual(new byte[] { 0xc2, 0x0c, 0x00 }))
+            {
+                continue;
+            }
+            if (match >= 0)
+                throw new InvalidDataException("Mech Pak shell presence callback is not unique.");
+            match = index;
+        }
+        if (match < 0)
+            throw new InvalidDataException("Mech Pak shell presence callback was not found.");
+        return match;
     }
 
     private static void TransformArchive(

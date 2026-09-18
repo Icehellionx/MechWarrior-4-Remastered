@@ -53,6 +53,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Install cancellation is accepted through bounded staging operations and immediately before commit; after atomic commit, exact-tree verification is non-cancellable and must finish.
 - Additive overlays require a verified matching base, refuse all destination replacement, atomically update the ownership manifest, and roll new files back if manifest commit or final verification fails.
 - A Vengeance installation with one or both Mech Paks must exactly verify the combined ownership manifest, derive both launcher indicators from exact file evidence, launch without mounted media/elevation, and uninstall all owned pack files while preserving an unowned save.
+- Mech Pak activation must prove three independent layers on each exact final executable/tree: selected archive records are unlocked, the global obsolete purchase-dialog failure branch cannot fire, and only selected-media `ShellCheckClanPak`/`ShellCheckISPak` callbacks report present. Synthetic coverage must retain an unselected callback byte-for-byte; field qualification must actually select one Clan and one Inner Sphere chassis in every installed title rather than accepting roster visibility alone.
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
 - Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal is owned separately by the standard package uninstaller.
 - The package requests one setup elevation for ISO access and all install-time mutation, starts the post-install launcher with the original user token, contains no broad uninstall-delete rule, and must preserve unowned game/save/configuration files during shell uninstall.
@@ -71,6 +72,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Diagnostics redact serials, credentials, private paths, and media content.
 - Release tests block ISOs, BIN/CUE/MDF/MDS, serial files, raw cracks, `.env`, dumps, and unintended executables.
 - Defender qualification scans every assembled package, extracted package tree, and representative installed tree with the current engine/intelligence. A clean exit alone is insufficient because exit `0` can also mean successful remediation; the scan gate also rejects new matching detection/remediation events.
+- Presentation qualification must visibly confirm strict 4:3 geometry outside the separately scoped Vengeance opening movie, non-minimizing fake-fullscreen Alt-Tab/return, and absence of the dgVoodoo watermark in all three titles. A parsed profile or staged-file hash is necessary but cannot replace the visible gate because a missing/ignored config falls back to wrapper defaults.
 
 ## Behavioral slice record
 

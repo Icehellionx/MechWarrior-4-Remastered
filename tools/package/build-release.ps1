@@ -119,7 +119,7 @@ try {
     }
     $dgVoodooProfile = Join-Path $projectRoot 'assets/compatibility/dgVoodoo-MW4.conf'
     $dgVoodooProfileHash = (Get-FileHash -LiteralPath $dgVoodooProfile -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($dgVoodooProfileHash -ne '50f2c43d4f806d238942e643a35c8bf402ac45d251cbf24d6027cbe6ef7e04cf') {
+    if ($dgVoodooProfileHash -ne 'a126cd326ba1e9e96ebedcb7921c535d546933febccf6d7c3b68149a885da90b') {
         throw "Unsupported MW4 dgVoodoo profile SHA-256: $dgVoodooProfileHash"
     }
     Copy-Item -LiteralPath $dgVoodooProfile -Destination (Join-Path $presentationDestination 'dgVoodoo.conf')
