@@ -1,0 +1,59 @@
+name: Bug report
+description: Report an installer, launcher, presentation, or gameplay compatibility problem
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Do not attach game ISOs, extracted game files, serial keys, credentials, or unrelated crash artifacts. Redact personal paths from logs before uploading them.
+  - type: dropdown
+    id: game
+    attributes:
+      label: Game
+      options:
+        - Installer or launcher
+        - MechWarrior 4: Vengeance
+        - MechWarrior 4: Black Knight
+        - MechWarrior 4: Mercenaries
+        - Inner Sphere Mech Pak
+        - Clan Mech Pak
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Remastered installer version
+      placeholder: 0.6.39
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: What happened?
+      description: Include the exact screen or step, what you expected, and what occurred.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      placeholder: |
+        1. Open...
+        2. Select...
+        3. Observe...
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Windows and graphics hardware
+      description: Windows version, GPU model, driver version, monitor resolution/layout, and media type (ISO or ZIP). Do not include serial keys.
+    validations:
+      required: true
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Relevant diagnostics
+      description: Paste a short redacted excerpt or attach the retained installer log. Do not upload proprietary game files.

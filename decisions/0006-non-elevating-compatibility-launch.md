@@ -1,6 +1,6 @@
 # 0006 — Non-elevating compatibility launch boundary
 
-- Status: Accepted
+- Status: Superseded by ADR 0012
 - Date: 2026-09-15
 
 ## Context and evidence
@@ -11,7 +11,7 @@ A project-owned 32-bit proof-of-contract helper was then built with an explicit 
 
 Follow-up testing also reproduced Windows installer-detection heuristics: legacy executables without a requested-execution-level manifest were elevated based partly on names such as `patch` and `unSafeDisc`, while a disposable copy with an embedded `asInvoker` manifest ran at the caller's integrity level. The project must therefore declare the privilege contract explicitly in every executable; relying on filenames or SDK defaults is not acceptable.
 
-## Decision
+## Historical decision
 
 - Installed game launch must run at the calling user's integrity level and must never request administrator elevation.
 - Installer, launcher, and compatibility helper all embed `asInvoker` manifests. Any future privileged operation must be isolated behind an explicit, narrow broker and must never be inherited by normal game launch.
@@ -28,12 +28,9 @@ Follow-up testing also reproduced Windows installer-detection heuristics: legacy
 - Ship opaque replacement executables: rejected as the default because provenance, reproducibility, licensing, and malware review are weaker than a source-built compatibility path.
 - Modify protected executables in place: deferred until a narrow, deterministic transform can be proven across known media revisions.
 
-## Consequences
+## Historical consequences
 
-- Packaging must produce and retain a 32-bit helper even if the main launcher is 64-bit.
-- Launch orchestration will eventually target the helper rather than the protected game executable directly, while installation health continues to hash both original media-derived files and project compatibility files.
-- Injection-sensitive security products may still block the technique. That must be treated as a failed compatibility path with honest diagnostics, never as a request to weaken endpoint security.
-- Black Knight installation and launch now use the helper through exact manifest ownership. Other titles remain disabled until their distinct compatibility paths pass.
+- The helper route was later rejected in field testing and removed. ADR 0012 replaces it with setup-only capture and a deterministic static Black Knight runtime image; ordinary launch now starts the game executable directly without a helper, proxy DLL, injection, or elevation.
 
 ## Rollback
 
@@ -44,6 +41,5 @@ Remove the helper from packaging and restore direct executable launch. Media-der
 - Release build completed with zero warnings and errors for `win-x86`.
 - Embedded manifest extraction confirmed `requestedExecutionLevel level="asInvoker"`.
 - A bounded Vengeance smoke test returned helper exit code `0`, produced a responsive game process, and reached the expected CD-check dialog without an elevation request.
-- `tests/CompatLauncherBoundary.Tests.ps1` locks the architecture, privilege level, target/DLL constraints, least-access source rule, and failed-child cleanup contract.
 - `tests/ApplicationPrivilegeBoundary.Tests.ps1` locks explicit `asInvoker` manifests for both the installer and launcher so Windows installer-name heuristics cannot silently reintroduce UAC.
-- A fresh media-only Black Knight install launched to a responsive game window through the manifest-owned helper without mounted media or UAC; ADR 0007 records the reproducible payload evidence.
+- ADR 0012 and the current core/packaging contracts verify that the superseding setup-only capture artifacts never enter the installed game runtime.

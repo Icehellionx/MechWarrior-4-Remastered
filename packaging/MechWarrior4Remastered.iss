@@ -55,7 +55,7 @@ Name: "{group}\Uninstall MechWarrior 4 Remastered"; Filename: "{uninstallexe}"
 Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLauncher.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Tasks]
-Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"; Flags: unchecked
+Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Run]
 Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 Remastered"; WorkingDir: "{app}"; Flags: postinstall nowait skipifsilent runasoriginaluser

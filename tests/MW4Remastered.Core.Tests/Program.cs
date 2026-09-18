@@ -399,19 +399,32 @@ try
         $"status reader exposes Black Knight from the shared Vengeance-family manifest and MW4X path ({installedStatuses["black-knight"].State}; {installedStatuses["black-knight"].LaunchPath}; {installedStatuses["black-knight"].Detail})");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
     var configuration = new LegacyGameConfiguration(new FixedGameResolutionProvider(1920, 1440));
-    configuration.Ensure(installedStatuses["black-knight"]);
+    var testResolution = configuration.ResolveResolution();
+    Check(GameResolution.LargestFourByThree(2560, 1440) == new GameResolution(1920, 1440) &&
+          GameResolution.LargestFourByThree(1920, 1080) == new GameResolution(1440, 1080) &&
+          GameResolution.LargestFourByThree(3840, 2160) == new GameResolution(2880, 2160) &&
+          GameResolution.LargestFourByThree(1280, 1024) == new GameResolution(1280, 960) &&
+          GameResolution.LargestFourByThree(1919, 1079) == new GameResolution(1436, 1077),
+        "monitor adaptation derives the largest integral 4:3 surface for wide, narrow, and irregular displays");
+    configuration.Ensure(installedStatuses["black-knight"], testResolution);
     Check(File.Exists(Path.Combine(destination, "MW4X", "optionsx.ini")),
         "shared-tree Black Knight configuration is seeded beside MW4X.exe for bootstrap");
     Check(File.ReadAllText(Path.Combine(destination, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "shared-tree Black Knight configuration is also seeded at the Vengeance runtime root");
     File.WriteAllText(Path.Combine(destination, "options.ini"), "[joystick]" + Environment.NewLine + "BiThrottleCenter=0.300000" + Environment.NewLine);
-    configuration.Ensure(installedStatuses["vengeance"]);
+    configuration.Ensure(installedStatuses["vengeance"], testResolution);
     var processStarter = new RecordingProcessStarter();
     var gameRegistration = new RecordingGameRegistration();
-    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
+    var gameWindowLifecycleGuard = new RecordingGameWindowLifecycleGuard();
+    new LaunchOrchestrator(
+        processStarter,
+        gameRegistration,
+        gameConfiguration: configuration,
+        gameWindowLifecycleGuard: gameWindowLifecycleGuard)
         .Launch(installedStatuses["vengeance"]);
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
+    Check(gameWindowLifecycleGuard.LastProcessId == 4242, "launch orchestration starts the window lifecycle guard for the exact game process");
     var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1440", "-gl", "-GameTime.MaxVariableFps", "60", "/gosNoJoystick" };
     var blackKnightArguments = new[] { "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
@@ -422,27 +435,44 @@ try
           vengeanceOptions.Contains("screenheight=1440", StringComparison.OrdinalIgnoreCase) &&
           vengeanceOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration seeding preserves existing controls and adds the graphics page required by pilot scripts");
-    configuration.Ensure(installedStatuses["vengeance"]);
+    configuration.Ensure(installedStatuses["vengeance"], testResolution);
     Check(File.ReadAllText(Path.Combine(destination, "options.ini")) == vengeanceOptions,
         "configuration seeding is byte-stable after the required graphics page exists");
     File.WriteAllText(Path.Combine(destination, "options.ini"), vengeanceOptions
         .Replace("screenwidth=1920", "ScreenWidth=800", StringComparison.OrdinalIgnoreCase)
         .Replace("screenheight=1440", "ScreenHeight=600", StringComparison.OrdinalIgnoreCase)
         .Replace("bitdepth=32", "bitdepth=16", StringComparison.OrdinalIgnoreCase));
-    configuration.Ensure(installedStatuses["vengeance"]);
+    configuration.Ensure(installedStatuses["vengeance"], testResolution);
     var repairedOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
     Check(repairedOptions.Contains("ScreenWidth=1920", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("ScreenHeight=1440", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("bitdepth=32", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration guard repairs the resolution page MW4 rewrites during startup without discarding controls");
+    File.WriteAllText(Path.Combine(destination, "options.ini"), repairedOptions
+        .Replace("DetailTexture=true", "DetailTexture=false", StringComparison.OrdinalIgnoreCase)
+        .Replace("ShadowMode=2", "ShadowMode=0", StringComparison.OrdinalIgnoreCase)
+        .Replace("FancyWater=true", "FancyWater=false", StringComparison.OrdinalIgnoreCase)
+        .Replace("MaxLights=8", "MaxLights=1", StringComparison.OrdinalIgnoreCase)
+        .Replace("Compositing=3", "Compositing=0", StringComparison.OrdinalIgnoreCase)
+        .Replace("LoadRadius=4", "LoadRadius=1", StringComparison.OrdinalIgnoreCase));
+    configuration.EnsureDefaults(installedStatuses["vengeance"], testResolution);
+    var maximumOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
+    Check(maximumOptions.Contains("DetailTexture=true", StringComparison.OrdinalIgnoreCase) &&
+          maximumOptions.Contains("ShadowMode=2", StringComparison.OrdinalIgnoreCase) &&
+          maximumOptions.Contains("FancyWater=true", StringComparison.OrdinalIgnoreCase) &&
+          maximumOptions.Contains("MaxLights=8", StringComparison.OrdinalIgnoreCase) &&
+          maximumOptions.Contains("Compositing=3", StringComparison.OrdinalIgnoreCase) &&
+          maximumOptions.Contains("LoadRadius=4", StringComparison.OrdinalIgnoreCase) &&
+          maximumOptions.Contains("AntiAlias=false", StringComparison.OrdinalIgnoreCase),
+        "setup upgrades an existing low-detail graphics page to MW4 Ultra High while leaving AA to dgVoodoo");
     var mercenaryRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "mercenary-launch")).FullName;
     var mercenaryExecutable = Path.Combine(mercenaryRoot, "MW4Mercs.exe");
     File.WriteAllText(mercenaryExecutable, "synthetic executable");
     var mercenaryProduct = ProductCatalog.All.Single(item => item.Id == "mercenaries");
     var mercenaryStatus = new ProductStatus(
         mercenaryProduct, ProductInstallState.Ready, mercenaryExecutable, null, null, mercenaryRoot, "synthetic");
-    configuration.Ensure(mercenaryStatus);
+    configuration.Ensure(mercenaryStatus, testResolution);
     new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
         .Launch(mercenaryStatus);
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
@@ -457,7 +487,7 @@ try
     var blackKnightLaunchStatus = new ProductStatus(
         blackKnightLaunchProduct, ProductInstallState.Ready, blackKnightLaunchExecutable, null, null,
         blackKnightRoot, "synthetic");
-    configuration.Ensure(blackKnightLaunchStatus);
+    configuration.Ensure(blackKnightLaunchStatus, testResolution);
     new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
         .Launch(blackKnightLaunchStatus);
     Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
@@ -474,7 +504,7 @@ try
     var sharedBlackKnightStatus = new ProductStatus(
         blackKnightLaunchProduct, ProductInstallState.Ready, sharedBlackKnightExecutable, null, null,
         sharedBlackKnightRoot, "synthetic");
-    configuration.Ensure(sharedBlackKnightStatus);
+    configuration.Ensure(sharedBlackKnightStatus, testResolution);
     var sharedOptions = File.ReadAllText(Path.Combine(sharedBlackKnightRoot, "optionsx.ini"));
     Check(sharedOptions.Contains("[graphics options]\r\n", StringComparison.Ordinal) &&
           !sharedOptions.Replace("\r\n", string.Empty, StringComparison.Ordinal).Contains('\n'),
@@ -933,6 +963,7 @@ MediaSelectionSessionSmoke.Run(failures);
 MechPakIsoProjectionSmoke.Run(failures);
 MechPakResourceOverlayPlanSmoke.Run(failures);
 MechPakActivationTransformSmoke.Run(failures);
+MechPakOwnedExecutableUpgradeSmoke.Run(failures);
 OwnedInstallOverlayTransactionSmoke.Run(failures);
 OwnedInstallFileReplacementTransactionSmoke.Run(failures);
 
@@ -1013,4 +1044,19 @@ sealed class RecordingGameProcessState : IGameProcessState
         LastExecutablePath = executablePath;
         return Running;
     }
+}
+
+sealed class RecordingGameWindowLifecycleGuard : IGameWindowLifecycleGuard
+{
+    public event EventHandler? ActiveSessionsChanged;
+    public bool HasActiveSessions => LastProcessId.HasValue;
+    public int? LastProcessId { get; private set; }
+
+    public void Protect(int processId)
+    {
+        LastProcessId = processId;
+        ActiveSessionsChanged?.Invoke(this, EventArgs.Empty);
+    }
+
+    public void Dispose() { }
 }

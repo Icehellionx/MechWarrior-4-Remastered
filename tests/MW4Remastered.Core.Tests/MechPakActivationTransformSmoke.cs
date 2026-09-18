@@ -18,6 +18,28 @@ internal static class MechPakActivationTransformSmoke
             WriteExecutable(executable);
             var hash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).ToLowerInvariant();
             var executableHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(executable))).ToLowerInvariant();
+            var componentExpected = Path.Combine(root, "component-expected.mw4");
+            MechPakActivationTransform.UpgradeInstalledArchiveComponents(
+                archive, componentExpected, new HashSet<uint> { 1, 2 });
+            var componentExpectedHash = Convert.ToHexString(
+                SHA256.HashData(File.ReadAllBytes(componentExpected))).ToLowerInvariant();
+            var upgradeManifest = new InstallManifest(2, "vengeance",
+                [new InstalledFile("RESOURCE/core.mw4", new FileInfo(archive).Length, hash, "test")],
+                ["vengeance", "clan", "inner-sphere"]);
+            var archiveUpgrade = new MechPakOwnedArchiveUpgrade(
+            [
+                new MechPakOwnedArchiveUpgrade.QualifiedUpgrade(
+                    "vengeance", "RESOURCE/core.mw4", 3, hash, componentExpectedHash),
+            ]);
+            var upgradeInstall = Path.Combine(root, "upgrade-install", "RESOURCE");
+            Directory.CreateDirectory(upgradeInstall);
+            File.Copy(archive, Path.Combine(upgradeInstall, "core.mw4"));
+            var archiveReplacements = archiveUpgrade.CreateReplacements(
+                Path.GetDirectoryName(upgradeInstall)!, upgradeManifest, Path.Combine(root, "archive-upgrade"));
+            Check(archiveReplacements.Count == 1 &&
+                  Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(Resolve(archiveReplacements.Single()))))
+                      .Equals(componentExpectedHash, StringComparison.OrdinalIgnoreCase),
+                "owned Mech Pak archive upgrade exposes pack weapons and subsystems on an existing install", failures);
             var transform = new MechPakActivationTransform(
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase) { hash },
                 new HashSet<string>(StringComparer.OrdinalIgnoreCase) { executableHash });
@@ -30,9 +52,13 @@ internal static class MechPakActivationTransformSmoke
             var clanPlan = transform.TransformPlan(plan, new[] { "clan" }, Path.Combine(root, "clan"));
             var clanArchive = Resolve(clanPlan.Files.Single(file =>
                 file.DestinationRelativePath.EndsWith("core.mw4", StringComparison.OrdinalIgnoreCase)));
-            Check(ReadFlags(clanArchive).All(flags => flags.Count(flag => flag == 0) == 5 &&
-                flags.Count(flag => flag == 2) == 4 && flags.All(flag => flag is 0 or 2)),
-                "Mech Pak activation unlocks only the selected Clan records", failures);
+            var clanFlags = ReadFlags(clanArchive);
+            Check(clanFlags.Count == 4 &&
+                  clanFlags[0].Count(flag => flag == 0) == 5 && clanFlags[0].Count(flag => flag == 2) == 4 &&
+                  clanFlags[1].Count(flag => flag == 0) == 5 && clanFlags[1].Count(flag => flag == 2) == 4 &&
+                  clanFlags[2].Count(flag => flag == 0) == 5 && clanFlags[2].Count(flag => flag == 2) == 1 &&
+                  clanFlags[3].Count(flag => flag == 0) == 2 && clanFlags[3].Count(flag => flag == 2) == 1,
+                "Mech Pak activation unlocks only the selected Clan chassis, weapons, and subsystem records", failures);
             Check(Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(archive))).Equals(hash, StringComparison.OrdinalIgnoreCase),
                 "Mech Pak activation produces a transformed archive rather than mutating source media", failures);
             var clanExecutable = File.ReadAllBytes(Resolve(clanPlan.Files.Single(file =>
@@ -43,6 +69,15 @@ internal static class MechPakActivationTransformSmoke
                 "Mech Pak activation makes the Clan shell ownership callback usable after validated media setup", failures);
             Check(clanExecutable[46] == 0xa1,
                 "Mech Pak activation leaves the unselected Inner Sphere shell ownership callback unchanged", failures);
+            Check(clanExecutable[^31] == 1 && clanExecutable[^26] == 0,
+                "Mech Pak activation projects only selected Clan media into the native model-loading path", failures);
+            var stockGate = FindSequence(clanExecutable,
+            [
+                0x8b, 0x4e, 0x3c, 0x32, 0xdb, 0x81, 0xf1, 0x31, 0x95, 0x73, 0x85,
+            ]);
+            Check(stockGate >= 0 && clanExecutable[stockGate + 15] == 1 &&
+                clanExecutable[stockGate + 3] == 0x32 && clanExecutable[stockGate + 4] == 0xdb,
+                "Mech Pak activation exposes selected Clan stock chassis to Instant Action", failures);
 
             var bothPlan = transform.TransformPlan(plan, new[] { "clan", "inner-sphere" }, Path.Combine(root, "both"));
             Check(ReadFlags(Resolve(bothPlan.Files.Single(file =>
@@ -52,6 +87,14 @@ internal static class MechPakActivationTransformSmoke
                 file.DestinationRelativePath.Equals("MW4.exe", StringComparison.OrdinalIgnoreCase))));
             Check(bothExecutable[22] == 0xb8 && bothExecutable[46] == 0xb8,
                 "Mech Pak activation enables both script-facing ownership callbacks when both media are selected", failures);
+            Check(bothExecutable[^31] == 1 && bothExecutable[^26] == 1,
+                "Mech Pak activation preserves model loading while satisfying both native ownership flags", failures);
+            stockGate = FindSequence(bothExecutable,
+            [
+                0x8b, 0x4e, 0x3c, 0xb3, 0x01, 0x81, 0xf1, 0x31, 0x95, 0x73, 0x85,
+            ]);
+            Check(stockGate >= 0 && bothExecutable[stockGate + 15] == 1,
+                "Mech Pak activation exposes both selected stock rosters to Instant Action", failures);
 
             var rejected = false;
             try
@@ -124,8 +167,13 @@ internal static class MechPakActivationTransformSmoke
     {
         var tables = new Dictionary<string, byte[]>(StringComparer.OrdinalIgnoreCase)
         {
-            [@"tables\mechtable.mpt"] = CreateTable(),
-            [@"tables\mechchassistable.mpt"] = CreateTable(),
+            [@"tables\mechtable.mpt"] = CreateChassisTable(),
+            [@"tables\mechchassistable.mpt"] = CreateChassisTable(),
+            [@"tables\weaponstable.mpt"] = CreateTable(
+                ("SMRM10", 1u), ("SMRM20", 1u), ("SMRM30", 1u), ("SMRM40", 1u),
+                ("HeavyGauss", 2u), ("ERLargeLaser", 0u)),
+            [@"tables\subsystemtable.mpt"] = CreateTable(
+                ("EnhancedOptics", 1u), ("IFFJammer", 2u), ("HeatSink", 0u)),
         };
         var directoryLength = 0x3c + tables.Sum(item => 23 + Encoding.ASCII.GetByteCount(item.Key));
         using var stream = new MemoryStream();
@@ -171,18 +219,33 @@ internal static class MechPakActivationTransformSmoke
             0xa1, 0x0c, 0x7c, 0x81, 0x00,
             0x8b, 0x08, 0x33, 0x0d, 0x08, 0x7c, 0x81, 0x00,
             0x8b, 0x41, 0x48, 0x35, 0x31, 0x95, 0x73, 0x85, 0xc2, 0x0c, 0x00,
+            0x8b, 0x4e, 0x3c,
+            0x32, 0xdb,
+            0x81, 0xf1, 0x31, 0x95, 0x73, 0x85,
+            0xc6, 0x44, 0x24, 0x12, 0x00,
+            0x88, 0x5c, 0x24, 0x13,
+            0x74, 0x05, 0xc6, 0x44, 0x24, 0x12, 0x01,
+            0x8b, 0x56, 0x48,
+            0x81, 0xf2, 0x31, 0x95, 0x73, 0x85,
+            0x74, 0x09, 0xc6, 0x44, 0x24, 0x13, 0x01,
+            0x8a, 0x5c, 0x24, 0x13,
+            0x8b, 0x4e, 0x3c, 0x81, 0xf1, 0x31, 0x95, 0x73, 0x85,
+            0xc6, 0x44, 0x24, 0x12, 0x00,
+            0xc6, 0x44, 0x24, 0x13, 0x00,
+            0x74, 0x05, 0xc6, 0x44, 0x24, 0x12, 0x01,
+            0x8b, 0x56, 0x48, 0x81, 0xf2, 0x31, 0x95, 0x73, 0x85,
+            0x74, 0x05, 0xc6, 0x44, 0x24, 0x13, 0x01, 0x6a, 0x14,
         ]);
     }
 
-    private static byte[] CreateTable()
-    {
-        using var stream = new MemoryStream();
-        var entries = new[]
-        {
+    private static byte[] CreateChassisTable() => CreateTable(
             ("Arctic Wolf", 1u), ("Cauldron-Born", 1u), ("Kodiak", 1u), ("Masakari", 1u),
             ("Dragon", 2u), ("Highlander", 2u), ("Hunchback", 2u), ("Zeus", 2u),
-            ("Argus", 0u),
-        };
+            ("Argus", 0u));
+
+    private static byte[] CreateTable(params (string Name, uint Flag)[] entries)
+    {
+        using var stream = new MemoryStream();
         uint id = 1;
         var scalar = new byte[4];
         var metadata = new byte[8];
@@ -242,6 +305,15 @@ internal static class MechPakActivationTransformSmoke
 
     private static string Resolve(InstallFile file) =>
         Path.Combine(file.SourceRoot, file.SourceRelativePath.Replace('/', Path.DirectorySeparatorChar));
+
+    private static int FindSequence(byte[] bytes, ReadOnlySpan<byte> sequence)
+    {
+        for (var index = 0; index <= bytes.Length - sequence.Length; index++)
+        {
+            if (bytes.AsSpan(index, sequence.Length).SequenceEqual(sequence)) return index;
+        }
+        return -1;
+    }
 
     private static void Check(bool condition, string message, List<string> failures)
     {

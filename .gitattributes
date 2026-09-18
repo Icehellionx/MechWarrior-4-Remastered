@@ -6,5 +6,5 @@
 *.manifest text eol=lf
 *.md text eol=lf
 *.ps1 text eol=lf
-*.patch text eol=lf
+*.patch text eol=lf -whitespace
 *.yml text eol=lf

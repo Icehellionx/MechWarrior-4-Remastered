@@ -97,7 +97,7 @@ internal sealed class InstallWorker
         var configuration = new LegacyGameConfiguration();
         foreach (var status in statuses.Values)
         {
-            configuration.Ensure(status);
+            configuration.EnsureDefaults(status, configuration.ResolveResolution());
             TryAppendLog(args.LogPath, $"Prepared modern graphics configuration for {status.Product.DisplayName}.");
         }
         var registration = new LegacyGameRegistration();
@@ -130,6 +130,31 @@ internal sealed class InstallWorker
                         migration.Files,
                         migration.RetiredOwnedPaths);
                     TryAppendLog(args.LogPath, "Restored Vengeance long filenames from the original setup table.");
+                }
+            }
+            var mechPakUpgrade = new MechPakOwnedExecutableUpgrade();
+            var mechPakArchiveUpgrade = new MechPakOwnedArchiveUpgrade();
+            foreach (var productId in new[] { "vengeance", "mercenaries" })
+            {
+                if (!statuses.TryGetValue(productId, out var status) || string.IsNullOrWhiteSpace(status.InstallPath)) continue;
+                var verified = new InstallManifestVerifier().Verify(
+                    status.InstallPath, InstallVerificationScope.OwnedFiles);
+                if (!verified.IsValid || verified.Manifest is null)
+                    throw new InvalidDataException($"{status.Product.DisplayName} Mech Pak upgrade requires a verified owned manifest.");
+
+                var scratch = Path.Combine(Path.GetTempPath(), $"mw4-mech-pak-upgrade-{Guid.NewGuid():N}");
+                try
+                {
+                    var replacements = mechPakUpgrade.CreateReplacements(status.InstallPath, verified.Manifest, scratch)
+                        .Concat(mechPakArchiveUpgrade.CreateReplacements(status.InstallPath, verified.Manifest, scratch))
+                        .ToArray();
+                    if (replacements.Length == 0) continue;
+                    compatibilityReplacement.Execute(productId, status.InstallPath, replacements);
+                    TryAppendLog(args.LogPath, $"Upgraded stock chassis and component Mech Pak ownership for {status.Product.DisplayName}.");
+                }
+                finally
+                {
+                    if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
                 }
             }
             foreach (var productId in new[] { "vengeance", "mercenaries" })

@@ -1,0 +1,674 @@
+diff --git dgVoodooAPI/Samples/D3D12 Addon/Main.cpp dgVoodooAPI/Samples/D3D12 Addon/Main.cpp
+index 30c8f07..a1984fa 100644
+--- dgVoodooAPI/Samples/D3D12 Addon/Main.cpp	
++++ dgVoodooAPI/Samples/D3D12 Addon/Main.cpp	
+@@ -28,12 +28,80 @@ class AddonMain;
+ // --- Externs -----------------------------------------------------------------
+ 
+ extern AddonMain*	CreateAddonMain (HINSTANCE hDll, dgVoodoo::IAddonMainCallback* pAddonMainCB);
+-extern void			DeleteAddonMain (AddonMain* pAddonMain);
+ 
+ // --- Variables ---------------------------------------------------------------
+ 
+ HINSTANCE	hDll		= NULL;
+-AddonMain*	pAddonMain	= NULL;
++volatile LONG mediaPlaybackState = 0;
++volatile LONG64 vengeanceOpeningObservedTick = 0;
++volatile LONG direct3DDeviceCount = 0;
++const LONG64 vengeanceLiveActionDelayMs = 12250;
++
++enum MediaPlaybackState
++{
++	Media_None = 0,
++	Media_VengeanceStartup = 1,
++	Media_VengeanceLiveAction = 2
++};
++
++bool IsVengeanceProcess ()
++{
++	char executablePath[MAX_PATH] = {};
++	DWORD length = GetModuleFileNameA (NULL, executablePath, MAX_PATH);
++	if (length == 0 || length >= MAX_PATH) return false;
++	const char* pName = executablePath;
++	for (const char* p = executablePath; *p != '\0'; p++) {
++		if (*p == '\\' || *p == '/') pName = p + 1;
++	}
++	return _stricmp (pName, "MW4.exe") == 0;
++}
++
++LONG ProbeMediaPlaybackState ()
++{
++	static volatile LONG64 nextProbeTick = 0;
++	const LONG64 now = (LONG64) GetTickCount64 ();
++	const LONG64 next = InterlockedCompareExchange64 (&nextProbeTick, 0, 0);
++	if (now < next) {
++		return InterlockedCompareExchange (&mediaPlaybackState, 0, 0);
++	}
++	if (InterlockedCompareExchange64 (&nextProbeTick, now + 50, next) != next) {
++		return InterlockedCompareExchange (&mediaPlaybackState, 0, 0);
++	}
++
++	LONG observed = Media_None;
++	if (IsVengeanceProcess ()) {
++		HANDLE hFile = CreateFileA ("Content\\Movies\\GAMEOPEN.MPG", GENERIC_READ, 0,
++			NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
++		if (hFile != INVALID_HANDLE_VALUE) {
++			CloseHandle (hFile);
++		} else if (GetLastError () == ERROR_SHARING_VIOLATION) {
++			LONG64 began = InterlockedCompareExchange64 (&vengeanceOpeningObservedTick, 0, 0);
++			if (began == 0) {
++				InterlockedCompareExchange64 (&vengeanceOpeningObservedTick, now, 0);
++				began = InterlockedCompareExchange64 (&vengeanceOpeningObservedTick, 0, 0);
++			}
++			// GAMEOPEN.MPG embeds the Microsoft/FASA splash in its first 12.25
++			// seconds. Keep that segment on the ordinary 4:3 path and apply the
++			// sole widescreen exception only when the live-action sequence begins.
++			if (now - began >= vengeanceLiveActionDelayMs) {
++				observed = Media_VengeanceLiveAction;
++			} else {
++				observed = Media_VengeanceStartup;
++			}
++		} else {
++			InterlockedExchange64 (&vengeanceOpeningObservedTick, 0);
++		}
++	} else {
++		InterlockedExchange64 (&vengeanceOpeningObservedTick, 0);
++	}
++	InterlockedExchange (&mediaPlaybackState, observed);
++	return observed;
++}
++
++bool IsGameplay3DActive ()
++{
++	return InterlockedCompareExchange (&direct3DDeviceCount, 0, 0) > 0;
++}
+ 
+ // --- Dll Main ----------------------------------------------------------------
+ 
+@@ -66,16 +134,17 @@ extern "C" {
+ 
+ 	bool	API_EXPORT		AddOnInit (dgVoodoo::IAddonMainCallback* pAddonMainCB)
+ 	{
+-		pAddonMain = CreateAddonMain (hDll, pAddonMainCB);
+-
+-		return pAddonMain != NULL;
++		// All four dgVoodoo wrappers can initialize the same add-on module. Each
++		// host owns the callback registrations it receives; the process owns the
++		// tiny AddonMain allocations until exit so one wrapper cannot delete a
++		// different wrapper's observer through the handle-less AddOnExit ABI.
++		return CreateAddonMain (hDll, pAddonMainCB) != NULL;
+ 	}
+ 
+ 
+ 	void	API_EXPORT		AddOnExit ()
+ 	{
+-		DeleteAddonMain (pAddonMain);
+-		pAddonMain = NULL;
++		// See AddOnInit: Windows reclaims the process-scoped observer allocation.
+ 	}
+ 
+-} // extern "C"
+\ No newline at end of file
++} // extern "C"
+diff --git dgVoodooAPI/Samples/D3D12 Addon/Texturer.cpp dgVoodooAPI/Samples/D3D12 Addon/Texturer.cpp
+index d70ce24..17b3db1 100644
+--- dgVoodooAPI/Samples/D3D12 Addon/Texturer.cpp	
++++ dgVoodooAPI/Samples/D3D12 Addon/Texturer.cpp	
+@@ -10,6 +10,8 @@
+ 
+ #include "AddonMain.hpp"
+ 
++extern volatile LONG direct3DDeviceCount;
++
+ // --- Texturer ----------------------------------------------------------------
+ 
+ Texturer::Texturer (AddonMain& main):
+@@ -62,6 +64,9 @@ bool	Texturer::D3DDeviceObjectCreated (ID3DDevice* pD3DDevice)
+ 	ID3DDevice::ObjectType type = pD3DDevice->GetObjectType ();
+ 
+ 	const static char* pObjectTypeStrs[] = { "Direct3DDevice", "Direct3D8Device", "Direct3D9Device" };
++	if (type == ID3DDevice::OT_Direct3DDevice) {
++		InterlockedIncrement (&direct3DDeviceCount);
++	}
+ 
+ 	main.pAddonMainCB->IssueInfo (&main, "D3DDevice object (%p) is created. Object type is %s.\n", pD3DDevice, pObjectTypeStrs[type]);
+ 
+@@ -71,5 +76,8 @@ bool	Texturer::D3DDeviceObjectCreated (ID3DDevice* pD3DDevice)
+ 
+ void	Texturer::D3DDeviceObjectReleased (const ID3DDevice* pD3DDevice)
+ {
++	if (pD3DDevice->GetObjectType () == ID3DDevice::OT_Direct3DDevice) {
++		InterlockedDecrement (&direct3DDeviceCount);
++	}
+ 	main.pAddonMainCB->IssueInfo (&main, "D3DDevice object (%p) is released.\n", pD3DDevice);
+ }
+diff --git dgVoodooAPI/Samples/D3D12 Addon/Presenter.cpp dgVoodooAPI/Samples/D3D12 Addon/Presenter.cpp
+index ec611d6..4230e62 100644
+--- dgVoodooAPI/Samples/D3D12 Addon/Presenter.cpp	
++++ dgVoodooAPI/Samples/D3D12 Addon/Presenter.cpp	
+@@ -11,6 +11,8 @@
+ 
+ #include "AddonMain.hpp"
+ #include "Resource.h"
++extern LONG ProbeMediaPlaybackState ();
++extern bool IsGameplay3DActive ();
+ 
+ // --- Defines -----------------------------------------------------------------
+ 
+@@ -19,6 +20,53 @@
+ 
+ #define		VBUFFER_VERTEXCNT		256
+ 
++struct MonitorWindowSearch
++{
++	DWORD processID;
++	HWND window;
++	LONG64 area;
++};
++
++BOOL CALLBACK FindLargestProcessWindow (HWND window, LPARAM parameter)
++{
++	MonitorWindowSearch* pSearch = (MonitorWindowSearch*) parameter;
++	DWORD ownerProcessID = 0;
++	GetWindowThreadProcessId (window, &ownerProcessID);
++	if (ownerProcessID != pSearch->processID || !IsWindowVisible (window)) {
++		return TRUE;
++	}
++	RECT rect = {};
++	if (!GetWindowRect (window, &rect)) {
++		return TRUE;
++	}
++	const LONG64 width = max (0L, rect.right - rect.left);
++	const LONG64 height = max (0L, rect.bottom - rect.top);
++	const LONG64 area = width * height;
++	if (area > pSearch->area) {
++		pSearch->window = window;
++		pSearch->area = area;
++	}
++	return TRUE;
++}
++
++float GetTargetMonitorAspectRatio ()
++{
++	MonitorWindowSearch search = { GetCurrentProcessId (), NULL, 0 };
++	EnumWindows (FindLargestProcessWindow, (LPARAM) &search);
++	if (search.window != NULL) {
++		HMONITOR monitor = MonitorFromWindow (search.window, MONITOR_DEFAULTTONEAREST);
++		MONITORINFO info = { sizeof (MONITORINFO) };
++		if (monitor != NULL && GetMonitorInfo (monitor, &info)) {
++			const LONG width = info.rcMonitor.right - info.rcMonitor.left;
++			const LONG height = info.rcMonitor.bottom - info.rcMonitor.top;
++			if (width > 0 && height > 0) {
++				return (float) width / (float) height;
++			}
++		}
++	}
++	return 16.0f / 9.0f;
++}
++
+ // --- Presenter ---------------------------------------------------------------
+ 
+ const D3D12_BLEND_DESC			Presenter::defaultBlendDesc =
+@@ -74,6 +122,7 @@ Presenter::AdapterData::AdapterData ():
+ 	pDevice				(NULL),
+ 	pRootSignature		(NULL),
+ 	pSRVDescAllocator	(NULL),
++	pRTVDescAllocator	(NULL),
+ 	pGlassTexture		(NULL),
+ 	hGlassTexSRV		(-1),
+ 	glassTexState		(D3D12_RESOURCE_STATE_COMMON),
+@@ -367,6 +416,77 @@ void	Presenter::IReleaseGlassTexture (AdapterData& adapter)
+ }
+ 
+ 
++void	Presenter::IReleaseIntroTexture (AdapterData& adapter, SwapchainEntry& swapchain)
++{
++	if (swapchain.pIntroTexture == NULL) {
++		return;
++	}
++	pD3D12Root->RTResourceDestroyed (swapchain.pIntroTexture, true);
++	adapter.pSRVDescAllocator->DeallocDescriptorGroup (swapchain.hIntroTextureSRV, 1);
++	adapter.pRTVDescAllocator->DeallocDescriptorGroup (swapchain.hIntroTextureRTV, 1);
++	swapchain.pIntroTexture->Release ();
++	swapchain.pIntroTexture = NULL;
++	swapchain.hIntroTextureSRV = (UInt32) -1;
++	swapchain.hIntroTextureRTV = (UInt32) -1;
++	swapchain.introTextureWidth = 0;
++	swapchain.introTextureHeight = 0;
++}
++
++
++bool	Presenter::IEnsureIntroTexture (AdapterData& adapter, SwapchainEntry& swapchain, UInt32 width, UInt32 height)
++{
++	if (swapchain.pIntroTexture != NULL &&
++		swapchain.introTextureWidth == width && swapchain.introTextureHeight == height) {
++		return true;
++	}
++	IReleaseIntroTexture (adapter, swapchain);
++
++	D3D12_HEAP_PROPERTIES heapProp =
++	{
++		D3D12_HEAP_TYPE_DEFAULT, D3D12_CPU_PAGE_PROPERTY_UNKNOWN, D3D12_MEMORY_POOL_UNKNOWN, 0, 0
++	};
++	D3D12_RESOURCE_DESC desc =
++	{
++		D3D12_RESOURCE_DIMENSION_TEXTURE2D, D3D12_DEFAULT_RESOURCE_PLACEMENT_ALIGNMENT,
++		width, height, 1, 1, swapchain.properties.format, { 1, 0 },
++		D3D12_TEXTURE_LAYOUT_UNKNOWN, D3D12_RESOURCE_FLAG_ALLOW_RENDER_TARGET
++	};
++	HRESULT hr = adapter.pDevice->CreateCommittedResource (
++		&heapProp, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_COMMON,
++		NULL, __uuidof(ID3D12Resource), (void**) &swapchain.pIntroTexture);
++	if (FAILED (hr)) {
++		return false;
++	}
++
++	swapchain.hIntroTextureSRV = adapter.pSRVDescAllocator->AllocDescriptorGroup (1);
++	swapchain.hIntroTextureRTV = adapter.pRTVDescAllocator->AllocDescriptorGroup (1);
++	if (swapchain.hIntroTextureSRV == (UInt32) -1 || swapchain.hIntroTextureRTV == (UInt32) -1) {
++		if (swapchain.hIntroTextureSRV != (UInt32) -1) adapter.pSRVDescAllocator->DeallocDescriptorGroup (swapchain.hIntroTextureSRV, 1);
++		if (swapchain.hIntroTextureRTV != (UInt32) -1) adapter.pRTVDescAllocator->DeallocDescriptorGroup (swapchain.hIntroTextureRTV, 1);
++		swapchain.pIntroTexture->Release ();
++		swapchain.pIntroTexture = NULL;
++		return false;
++	}
++
++	D3D12_SHADER_RESOURCE_VIEW_DESC srvDesc =
++	{
++		swapchain.properties.format, D3D12_SRV_DIMENSION_TEXTURE2D, D3D12_DEFAULT_SHADER_4_COMPONENT_MAPPING
++	};
++	srvDesc.Texture2D.MipLevels = 1;
++	adapter.pDevice->CreateShaderResourceView (
++		swapchain.pIntroTexture, &srvDesc,
++		adapter.pSRVDescAllocator->GetCPUDescHandle (swapchain.hIntroTextureSRV));
++	adapter.pDevice->CreateRenderTargetView (
++		swapchain.pIntroTexture, NULL,
++		adapter.pRTVDescAllocator->GetCPUDescHandle (swapchain.hIntroTextureRTV));
++
++	swapchain.introTextureState = D3D12_RESOURCE_STATE_COMMON;
++	swapchain.introTextureWidth = width;
++	swapchain.introTextureHeight = height;
++	return true;
++}
++
++
+ void	Presenter::ICleanUpAdapter (AdapterData& adapter)
+ {
+ 	// Make sure to clear our "ownership" of the auto command lists
+@@ -385,6 +505,9 @@ void	Presenter::ICleanUpAdapter (AdapterData& adapter)
+ 
+ 	IReleaseRootSignature (adapter);
+ 	IReleaseGlassTexture (adapter);
++	for (auto& entry : adapter.swapchains) {
++		IReleaseIntroTexture (adapter, entry.second);
++	}
+ 
+ 	adapter.pVertexBuffer->Release ();
+ }
+@@ -467,6 +590,7 @@ bool	Presenter::D3D12BeginUsingAdapter (UInt32 adapterID)
+ 	if (ICreateRootSignature (adapter)) {
+ 
+ 		adapter.pSRVDescAllocator = pD3D12Root->GetCBV_SRV_UAV_DescAllocator (adapterID);
++		adapter.pRTVDescAllocator = pD3D12Root->GetRTV_DescAllocator (adapterID);
+ 
+ 		if (ICreateGlassTexture (adapter)) {
+ 
+@@ -527,7 +651,8 @@ void	Presenter::D3D12SwapchainCreated (UInt32 adapterID, ID3D12Swapchain* pSwapc
+ 
+ 	AdapterData& adapter = GetAdapterRef (adapterID);
+ 
+-	SwapchainEntry entry = { pSwapchain, swapchainData };
++	SwapchainEntry entry = { pSwapchain, swapchainData, NULL, (UInt32) -1, (UInt32) -1,
++		D3D12_RESOURCE_STATE_COMMON, 0, 0 };
+ 	adapter.swapchains.insert (std::make_pair (pSwapchain, entry));
+ }
+ 
+@@ -538,7 +663,12 @@ void	Presenter::D3D12SwapchainChanged (UInt32 adapterID, ID3D12Swapchain* pSwapc
+ 
+ 	AdapterData& adapter = GetAdapterRef (adapterID);
+ 
+-	SwapchainEntry entry = { pSwapchain, swapchainData };
++	auto existing = adapter.swapchains.find (pSwapchain);
++	if (existing != adapter.swapchains.end ()) {
++		IReleaseIntroTexture (adapter, existing->second);
++	}
++	SwapchainEntry entry = { pSwapchain, swapchainData, NULL, (UInt32) -1, (UInt32) -1,
++		D3D12_RESOURCE_STATE_COMMON, 0, 0 };
+ 	adapter.swapchains[pSwapchain] = entry;
+ }
+ 
+@@ -548,16 +678,40 @@ void	Presenter::D3D12SwapchainReleased (UInt32 adapterID, ID3D12Swapchain* pSwap
+ 	// Just remove it from our entries
+ 
+ 	AdapterData& adapter = GetAdapterRef (adapterID);
+-
++	auto existing = adapter.swapchains.find (pSwapchain);
++	if (existing != adapter.swapchains.end ()) {
++		IReleaseIntroTexture (adapter, existing->second);
++	}
+ 	adapter.swapchains.erase (pSwapchain);
+ }
+ 
+ 
+ bool	Presenter::D3D12SwapchainPresentBegin (UInt32 adapterID, const PresentBeginContextInput& iCtx, PresentBeginContextOutput& oCtx)
+ {
++	const LONG observedSrcWidth = iCtx.srcRect.right - iCtx.srcRect.left;
++	const LONG observedSrcHeight = iCtx.srcRect.bottom - iCtx.srcRect.top;
++
+ 	bool succeeded = false;
+ 
+ 	AdapterData& adapter = GetAdapterRef (adapterID);
++	SwapchainEntry& swapchain = adapter.swapchains[iCtx.pSwapchain];
++	const LONG mediaState = ProbeMediaPlaybackState ();
++	const bool isVengeanceOpening = mediaState == 2;
++	const float targetAspect = GetTargetMonitorAspectRatio ();
++	UInt32 introTextureHeight = (UInt32) max (1L, observedSrcHeight);
++	UInt32 introTextureWidth = (UInt32) max (1L, (LONG) (introTextureHeight * targetAspect + 0.5f));
++	if (swapchain.properties.maxOverriddenInputTextureSize.cx > 0 &&
++		introTextureWidth > (UInt32) swapchain.properties.maxOverriddenInputTextureSize.cx) {
++		const float scale = (float) swapchain.properties.maxOverriddenInputTextureSize.cx / introTextureWidth;
++		introTextureWidth = (UInt32) swapchain.properties.maxOverriddenInputTextureSize.cx;
++		introTextureHeight = (UInt32) max (1L, (LONG) (introTextureHeight * scale));
++	}
++	if (swapchain.properties.maxOverriddenInputTextureSize.cy > 0 &&
++		introTextureHeight > (UInt32) swapchain.properties.maxOverriddenInputTextureSize.cy) {
++		const float scale = (float) swapchain.properties.maxOverriddenInputTextureSize.cy / introTextureHeight;
++		introTextureHeight = (UInt32) swapchain.properties.maxOverriddenInputTextureSize.cy;
++		introTextureWidth = (UInt32) max (1L, (LONG) (introTextureWidth * scale));
++	}
+ 
+ 	// Get a render target - we don't do up/downscaling in this hook so we won't give back a texture factored on our own, but instead always draw into
+ 	// a proxy texure associated with the swapchain or into the swapchain directly. That's why we don't care about 'output texture expected state'
+@@ -580,7 +734,16 @@ bool	Presenter::D3D12SwapchainPresentBegin (UInt32 adapterID, const PresentBegin
+ 		// If the dimensions of the src/dst rects mismatch then it means an image scaling which we hand off to dgVoodoo by drawing into a matching size
+ 		// proxy texture instead.
+ 
+-		if (iCtx.drawingTarget.pDstTexture != NULL &&
++		if (isVengeanceOpening && IEnsureIntroTexture (
++			adapter, swapchain, introTextureWidth, introTextureHeight)) {
++			oCtx.pOutputTexture = swapchain.pIntroTexture;
++			oCtx.outputTexSRVCPUHandle = adapter.pSRVDescAllocator->GetCPUDescHandle (swapchain.hIntroTextureSRV);
++			oCtx.outputTextureExpectedState = D3D12_RESOURCE_STATE_COMMON;
++			rtvCPUHandle = adapter.pRTVDescAllocator->GetCPUDescHandle (swapchain.hIntroTextureRTV);
++			renderTargetState = swapchain.introTextureState;
++			dstRect = { 0, 0, (LONG) introTextureWidth, (LONG) introTextureHeight };
++			swapchain.introTextureState = D3D12_RESOURCE_STATE_COMMON;
++		} else if (iCtx.drawingTarget.pDstTexture != NULL &&
+ 			(iCtx.srcRect.right - iCtx.srcRect.left) == (iCtx.drawingTarget.dstRect.right - iCtx.drawingTarget.dstRect.left) &&
+ 			(iCtx.srcRect.bottom - iCtx.srcRect.top) == (iCtx.drawingTarget.dstRect.bottom - iCtx.drawingTarget.dstRect.top) ) {
+ 
+@@ -639,11 +802,51 @@ bool	Presenter::D3D12SwapchainPresentBegin (UInt32 adapterID, const PresentBegin
+ 				float srcWidth = (float) srcDesc.Width;
+ 				float srcHeight = (float) srcDesc.Height;
+ 
++				// The legacy game presents both its 2D shell and 3D scene at 800x600,
++				// so dimensions cannot distinguish them. dgVoodoo's Direct3D-device
++				// lifecycle does: menus and startup movies remain on the untouched 2D
++				// path, while gameplay and in-engine cinematics own that device.
++				// Keep right/bottom fixed to anchor the result there while trimming
++				// five source pixels from the defective top and left edges.
++				const bool isGameplay3DActive = mediaState == 0 && IsGameplay3DActive ();
++				float cropLeft = (float) iCtx.srcRect.left + (isGameplay3DActive ? 5.0f : 0.0f);
++				float cropTop = (float) iCtx.srcRect.top + (isGameplay3DActive ? 5.0f : 0.0f);
++				float cropRight = (float) iCtx.srcRect.right;
++				float cropBottom = (float) iCtx.srcRect.bottom;
++				if (isVengeanceOpening) {
++					const float movieAspect = 30.0f / 17.0f;
++					const float sourceAspect = (float) observedSrcWidth / observedSrcHeight;
++					float movieLeft = (float) iCtx.srcRect.left;
++					float movieTop = (float) iCtx.srcRect.top;
++					float movieWidth = (float) observedSrcWidth;
++					float movieHeight = (float) observedSrcHeight;
++					if (sourceAspect < movieAspect) {
++						movieHeight = movieWidth / movieAspect;
++						movieTop += (observedSrcHeight - movieHeight) * 0.5f;
++					} else {
++						movieWidth = movieHeight * movieAspect;
++						movieLeft += (observedSrcWidth - movieWidth) * 0.5f;
++					}
++					if (targetAspect >= movieAspect) {
++						const float coveredHeight = movieWidth / targetAspect;
++						cropLeft = movieLeft;
++						cropRight = movieLeft + movieWidth;
++						cropTop = movieTop + (movieHeight - coveredHeight) * 0.5f;
++						cropBottom = cropTop + coveredHeight;
++					} else {
++						const float coveredWidth = movieHeight * targetAspect;
++						cropLeft = movieLeft + (movieWidth - coveredWidth) * 0.5f;
++						cropRight = cropLeft + coveredWidth;
++						cropTop = movieTop;
++						cropBottom = movieTop + movieHeight;
++					}
++				}
++
+ 				// Texture coordinates for the incoming src rect
+-				float tuLeft	= (iCtx.srcRect.left / srcWidth);
+-				float tvTop		= (iCtx.srcRect.top / srcHeight);
+-				float tuRight	= (iCtx.srcRect.right / srcWidth);
+-				float tvBottom	= (iCtx.srcRect.bottom / srcHeight);
++				float tuLeft	= (cropLeft / srcWidth);
++				float tvTop		= (cropTop / srcHeight);
++				float tuRight	= (cropRight / srcWidth);
++				float tvBottom	= (cropBottom / srcHeight);
+ 
+ 				// Make ptr volatile to avoid compiling optimizations resulting in reading video memory
+ 				// ("and dword ptr [eax], 0" and the likes)
+@@ -760,12 +963,110 @@ bool	Presenter::D3D12SwapchainPresentBegin (UInt32 adapterID, const PresentBegin
+ }
+ 
+ 
+-void	Presenter::D3D12SwapchainPresentEnd (UInt32 /*adapterID*/, const PresentEndContextInput& iCtx)
++void	Presenter::D3D12SwapchainPresentEnd (UInt32 adapterID, const PresentEndContextInput& iCtx)
+ {
+-	// The source image has been drawn into the swapchain and set to the expected resource state (if it was required) and that's the point
+-	// where this callback gets called
+-	// We get a valid non-NULL destination texture in iCtx.drawingTarget and could draw something extra into the swapchain (like some overlay data) here
+-	// but we do not draw anything in this sample
++	if (ProbeMediaPlaybackState () != 2 ||
++		iCtx.drawingTarget.pDstTexture == NULL) {
++		return;
++	}
++
++	AdapterData& adapter = GetAdapterRef (adapterID);
++	auto existing = adapter.swapchains.find (iCtx.pSwapchain);
++	if (existing == adapter.swapchains.end () || existing->second.pIntroTexture == NULL) {
++		return;
++	}
++	SwapchainEntry& swapchain = existing->second;
++	ID3D12GraphicsCommandListAuto* pCmdListAuto = pD3D12Root->GetGraphicsCommandListAuto (adapterID);
++	ID3D12Buffer::LockData lData = adapter.pVertexBuffer->Lock (
++		(adapter.vbPos + 4) <= VBUFFER_VERTEXCNT ? ID3D12Buffer::LT_NoOverwrite : ID3D12Buffer::LT_Discard,
++		pCmdListAuto->AGetFence (), pCmdListAuto->GetFenceValue ());
++	if (lData.ptr == NULL) {
++		return;
++	}
++
++	ID3D12ResourceDescRingBuffer* pSRVRingBuffer = pD3D12Root->GetCBV_SRV_UAV_RingBuffer (adapterID);
++	ID3D12ResourceDescRingBuffer::AllocData rdData;
++	if (pSRVRingBuffer->Alloc (2, pCmdListAuto->AGetFence (), pCmdListAuto->GetFenceValue (), rdData)) {
++		if ((adapter.vbPos + 4) > VBUFFER_VERTEXCNT) adapter.vbPos = 0;
++		volatile Vertex* pVertex = ((Vertex*) lData.ptr) + adapter.vbPos;
++		pVertex[0].pX = -1.0f; pVertex[0].pY =  1.0f; pVertex[0].tU = 0.0f; pVertex[0].tV = 0.0f;
++		pVertex[1].pX = -1.0f; pVertex[1].pY = -1.0f; pVertex[1].tU = 0.0f; pVertex[1].tV = 1.0f;
++		pVertex[2].pX =  1.0f; pVertex[2].pY =  1.0f; pVertex[2].tU = 1.0f; pVertex[2].tV = 0.0f;
++		pVertex[3].pX =  1.0f; pVertex[3].pY = -1.0f; pVertex[3].tU = 1.0f; pVertex[3].tV = 1.0f;
++
++		D3D12_CPU_DESCRIPTOR_HANDLE textureSRVs[] = {
++			adapter.pSRVDescAllocator->GetCPUDescHandle (swapchain.hIntroTextureSRV),
++			adapter.pSRVDescAllocator->GetCPUDescHandle (adapter.hGlassTexSRV)
++		};
++		const static UINT textureSRVrangeSizes[] = { 1, 1 };
++		const static UINT srvRingBufferRangeSize = 2;
++		adapter.pDevice->CopyDescriptors (1, &rdData.cpuDescHandle, &srvRingBufferRangeSize,
++			2, textureSRVs, textureSRVrangeSizes, D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
++
++		bool forceUpdate = pCmdListAuto->ChangeId (this);
++		pCmdListAuto->AFlushLock ();
++		ID3D12GraphicsCommandList* pCmdList = pCmdListAuto->GetCommandListInterface ();
++		if (forceUpdate) pCmdList->SetGraphicsRootSignature (adapter.pRootSignature);
++
++		bool updatePSO = forceUpdate;
++		const D3D12_RESOURCE_DESC finalTargetDesc = iCtx.drawingTarget.pDstTexture->GetDesc ();
++		const DXGI_FORMAT rtvFormat = finalTargetDesc.Format;
++		if (adapter.graphicsPipeline.RTVFormats[0] != rtvFormat) {
++			adapter.graphicsPipeline.RTVFormats[0] = rtvFormat;
++			adapter.pPSO = pD3D12Root->PLCacheGetGraphicsPipeline (adapterID, adapter.graphicsPipeline);
++			updatePSO = true;
++		}
++		if (updatePSO) pCmdList->SetPipelineState (adapter.pPSO);
++
++		D3D12_RESOURCE_BARRIER barriers[3];
++		UInt32 numBarriers = 0;
++		if ((adapter.glassTexState & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) == 0) {
++			IAddTransitionBarrier (adapter.pGlassTexture, adapter.glassTexState,
++				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, barriers, numBarriers++);
++			adapter.glassTexState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
++		}
++		if ((swapchain.introTextureState & D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE) == 0) {
++			IAddTransitionBarrier (swapchain.pIntroTexture, swapchain.introTextureState,
++				D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE, barriers, numBarriers++);
++			swapchain.introTextureState = D3D12_RESOURCE_STATE_PIXEL_SHADER_RESOURCE;
++		}
++		if ((iCtx.drawingTarget.dstTextureState & D3D12_RESOURCE_STATE_RENDER_TARGET) == 0) {
++			IAddTransitionBarrier (iCtx.drawingTarget.pDstTexture, iCtx.drawingTarget.dstTextureState,
++				D3D12_RESOURCE_STATE_RENDER_TARGET, barriers, numBarriers++);
++		}
++		if (numBarriers != 0) pCmdList->ResourceBarrier (numBarriers, barriers);
++
++		if (forceUpdate) {
++			pCmdList->IASetPrimitiveTopology (D3D_PRIMITIVE_TOPOLOGY_TRIANGLESTRIP);
++			pCmdList->SetGraphicsRoot32BitConstants (1, 4, &rootPSConstBuffer, 0);
++		}
++		D3D12_VERTEX_BUFFER_VIEW vbView[] = {
++			lData.gpuAddress, VBUFFER_VERTEXCNT * sizeof (Vertex), sizeof (Vertex)
++		};
++		pCmdList->IASetVertexBuffers (0, 1, vbView);
++		pCmdList->SetDescriptorHeaps (1, &rdData.pHeap);
++		pCmdList->SetGraphicsRootDescriptorTable (0, rdData.gpuDescHandle);
++		pCmdList->OMSetRenderTargets (1, &iCtx.drawingTarget.rtvCPUHandle, TRUE, NULL);
++		// PresentEnd exposes the final swapchain texture, while dstRect still
++		// describes the ordinary centered 4:3 game viewport. This one movie is
++		// intentionally drawn across the complete final texture.
++		const RECT dstRect = { 0, 0, (LONG) finalTargetDesc.Width, (LONG) finalTargetDesc.Height };
++		pCmdList->RSSetScissorRects (1, &dstRect);
++		D3D12_VIEWPORT vp = { (FLOAT) dstRect.left, (FLOAT) dstRect.top,
++			(FLOAT) (dstRect.right - dstRect.left), (FLOAT) (dstRect.bottom - dstRect.top), 0.0f, 1.0f };
++		pCmdList->RSSetViewports (1, &vp);
++		pCmdList->DrawInstanced (4, 1, adapter.vbPos, 0);
++		adapter.vbPos += 4;
++
++		if ((iCtx.drawingTarget.dstTextureState & D3D12_RESOURCE_STATE_RENDER_TARGET) == 0) {
++			D3D12_RESOURCE_BARRIER restoreBarrier;
++			IAddTransitionBarrier (iCtx.drawingTarget.pDstTexture, D3D12_RESOURCE_STATE_RENDER_TARGET,
++				iCtx.drawingTarget.dstTextureState, &restoreBarrier, 0);
++			pCmdList->ResourceBarrier (1, &restoreBarrier);
++		}
++		pCmdListAuto->AFlushUnlock ();
++	}
++	adapter.pVertexBuffer->Unlock ();
+ }
+ 
+ 
+diff --git dgVoodooAPI/Samples/D3D12 Addon/Presenter.hpp dgVoodooAPI/Samples/D3D12 Addon/Presenter.hpp
+index a7e3826..e60ca49 100644
+--- dgVoodooAPI/Samples/D3D12 Addon/Presenter.hpp	
++++ dgVoodooAPI/Samples/D3D12 Addon/Presenter.hpp	
+@@ -28,11 +28,14 @@ class Presenter:	public ID3D12RootObserver
+ protected:
+ 	struct SwapchainEntry
+ 	{
+-		// Here we could cache our resources associated with particular swapchains
+-		// But there are no own-factored resources in this sample addon so this structure is empty
+-		// and serves only demonstration purposes
+ 		ID3D12Swapchain*				pSwapchain;
+ 		ID3D12Root::SwapchainData		properties;
++		ID3D12Resource*					pIntroTexture;
++		UInt32							hIntroTextureSRV;
++		UInt32							hIntroTextureRTV;
++		UINT							introTextureState;
++		UInt32							introTextureWidth;
++		UInt32							introTextureHeight;
+ 	};
+ 
+ 	struct AdapterData
+@@ -42,6 +45,7 @@ protected:
+ 		ID3D12Device*					pDevice;
+ 		ID3D12RootSignature*			pRootSignature;
+ 		ID3D12ResourceDescAllocator*	pSRVDescAllocator;
++		ID3D12ResourceDescAllocator*	pRTVDescAllocator;
+ 
+ 		ID3D12Resource*					pGlassTexture;
+ 		UInt32							hGlassTexSRV;
+@@ -106,6 +110,8 @@ protected:
+ 	void			IReleaseRootSignature (AdapterData& adapter);
+ 	bool			ICreateGlassTexture (AdapterData& adapter);
+ 	void			IReleaseGlassTexture (AdapterData& adapter);
++	bool			IEnsureIntroTexture (AdapterData& adapter, SwapchainEntry& swapchain, UInt32 width, UInt32 height);
++	void			IReleaseIntroTexture (AdapterData& adapter, SwapchainEntry& swapchain);
+ 
+ 	void			ICleanUpAdapter (AdapterData& adapter);
+ 
+@@ -138,4 +144,4 @@ public:
+ 	void			Exit ();
+ 
+ 	void			SetINISectionIdx (UInt32 idx) { sectionIdx = idx; }
+-};
+\ No newline at end of file
++};
+diff --git dgVoodooAPI/Samples/D3D12 Addon/SampleAddon.vcxproj dgVoodooAPI/Samples/D3D12 Addon/SampleAddon.vcxproj
+index 81ca1d7..5b3913a 100644
+--- dgVoodooAPI/Samples/D3D12 Addon/SampleAddon.vcxproj	
++++ dgVoodooAPI/Samples/D3D12 Addon/SampleAddon.vcxproj	
+@@ -352,14 +352,14 @@
+       <RuntimeTypeInfo>false</RuntimeTypeInfo>
+       <UndefinePreprocessorDefinitions>
+       </UndefinePreprocessorDefinitions>
+-      <AdditionalOptions>/Zc:threadSafeInit- /D_APIDLL /D_NO_CRT_STDIO_INLINE /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
++      <AdditionalOptions>/Brepro /Zc:threadSafeInit- /D_APIDLL /D_NO_CRT_STDIO_INLINE /D _CRT_SECURE_NO_WARNINGS %(AdditionalOptions)</AdditionalOptions>
+       <PrecompiledHeaderFile>
+       </PrecompiledHeaderFile>
+       <PrecompiledHeader>NotUsing</PrecompiledHeader>
+       <PreprocessorDefinitions>_WINDLL;BUILD_AS_DLL;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+     </ClCompile>
+     <Link>
+-      <GenerateDebugInformation>true</GenerateDebugInformation>
++      <GenerateDebugInformation>false</GenerateDebugInformation>
+       <EnableCOMDATFolding>true</EnableCOMDATFolding>
+       <OptimizeReferences>true</OptimizeReferences>
+       <AdditionalLibraryDirectories>$(SolutionDir)\..\Lib\x86\</AdditionalLibraryDirectories>
+@@ -367,6 +367,7 @@
+       <AdditionalDependencies>dgVoodooAddon.lib;dxguid.lib;kernel32.lib;user32.lib;gdi32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+       <IgnoreAllDefaultLibraries>false</IgnoreAllDefaultLibraries>
+       <ImageHasSafeExceptionHandlers>false</ImageHasSafeExceptionHandlers>
++      <AdditionalOptions>/Brepro %(AdditionalOptions)</AdditionalOptions>
+     </Link>
+     <ResourceCompile>
+       <AdditionalIncludeDirectories></AdditionalIncludeDirectories>
+@@ -613,4 +614,4 @@
+   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+   <ImportGroup Label="ExtensionTargets">
+   </ImportGroup>
+-</Project>
+\ No newline at end of file
++</Project>
+diff --git dgVoodooAPI/Samples/D3D12 Addon/Shaders/PSGlass.hlsl dgVoodooAPI/Samples/D3D12 Addon/Shaders/PSGlass.hlsl
+index d7c057d..cf59ab1 100644
+--- dgVoodooAPI/Samples/D3D12 Addon/Shaders/PSGlass.hlsl	
++++ dgVoodooAPI/Samples/D3D12 Addon/Shaders/PSGlass.hlsl	
+@@ -38,15 +38,8 @@ cbuffer				RootPSConstBuffer : register (b0, space2)
+ 
+ OUTPUT	main (INPUT i)
+ {
+-	const float3 bwFactors	= float3 (0.3125f, 0.5f, 0.1875f);
+ 	OUTPUT o;
+-
+-	float4 t1			= textures[1].Sample (samplerBi, i.srcTexUV);
+-	float4 t0			= textures[0].Sample (samplerPt, i.srcTexUV);
+-
+-	t0.rgb				= lerp (dot (t0.rgb, bwFactors), t0.rgb, colorIntensity) * sepiaColor;
+-
+-	o.color0			= lerp (t0, t1, t1.a);
++	o.color0 = textures[0].Sample (samplerPt, i.srcTexUV);
+ 
+ 	return o;
+ }

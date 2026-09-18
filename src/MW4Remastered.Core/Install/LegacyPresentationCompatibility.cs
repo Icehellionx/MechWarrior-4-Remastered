@@ -7,12 +7,16 @@ public static class LegacyPresentationCompatibility
     private static readonly IReadOnlyDictionary<string, string> DgVoodooFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
-            ["DDraw.dll"] = "62f1e1b2ac5196f4a74b35b898ba8644322f976026324e2f767a4096bfb58748",
-            ["D3DImm.dll"] = "f51507acbb1c5510ab72881eefde5e4dfe6376667546e86ddcf62e6a9ee4923f",
-            ["D3D8.dll"] = "72bd6b84face40b928dfd5d1ee6d30f2ce8671919d0264b24513e25a2c647fd3",
-            ["D3D9.dll"] = "b7401378b2b8e8c18c88a033e77c3ee99f4c7d2ac8cfcc949d79c1dd7fa99767",
+            ["DDraw.dll"] = "612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e",
+            ["D3DImm.dll"] = "93c534f2d17419ea78f15551f7e0aac78b3c503733a840914fa063708a5afe8e",
+            ["D3D8.dll"] = "d03e2562178db1fcf3493fc0a0b23a465e35c55d73adb3ec095be866cd662704",
+            ["D3D9.dll"] = "6a0ca214784be04b7c8b547105aa9d79acf4dc26c0b6f8702b437ddca54058b2",
+            ["SampleAddon.dll"] = "33e7fae1c1cb2d297c05c14b5d4f886676fcd492c44eab0602d8e4465bc71ef0",
+            ["SampleAddon.ini"] = "f21bb13f1e5ecb33595677ed5f8eba156576fcb2f2f5123138147809ae9b9edb",
+            ["DirtyGlass.png"] = "dc507d14880cde567b192aaf444769586a906c0165ec2432ee43d0cead4fcbc5",
         };
     private const string ConfigName = "dgVoodoo.conf";
+    private const string ConfigSha256 = "72b27b7bbebb7d1a3a3dd136b83f88c79aebcb20ba8edcc20a4703a40c0300a6";
 
     public static IReadOnlyList<InstallFile> CreateVengeanceFiles(string root, bool includeBlackKnight = false)
     {
@@ -56,7 +60,13 @@ public static class LegacyPresentationCompatibility
             if (!actual.Equals(expected.Value, StringComparison.Ordinal))
                 throw new InvalidDataException($"Unsupported dgVoodoo2 file SHA-256 for {expected.Key}: {actual}");
         }
-        _ = RequireRegularFile(fullRoot, ConfigName);
+        var config = RequireRegularFile(fullRoot, ConfigName);
+        using (var stream = File.OpenRead(config))
+        {
+            var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+            if (!actual.Equals(ConfigSha256, StringComparison.Ordinal))
+                throw new InvalidDataException($"Unsupported dgVoodoo2 profile SHA-256: {actual}");
+        }
         return fullRoot;
     }
 

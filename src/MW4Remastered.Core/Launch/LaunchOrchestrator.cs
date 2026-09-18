@@ -61,19 +61,22 @@ public sealed class LaunchOrchestrator
     private readonly IGameProcessState gameProcessState;
     private readonly ILegacyGameConfiguration gameConfiguration;
     private readonly IGameConfigurationGuard gameConfigurationGuard;
+    private readonly IGameWindowLifecycleGuard gameWindowLifecycleGuard;
 
     public LaunchOrchestrator(
         IProcessStarter processStarter,
         ILegacyGameRegistration gameRegistration,
         IGameProcessState? gameProcessState = null,
         ILegacyGameConfiguration? gameConfiguration = null,
-        IGameConfigurationGuard? gameConfigurationGuard = null)
+        IGameConfigurationGuard? gameConfigurationGuard = null,
+        IGameWindowLifecycleGuard? gameWindowLifecycleGuard = null)
     {
         this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
         this.gameProcessState = gameProcessState ?? new SystemGameProcessState();
         this.gameConfiguration = gameConfiguration ?? new LegacyGameConfiguration();
         this.gameConfigurationGuard = gameConfigurationGuard ?? new LegacyGameConfigurationGuard(this.gameConfiguration);
+        this.gameWindowLifecycleGuard = gameWindowLifecycleGuard ?? new NoOpGameWindowLifecycleGuard();
     }
 
     public void Launch(ProductStatus status)
@@ -94,7 +97,8 @@ public sealed class LaunchOrchestrator
         // but configuration remains user-owned and MW4 can erase its graphics
         // page while booting when the obsolete autoconfigurator is bypassed.
         gameRegistration.ValidateOwned(status);
-        gameConfiguration.Ensure(status);
+        var resolution = gameConfiguration.ResolveResolution();
+        gameConfiguration.Ensure(status, resolution);
         // Black Knight is installed below the shared Vengeance tree but resolves
         // its shell resources and optionsx.ini from that parent at runtime.
         var workingDirectory = status.Product.Id == "black-knight"
@@ -108,10 +112,11 @@ public sealed class LaunchOrchestrator
         };
         if (status.Product.Id is "vengeance" or "black-knight" or "mercenaries")
         {
-            AddModernWindowsArguments(startInfo, status.Product.Id, gameConfiguration.Resolution);
+            AddModernWindowsArguments(startInfo, status.Product.Id, resolution);
         }
         var processId = processStarter.Start(startInfo);
-        gameConfigurationGuard.Protect(status, processId);
+        gameConfigurationGuard.Protect(status, processId, resolution);
+        gameWindowLifecycleGuard.Protect(processId);
     }
 
     private static void AddModernWindowsArguments(

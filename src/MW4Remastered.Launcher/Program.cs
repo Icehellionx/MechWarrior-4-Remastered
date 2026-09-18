@@ -13,12 +13,14 @@ internal static class Program
         var root = AppContext.BaseDirectory;
         var processStarter = new SystemProcessStarter();
         var gameRegistration = new LegacyGameRegistration();
+        using var gameWindowLifecycleGuard = new SystemGameWindowLifecycleGuard();
         Application.Run(new MainForm(
             new InstallStatusReader(root),
-            new LaunchOrchestrator(processStarter, gameRegistration),
+            new LaunchOrchestrator(processStarter, gameRegistration, gameWindowLifecycleGuard: gameWindowLifecycleGuard),
             new DocumentOpener(processStarter),
             new OwnedInstallUninstaller(),
             new ApplicationUninstallOrchestrator(root, processStarter),
-            gameRegistration));
+            gameRegistration,
+            gameWindowLifecycleGuard));
     }
 }

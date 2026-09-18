@@ -25,12 +25,14 @@ internal sealed class MainForm : Form
     private readonly OwnedInstallUninstaller gameUninstaller;
     private readonly ApplicationUninstallOrchestrator applicationUninstaller;
     private readonly ILegacyGameRegistration gameRegistration;
+    private readonly IGameWindowLifecycleGuard gameWindowLifecycleGuard;
     private readonly TableLayoutPanel operationGrid = new();
     private readonly FlowLayoutPanel packRow = new();
     private readonly Label statusLine = new();
     private readonly List<Button> actionButtons = new();
     private Button? creditsButton;
     private Button? uninstallButton;
+    private bool closeWhenGameExits;
 
     public MainForm(
         InstallStatusReader statusReader,
@@ -38,7 +40,8 @@ internal sealed class MainForm : Form
         DocumentOpener documentOpener,
         OwnedInstallUninstaller gameUninstaller,
         ApplicationUninstallOrchestrator applicationUninstaller,
-        ILegacyGameRegistration gameRegistration)
+        ILegacyGameRegistration gameRegistration,
+        IGameWindowLifecycleGuard gameWindowLifecycleGuard)
     {
         this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
@@ -46,6 +49,7 @@ internal sealed class MainForm : Form
         this.gameUninstaller = gameUninstaller ?? throw new ArgumentNullException(nameof(gameUninstaller));
         this.applicationUninstaller = applicationUninstaller ?? throw new ArgumentNullException(nameof(applicationUninstaller));
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
+        this.gameWindowLifecycleGuard = gameWindowLifecycleGuard ?? throw new ArgumentNullException(nameof(gameWindowLifecycleGuard));
 
         Text = "MechWarrior 4 Remastered";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -61,6 +65,31 @@ internal sealed class MainForm : Form
         Controls.Add(CreateLayout());
         ShowLoadingState();
         Shown += async (_, _) => await RefreshStatusesAsync();
+        FormClosing += OnFormClosing;
+        gameWindowLifecycleGuard.ActiveSessionsChanged += OnActiveSessionsChanged;
+    }
+
+    private void OnFormClosing(object? sender, FormClosingEventArgs eventArgs)
+    {
+        if (eventArgs.CloseReason != CloseReason.UserClosing || !gameWindowLifecycleGuard.HasActiveSessions) return;
+        eventArgs.Cancel = true;
+        closeWhenGameExits = true;
+        Hide();
+    }
+
+    private void OnActiveSessionsChanged(object? sender, EventArgs eventArgs)
+    {
+        if (IsDisposed || !IsHandleCreated) return;
+        BeginInvoke(() =>
+        {
+            if (closeWhenGameExits && !gameWindowLifecycleGuard.HasActiveSessions) Close();
+        });
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing) gameWindowLifecycleGuard.ActiveSessionsChanged -= OnActiveSessionsChanged;
+        base.Dispose(disposing);
     }
 
     private Control CreateLayout()

@@ -7,6 +7,7 @@
     <RootNamespace>MW4Remastered.Launcher</RootNamespace>
     <ApplicationIcon>..\..\assets\branding\MW4-Remastered.ico</ApplicationIcon>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\MW4Remastered.Core\MW4Remastered.Core.csproj" />

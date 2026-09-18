@@ -16,13 +16,14 @@ The upstream elevated `VersionInjector` project is neither built nor distributed
 
 ## dgVoodoo2
 
-MechWarrior 4: Vengeance, Black Knight, and Mercenaries use the stock x86 DirectX compatibility DLLs from dgVoodoo2 2.86.5 for modern D3D11 presentation, aspect-preserving scaling, and cursor stability. The project keeps the original cinematic path enabled; interactive cinematic qualification is tracked separately from this notice.
+MechWarrior 4: Vengeance, Black Knight, and Mercenaries use the stock x86 DirectX compatibility DLLs from dgVoodoo2 2.87.5 with its D3D12 backend for modern presentation, aspect-preserving scaling, and cursor stability. A reproducibly source-built add-on derived from the upstream D3D12 sample applies only two narrow presentation corrections: a high-resolution gameplay/in-engine top-left crop, and proportional cover presentation during the live-action portion of Vengeance's exact `Content/Movies/GAMEOPEN.MPG` asset. Its embedded Microsoft/FASA logo segment remains on the ordinary 4:3 path. Original media remains enabled and unmodified.
 
 - Project: <https://github.com/dege-diosg/dgVoodoo2>
-- Version: 2.86.5
-- Complete evaluated archive SHA-256: `76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf`
+- Version: 2.87.5
+- Complete evaluated archive SHA-256: `5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850`
 - Redistribution: the official dgVoodoo readme permits individual files to ship with a game or game mod. Standalone redistribution requires the complete ZIP; this project does not distribute dgVoodoo as a general-purpose framework.
 - Exact provenance and component hashes are recorded in `third_party/dgVoodoo2.lock.json`.
+- Add-on source base: upstream commit `de5f360b43c1fa61cc2c47ccfc48bbdd995badf7`; the exact local patch is packaged beside the binary and retained in `tools/compatibility/patches/`.
 
 ## Inno Setup
 

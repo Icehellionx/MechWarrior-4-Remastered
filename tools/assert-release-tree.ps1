@@ -11,6 +11,11 @@ if (-not (Test-Path -LiteralPath $resolvedRoot -PathType Container)) { throw "Re
 if ((Get-Item -LiteralPath $resolvedRoot -Force).Attributes -band [IO.FileAttributes]::ReparsePoint) {
     throw "Release root must not be a reparse point: $resolvedRoot"
 }
+$directorySeparator = [IO.Path]::DirectorySeparatorChar.ToString()
+$rootPrefix = $resolvedRoot
+if (-not $rootPrefix.EndsWith($directorySeparator, [StringComparison]::Ordinal)) {
+    $rootPrefix += $directorySeparator
+}
 
 $allowedExecutables = [Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
 foreach ($relativePath in $AllowedExecutablePaths) {
@@ -59,7 +64,12 @@ Get-ChildItem -LiteralPath $resolvedRoot -Recurse -Force | ForEach-Object {
         return
     }
     if (-not $_.PSIsContainer) {
-        $relative = [IO.Path]::GetRelativePath($resolvedRoot, $_.FullName).Replace('\', '/')
+        $fullPath = [IO.Path]::GetFullPath($_.FullName)
+        if (-not $fullPath.StartsWith($rootPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            $violations.Add("path escaped release root: $fullPath")
+            return
+        }
+        $relative = $fullPath.Substring($rootPrefix.Length).Replace('\', '/')
         $segments = $relative.Split('/')
         if ($segments | Where-Object { $forbiddenSegments.Contains($_) }) { $violations.Add("forbidden path segment: $relative") }
         if ($forbiddenExtensions.Contains($_.Extension)) { $violations.Add("forbidden extension: $relative") }

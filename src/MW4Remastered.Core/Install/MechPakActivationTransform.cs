@@ -11,6 +11,7 @@ public sealed class MechPakActivationTransform
     private const uint ResetCode = 0x100;
     private const uint EndCode = 0x101;
     private const uint FirstDictionaryCode = 0x102;
+    private const string MercenariesPr1ArchiveHash = "ad045a0a2026408ecaf22ea739a53812803a91464d647f87a8d3e90b92ba1421";
 
     private static readonly IReadOnlySet<string> SupportedArchiveHashes =
         new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -20,7 +21,7 @@ public sealed class MechPakActivationTransform
             // Black Knight PR1 corex.mw4
             "c1b444cb137820c7f08a66ee70f778da3fc985fda5551e22a22e89aeb6fe02a5",
             // Mercenaries PR1 core.mw4
-            "ad045a0a2026408ecaf22ea739a53812803a91464d647f87a8d3e90b92ba1421",
+            MercenariesPr1ArchiveHash,
         };
 
     private static readonly IReadOnlySet<string> SupportedExecutableHashes =
@@ -47,6 +48,15 @@ public sealed class MechPakActivationTransform
         {
             "tables\\mechtable.mpt",
             "tables\\mechchassistable.mpt",
+            "tables\\weaponstable.mpt",
+            "tables\\subsystemtable.mpt",
+        };
+
+    private static readonly IReadOnlySet<string> ComponentTables =
+        new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "tables\\weaponstable.mpt",
+            "tables\\subsystemtable.mpt",
         };
 
     private readonly IReadOnlySet<string> supportedArchiveHashes;
@@ -109,7 +119,7 @@ public sealed class MechPakActivationTransform
 
             var outputName = $"{transformed:D2}-{Path.GetFileName(destination)}";
             var output = Path.Combine(scratch, outputName);
-            TransformArchive(source, output, enabledFlags, cancellationToken);
+            TransformArchive(source, output, enabledFlags, hash, cancellationToken);
             files[index] = new InstallFile(scratch, outputName, candidate.DestinationRelativePath);
             transformed++;
         }
@@ -205,8 +215,143 @@ public sealed class MechPakActivationTransform
             bytes[callback + 7] = 0x00;
             bytes.AsSpan(callback + 8, 16).Fill(0x90);
         }
+
+        // MechLab has a third ownership boundary below the script callbacks.
+        // Its normal selection path first loads the chassis/model and then
+        // consults two obfuscated process globals. A missing Clan value makes
+        // that routine return -1; a missing Inner Sphere value returns -2.
+        // Returning success from the callback above this routine suppresses
+        // the dialog but also skips the model load. Instead, project the
+        // validated selected media into every copy of the native presence
+        // pair and leave the complete load/selection path intact.
+        var runtimePresenceGates = ActivateNativePackPresence(bytes, enabledFlags);
+        runtimePresenceGates += ActivateInstantActionStockPresence(bytes, enabledFlags);
+        var expectedRuntimePresenceGates = sourceHash switch
+        {
+            VengeancePatch3ExecutableTransform.OutputSha256 => 5,
+            BlackKnightPr1ExecutableTransform.OutputSha256 => 5,
+            MercenariesPr1ExecutableTransform.OutputSha256 => 5,
+            _ => (int?)null,
+        };
+        if (expectedRuntimePresenceGates is int expected && runtimePresenceGates != expected)
+        {
+            throw new InvalidDataException(
+                $"Mech Pak native presence gate count was {runtimePresenceGates}; expected {expected}.");
+        }
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(outputPath))!);
         File.WriteAllBytes(outputPath, bytes);
+    }
+
+    private static int ActivateNativePackPresence(byte[] bytes, IReadOnlySet<uint> enabledFlags)
+    {
+        ReadOnlySpan<byte> initialization =
+        [
+            0xc6, 0x44, 0x24, 0x12, 0x00,
+            0xc6, 0x44, 0x24, 0x13, 0x00,
+            0x74, 0x05, 0xc6, 0x44, 0x24, 0x12, 0x01,
+        ];
+        ReadOnlySpan<byte> secondSuccess = [0x74, 0x05, 0xc6, 0x44, 0x24, 0x13, 0x01];
+        ReadOnlySpan<byte> obfuscationConstant = [0x31, 0x95, 0x73, 0x85];
+        var matches = 0;
+
+        for (var index = 9; index <= bytes.Length - 34; index++)
+        {
+            if (!bytes.AsSpan(index, initialization.Length).SequenceEqual(initialization) ||
+                !HasObfuscatedPackFieldBefore(bytes, index, obfuscationConstant))
+            {
+                continue;
+            }
+
+            var secondLoad = index + initialization.Length;
+            if (bytes[secondLoad] != 0x8b || bytes[secondLoad + 2] is not (0x48 or 0x58))
+                continue;
+
+            var xorLength = bytes[secondLoad + 3] switch
+            {
+                0x35 when bytes.AsSpan(secondLoad + 4, 4).SequenceEqual(obfuscationConstant) => 5,
+                0x81 when (bytes[secondLoad + 4] & 0xf8) == 0xf0 &&
+                          bytes.AsSpan(secondLoad + 5, 4).SequenceEqual(obfuscationConstant) => 6,
+                _ => 0,
+            };
+            if (xorLength == 0 ||
+                !bytes.AsSpan(secondLoad + 3 + xorLength, secondSuccess.Length).SequenceEqual(secondSuccess))
+            {
+                continue;
+            }
+
+            if (enabledFlags.Contains(1)) bytes[index + 4] = 1;
+            if (enabledFlags.Contains(2)) bytes[index + 9] = 1;
+            matches++;
+        }
+
+        if (matches == 0)
+            throw new InvalidDataException("Mech Pak native presence gates were not found.");
+        return matches;
+    }
+
+    internal static int ActivateInstantActionStockPresence(byte[] bytes, IReadOnlySet<uint> enabledFlags)
+    {
+        // Vengeance and Black Knight compile the Instant Action stock-roster
+        // presence locals differently from the other native consumers: the
+        // Inner Sphere false value is copied from BL instead of emitted as an
+        // immediate zero. That instruction form is absent from Mercenaries,
+        // whose equivalent path is covered by ActivateNativePackPresence.
+        ReadOnlySpan<byte> stockRosterGate =
+        [
+            0x8b, 0x4e, 0x3c,
+            0x32, 0xdb,
+            0x81, 0xf1, 0x31, 0x95, 0x73, 0x85,
+            0xc6, 0x44, 0x24, 0x12, 0x00,
+            0x88, 0x5c, 0x24, 0x13,
+            0x74, 0x05, 0xc6, 0x44, 0x24, 0x12, 0x01,
+            0x8b, 0x56, 0x48,
+            0x81, 0xf2, 0x31, 0x95, 0x73, 0x85,
+            0x74, 0x09, 0xc6, 0x44, 0x24, 0x13, 0x01,
+            0x8a, 0x5c, 0x24, 0x13,
+        ];
+        var matches = 0;
+        for (var index = 0; index <= bytes.Length - stockRosterGate.Length; index++)
+        {
+            if (!bytes.AsSpan(index, stockRosterGate.Length).SequenceEqual(stockRosterGate))
+                continue;
+
+            if (enabledFlags.Contains(1)) bytes[index + 15] = 1;
+            if (enabledFlags.Contains(2))
+            {
+                // xor bl,bl -> mov bl,1. Both encodings are two bytes.
+                bytes[index + 3] = 0xb3;
+                bytes[index + 4] = 1;
+            }
+            matches++;
+        }
+        return matches;
+    }
+
+    private static bool HasObfuscatedPackFieldBefore(
+        byte[] bytes,
+        int initializationOffset,
+        ReadOnlySpan<byte> obfuscationConstant)
+    {
+        var fieldEnd = initializationOffset;
+        if (fieldEnd > 0 && bytes[fieldEnd - 1] is >= 0x50 and <= 0x57)
+            fieldEnd--; // optional preserved-register push between the test and local initialization
+
+        // eax uses the one-byte XOR opcode; other registers use 81 /6.
+        if (fieldEnd >= 8 &&
+            bytes[fieldEnd - 8] == 0x8b &&
+            bytes[fieldEnd - 6] is 0x3c or 0x4c &&
+            bytes[fieldEnd - 5] == 0x35 &&
+            bytes.AsSpan(fieldEnd - 4, 4).SequenceEqual(obfuscationConstant))
+        {
+            return true;
+        }
+
+        return fieldEnd >= 9 &&
+               bytes[fieldEnd - 9] == 0x8b &&
+               bytes[fieldEnd - 7] is 0x3c or 0x4c &&
+               bytes[fieldEnd - 6] == 0x81 &&
+               (bytes[fieldEnd - 5] & 0xf8) == 0xf0 &&
+               bytes.AsSpan(fieldEnd - 4, 4).SequenceEqual(obfuscationConstant);
     }
 
     private static int FindPackPresenceCallback(byte[] bytes, byte runtimeSlot)
@@ -236,6 +381,35 @@ public sealed class MechPakActivationTransform
         string sourcePath,
         string outputPath,
         IReadOnlySet<uint> enabledFlags,
+        string sourceHash,
+        CancellationToken cancellationToken)
+        => TransformArchiveTables(
+            sourcePath,
+            outputPath,
+            enabledFlags,
+            TargetTables,
+            (name, flag) => ExpectedFreshTableRecords(sourceHash, name, flag),
+            cancellationToken);
+
+    internal static void UpgradeInstalledArchiveComponents(
+        string sourcePath,
+        string outputPath,
+        IReadOnlySet<uint> enabledFlags,
+        CancellationToken cancellationToken = default)
+        => TransformArchiveTables(
+            sourcePath,
+            outputPath,
+            enabledFlags,
+            ComponentTables,
+            ExpectedComponentTableRecords,
+            cancellationToken);
+
+    private static void TransformArchiveTables(
+        string sourcePath,
+        string outputPath,
+        IReadOnlySet<uint> enabledFlags,
+        IReadOnlySet<string> targetTables,
+        Func<string, uint, int> expectedRecords,
         CancellationToken cancellationToken)
     {
         var archive = File.ReadAllBytes(sourcePath);
@@ -252,9 +426,9 @@ public sealed class MechPakActivationTransform
             throw new InvalidDataException("Mech Pak archive directory boundary is invalid.");
 
         var entries = ReadDirectory(archive, directoryStart, directoryEnd)
-            .Where(entry => TargetTables.Contains(entry.Name))
+            .Where(entry => targetTables.Contains(entry.Name))
             .ToArray();
-        if (entries.Length != TargetTables.Count || entries.Select(entry => entry.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != TargetTables.Count)
+        if (entries.Length != targetTables.Count || entries.Select(entry => entry.Name).Distinct(StringComparer.OrdinalIgnoreCase).Count() != targetTables.Count)
             throw new InvalidDataException("Mech Pak archive must contain exactly one copy of each activation table.");
 
         using var output = new MemoryStream(archive.Length + entries.Sum(entry => entry.UnpackedLength));
@@ -264,9 +438,10 @@ public sealed class MechPakActivationTransform
             cancellationToken.ThrowIfCancellationRequested();
             var decoded = ReadPayload(archive, directoryEnd, entry);
             var changed = UnlockTable(decoded, enabledFlags);
-            var expectedChanges = checked(enabledFlags.Count * 4);
+            var expectedChanges = enabledFlags.Sum(flag => expectedRecords(entry.Name, flag));
             if (changed != expectedChanges)
                 throw new InvalidDataException($"{entry.Name} exposed {changed} selected Mech Pak records; expected {expectedChanges}.");
+            if (changed == 0) continue;
 
             var dataOffset = checked((uint)(output.Length - directoryEnd));
             output.Write(decoded);
@@ -277,6 +452,29 @@ public sealed class MechPakActivationTransform
         var target = Path.GetFullPath(outputPath);
         Directory.CreateDirectory(Path.GetDirectoryName(target)!);
         File.WriteAllBytes(target, output.ToArray());
+    }
+
+    private static int ExpectedFreshTableRecords(string sourceHash, string tableName, uint flag)
+    {
+        if (sourceHash.Equals(MercenariesPr1ArchiveHash, StringComparison.OrdinalIgnoreCase) &&
+            ComponentTables.Contains(tableName))
+        {
+            return 0; // Mercenaries PR1 already exposes the pack equipment records.
+        }
+        return ExpectedTableRecords(tableName, flag);
+    }
+
+    private static int ExpectedComponentTableRecords(string tableName, uint flag) =>
+        ExpectedTableRecords(tableName, flag);
+
+    private static int ExpectedTableRecords(string tableName, uint flag)
+    {
+        if (tableName.Equals("tables\\mechtable.mpt", StringComparison.OrdinalIgnoreCase) ||
+            tableName.Equals("tables\\mechchassistable.mpt", StringComparison.OrdinalIgnoreCase)) return 4;
+        if (tableName.Equals("tables\\weaponstable.mpt", StringComparison.OrdinalIgnoreCase))
+            return flag == 1 ? 4 : 1;
+        if (tableName.Equals("tables\\subsystemtable.mpt", StringComparison.OrdinalIgnoreCase)) return 1;
+        throw new InvalidDataException($"Unsupported Mech Pak activation table: {tableName}");
     }
 
     private static IReadOnlyList<VbdEntry> ReadDirectory(byte[] archive, int directoryStart, int directoryEnd)

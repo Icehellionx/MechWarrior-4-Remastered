@@ -7,6 +7,7 @@ param(
     [string]$SafeDiscLoader2SourceRoot,
     [string]$BlackKnightCaptureBundle,
     [string]$DgVoodooArchive,
+    [string]$DgVoodooSourceRoot,
     [string]$MercenariesPr1Archive,
     [switch]$StageOnly
 )
@@ -64,12 +65,12 @@ try {
     }
 
     if ([string]::IsNullOrWhiteSpace($DgVoodooArchive)) {
-        throw 'Provide DgVoodooArchive containing the exact dgVoodoo2 2.86.5 complete ZIP.'
+        throw 'Provide DgVoodooArchive containing the exact dgVoodoo2 2.87.5 complete ZIP.'
     }
     $DgVoodooArchive = [IO.Path]::GetFullPath($DgVoodooArchive)
     if (-not (Test-Path -LiteralPath $DgVoodooArchive -PathType Leaf)) { throw 'The dgVoodoo2 archive does not exist.' }
     $dgVoodooArchiveHash = (Get-FileHash -LiteralPath $DgVoodooArchive -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($dgVoodooArchiveHash -ne '76b6893a0be81e3905a03f30f25202d6dc6128c3b8f7a21f2c33bcfabfa75ddf') {
+    if ($dgVoodooArchiveHash -ne '5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850') {
         throw "Unsupported dgVoodoo2 archive SHA-256: $dgVoodooArchiveHash"
     }
 
@@ -99,10 +100,10 @@ try {
     $dgVoodooZip = [IO.Compression.ZipFile]::OpenRead($DgVoodooArchive)
     try {
         $qualifiedPresentationFiles = [ordered]@{
-            'MS/x86/DDraw.dll' = '62f1e1b2ac5196f4a74b35b898ba8644322f976026324e2f767a4096bfb58748'
-            'MS/x86/D3DImm.dll' = 'f51507acbb1c5510ab72881eefde5e4dfe6376667546e86ddcf62e6a9ee4923f'
-            'MS/x86/D3D8.dll' = '72bd6b84face40b928dfd5d1ee6d30f2ce8671919d0264b24513e25a2c647fd3'
-            'MS/x86/D3D9.dll' = 'b7401378b2b8e8c18c88a033e77c3ee99f4c7d2ac8cfcc949d79c1dd7fa99767'
+            'MS/x86/DDraw.dll' = '612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e'
+            'MS/x86/D3DImm.dll' = '93c534f2d17419ea78f15551f7e0aac78b3c503733a840914fa063708a5afe8e'
+            'MS/x86/D3D8.dll' = 'd03e2562178db1fcf3493fc0a0b23a465e35c55d73adb3ec095be866cd662704'
+            'MS/x86/D3D9.dll' = '6a0ca214784be04b7c8b547105aa9d79acf4dc26c0b6f8702b437ddca54058b2'
         }
         foreach ($entry in $qualifiedPresentationFiles.GetEnumerator()) {
             $sourceEntry = @($dgVoodooZip.Entries | Where-Object { $_.FullName.Replace('\', '/') -ceq $entry.Key })
@@ -119,10 +120,31 @@ try {
     }
     $dgVoodooProfile = Join-Path $projectRoot 'assets/compatibility/dgVoodoo-MW4.conf'
     $dgVoodooProfileHash = (Get-FileHash -LiteralPath $dgVoodooProfile -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($dgVoodooProfileHash -ne '4b777cb05b8f604346263a0d57f7efb98222df415de1e1b913a86f86d99e1557') {
+    if ($dgVoodooProfileHash -ne '72b27b7bbebb7d1a3a3dd136b83f88c79aebcb20ba8edcc20a4703a40c0300a6') {
         throw "Unsupported MW4 dgVoodoo profile SHA-256: $dgVoodooProfileHash"
     }
     Copy-Item -LiteralPath $dgVoodooProfile -Destination (Join-Path $presentationDestination 'dgVoodoo.conf')
+
+    if ([string]::IsNullOrWhiteSpace($DgVoodooSourceRoot)) {
+        throw 'Provide DgVoodooSourceRoot at exact commit de5f360b43c1fa61cc2c47ccfc48bbdd995badf7.'
+    }
+    $addonBundle = Join-Path $scratch 'dgvoodoo-mw4-addon'
+    & (Join-Path $projectRoot 'tools/compatibility/build-dgvoodoo-mw4-addon.ps1') `
+        -SourceRoot $DgVoodooSourceRoot -OutputDirectory $addonBundle
+    if ($LASTEXITCODE -ne 0) { throw "dgVoodoo MW4 add-on build failed with exit code $LASTEXITCODE." }
+    $qualifiedAddonFiles = [ordered]@{
+        'SampleAddon.dll' = '33e7fae1c1cb2d297c05c14b5d4f886676fcd492c44eab0602d8e4465bc71ef0'
+        'SampleAddon.ini' = 'f21bb13f1e5ecb33595677ed5f8eba156576fcb2f2f5123138147809ae9b9edb'
+        'DirtyGlass.png' = 'dc507d14880cde567b192aaf444769586a906c0165ec2432ee43d0cead4fcbc5'
+        'dgVoodoo2-MW4-Presentation.patch' = '590649a7ace57addf189b8264420bec7bbb8b963f045f338d8431f13c484e919'
+    }
+    foreach ($entry in $qualifiedAddonFiles.GetEnumerator()) {
+        $path = Join-Path $addonBundle $entry.Key
+        if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Qualified dgVoodoo add-on file is missing: $($entry.Key)" }
+        $actual = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -ne $entry.Value) { throw "dgVoodoo add-on hash mismatch for $($entry.Key): $actual" }
+        Copy-Item -LiteralPath $path -Destination (Join-Path $presentationDestination $entry.Key)
+    }
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/DiscUtils-LICENSE.txt') -Destination (Join-Path $payload 'DiscUtils-LICENSE.txt')
 
@@ -210,6 +232,7 @@ try {
         'Compatibility/dgVoodoo2/D3DImm.dll',
         'Compatibility/dgVoodoo2/D3D8.dll',
         'Compatibility/dgVoodoo2/D3D9.dll'
+        'Compatibility/dgVoodoo2/SampleAddon.dll'
     )
 
     if ($StageOnly) {
