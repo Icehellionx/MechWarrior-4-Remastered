@@ -95,7 +95,11 @@ public sealed class LaunchOrchestrator
         // page while booting when the obsolete autoconfigurator is bypassed.
         gameRegistration.ValidateOwned(status);
         gameConfiguration.Ensure(status);
-        var workingDirectory = Path.GetDirectoryName(executable)!;
+        // Black Knight is installed below the shared Vengeance tree but resolves
+        // its shell resources and optionsx.ini from that parent at runtime.
+        var workingDirectory = status.Product.Id == "black-knight"
+            ? Path.GetFullPath(status.InstallPath!)
+            : Path.GetDirectoryName(executable)!;
         var startInfo = new ProcessStartInfo
         {
             FileName = executable,

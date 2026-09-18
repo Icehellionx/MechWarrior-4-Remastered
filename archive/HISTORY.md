@@ -2,6 +2,12 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## Black Knight pilot-entry INI diagnosis — 2026-09-17
+
+- Packaged static v4 crossed startup and reached the real Black Knight menu, retiring the frame-one executable-transform failure.
+- The next field stop named `optionsx.ini`, `[graphics options]`, and `PilotEntry.script:455`. Byte inspection found the preserved shared-root file had a CRLF joystick block followed by the launcher's LF-only appended graphics block; the legacy parser could not see that page.
+- The crash report independently showed `MW4X.exe` using the shared Vengeance root as its current directory. Configuration now maintains both bootstrap and runtime locations, canonicalizes the full file to CRLF, and launches from the shared root. Focused regressions and internal setup `0.6.22` cover the correction; interactive pilot/mission proof remains open.
+
 ## Black Knight static PR1 v3 field rejection — 2026-09-17
 
 - Field setup `0.6.20` installed successfully and Vengeance reached gameplay, but Black Knight static v3 `7761c41d…` crashed on frame 1 by attempting to execute stack memory.

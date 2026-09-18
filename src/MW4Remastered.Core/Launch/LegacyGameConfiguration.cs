@@ -66,23 +66,43 @@ HudTargetDamageMode=false
         if (status.State != ProductInstallState.Ready || string.IsNullOrWhiteSpace(status.InstallPath))
             throw new InvalidOperationException($"{status.Product.DisplayName} does not have a verified configuration root.");
 
-        var configurationRoot = status.Product.Id == "black-knight"
-            ? Path.GetDirectoryName(status.LaunchPath
-                ?? throw new InvalidOperationException("Black Knight does not have a verified launch path."))
-            : status.InstallPath;
-        var root = Path.GetFullPath(configurationRoot
-            ?? throw new InvalidOperationException($"{status.Product.DisplayName} does not have a configuration root."));
+        var fileName = status.Product.Id == "black-knight" ? "optionsx.ini" : "options.ini";
+        foreach (var root in ConfigurationRoots(status)) EnsureFile(root, fileName);
+    }
+
+    private static IEnumerable<string> ConfigurationRoots(ProductStatus status)
+    {
+        var installRoot = Path.GetFullPath(status.InstallPath!);
+        if (status.Product.Id != "black-knight")
+        {
+            yield return installRoot;
+            yield break;
+        }
+
+        // Black Knight's executable and renderer wrappers live in MW4X, but the
+        // expansion switches its current directory to the shared Vengeance root
+        // before PilotEntry.script reads optionsx.ini. Keep both locations valid:
+        // the executable-local copy supports the initial bootstrap and the shared
+        // copy supports shell/pilot creation.
+        var executableRoot = Path.GetFullPath(Path.GetDirectoryName(status.LaunchPath
+            ?? throw new InvalidOperationException("Black Knight does not have a verified launch path."))!);
+        yield return executableRoot;
+        if (!installRoot.Equals(executableRoot, StringComparison.OrdinalIgnoreCase)) yield return installRoot;
+    }
+
+    private static void EnsureFile(string root, string fileName)
+    {
         if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Verified game root is missing: {root}");
         if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
             throw new InvalidDataException("Game configuration root cannot be a reparse point.");
 
-        var fileName = status.Product.Id == "black-knight" ? "optionsx.ini" : "options.ini";
         var path = Path.Combine(root, fileName);
         var existing = File.Exists(path) ? ReadRegularFile(root, path) : string.Empty;
         var updated = HasGraphicsPage(existing)
             ? EnsureRequiredResolution(existing)
             : existing + (existing.Length == 0 || existing.EndsWith('\n') ? string.Empty : Environment.NewLine)
                 + (existing.Length == 0 ? string.Empty : Environment.NewLine) + GraphicsPage + Environment.NewLine;
+        updated = NormalizeWindowsLineEndings(updated);
         if (updated.Equals(existing, StringComparison.Ordinal)) return;
         var temporary = Path.Combine(root, $".{fileName}.mw4-remastered-{Guid.NewGuid():N}.tmp");
         try
@@ -95,6 +115,9 @@ HudTargetDamageMode=false
             if (File.Exists(temporary)) File.Delete(temporary);
         }
     }
+
+    private static string NormalizeWindowsLineEndings(string value) =>
+        value.Replace("\r\n", "\n", StringComparison.Ordinal).Replace('\r', '\n').Replace("\n", "\r\n", StringComparison.Ordinal);
 
     private static string ReadRegularFile(string root, string path)
     {

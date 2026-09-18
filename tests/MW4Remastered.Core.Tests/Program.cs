@@ -381,7 +381,9 @@ try
     var configuration = new LegacyGameConfiguration();
     configuration.Ensure(installedStatuses["black-knight"]);
     Check(File.Exists(Path.Combine(destination, "MW4X", "optionsx.ini")),
-        "shared-tree Black Knight configuration is seeded beside MW4X.exe rather than at the Vengeance root");
+        "shared-tree Black Knight configuration is seeded beside MW4X.exe for bootstrap");
+    Check(File.ReadAllText(Path.Combine(destination, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
+        "shared-tree Black Knight configuration is also seeded at the Vengeance runtime root");
     File.WriteAllText(Path.Combine(destination, "options.ini"), "[joystick]" + Environment.NewLine + "BiThrottleCenter=0.300000" + Environment.NewLine);
     configuration.Ensure(installedStatuses["vengeance"]);
     var processStarter = new RecordingProcessStarter();
@@ -439,6 +441,23 @@ try
         "Black Knight starts directly through dgVoodoo fullscreen presentation with no process-injection helper");
     Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Black Knight receives its title-specific required optionsx graphics page");
+
+    var sharedBlackKnightRoot = Directory.CreateDirectory(Path.Combine(transactionRoot, "black-knight-shared-root")).FullName;
+    var sharedBlackKnightExecutableRoot = Directory.CreateDirectory(Path.Combine(sharedBlackKnightRoot, "MW4X")).FullName;
+    var sharedBlackKnightExecutable = Path.Combine(sharedBlackKnightExecutableRoot, "MW4X.exe");
+    File.WriteAllText(sharedBlackKnightExecutable, "synthetic executable");
+    File.WriteAllText(Path.Combine(sharedBlackKnightRoot, "optionsx.ini"), "[joystick]\r\nBiThrottleCenter=0.300000\r\n");
+    var sharedBlackKnightStatus = new ProductStatus(
+        blackKnightLaunchProduct, ProductInstallState.Ready, sharedBlackKnightExecutable, null, null,
+        sharedBlackKnightRoot, "synthetic");
+    configuration.Ensure(sharedBlackKnightStatus);
+    var sharedOptions = File.ReadAllText(Path.Combine(sharedBlackKnightRoot, "optionsx.ini"));
+    Check(sharedOptions.Contains("[graphics options]\r\n", StringComparison.Ordinal) &&
+          !sharedOptions.Replace("\r\n", string.Empty, StringComparison.Ordinal).Contains('\n'),
+        "Black Knight repairs its shared runtime optionsx.ini with legacy-compatible CRLF line endings");
+    new LaunchOrchestrator(processStarter, gameRegistration).Launch(sharedBlackKnightStatus);
+    Check(processStarter.LastStart?.WorkingDirectory == sharedBlackKnightRoot,
+        "Black Knight launches from the shared Vengeance runtime root used by PilotEntry.script");
 
     var alreadyRunningState = new RecordingGameProcessState { Running = true };
     var duplicateBlocked = false;
