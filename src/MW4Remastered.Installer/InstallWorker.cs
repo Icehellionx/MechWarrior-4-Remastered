@@ -218,7 +218,11 @@ internal sealed class InstallWorker
             media.GetRoot("mercenaries-disc-1"),
             media.GetRoot("mercenaries-disc-2"),
             media.GetRoot("mercenaries-pr1"),
-            Path.Combine(applicationRoot, "Compatibility", "dgVoodoo2")),
+            Path.Combine(applicationRoot, "Compatibility", "dgVoodoo2"),
+            new[] { "inner-sphere-mech-pak", "clan-mech-pak" }
+                .Where(media.Layouts.ContainsKey)
+                .Select(id => id == "inner-sphere-mech-pak" ? "inner-sphere" : "clan")
+                .ToArray()),
         _ => throw new InvalidOperationException($"Unsupported product: {product.ProductId}"),
     };
 

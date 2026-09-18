@@ -16,6 +16,8 @@ Both on-disc readmes say the packs add content to Vengeance and Black Knight, re
 
 The Inner Sphere image also contains a `Razor1911` directory. That directory is third-party crack material and is excluded from any automatic or release input. Its presence means the image cannot be treated as pristine retail media solely by filename.
 
+The entitlement effect is now localized in the patched runtime archives rather than inferred from the obsolete installer. Exact `#VBD` inspection found the same eight nonzero records in both `tables\mechtable.mpt` and `tables\mechchassistable.mpt` in qualified Vengeance Patch 3 `core.mw4`, Black Knight PR1 `corex.mw4`, and Mercenaries PR1 `core.mw4`: Clan flag 1 marks Arctic Wolf, Cauldron-Born, Kodiak, and Masakari; Inner Sphere flag 2 marks Dragon, Highlander, Hunchback, and Zeus. A source-owned transform exact-hash gates those three archives, independently decodes the archive format, zeroes only the selected four-record groups in both tables, and points the original directory entries at appended uncompressed replacements. It never modifies source media, never installs C-Dilla/SafeCast, and applies the selected packs to Mercenaries as well as the shared Vengeance/Black Knight family. Both-pack outputs are deterministic: Vengeance `core.mw4` is 1,255,140 bytes/SHA-256 `6033d799bb8fc1cbc6339f2d7a7ba784657dcc141f0af88be017f21ab8e2f57`; Black Knight `corex.mw4` is 1,448,084 bytes/`019f579955c84fddc12a471e942e7de61ba6076f3a7ca2b47d8ef060759dad60`; Mercenaries `core.mw4` is 1,699,370 bytes/`b20705b26287e106c913d85206727fb8df43cd11696e71f8745a580afc1ea4ef`. This is deterministic structural evidence; Instant Action, multiplayer, and MechLab visibility in each title remain field gates. The original Microsoft description scoped pack availability to those modes, so campaign shops are intentionally unchanged.
+
 Black Knight contains a conventional game payload (`MW4X`, `RESOURCE`, movies), `SECDRV.SYS`, and an official Vengeance Patch 2 payload. Its disc `MW4X.EXE` and historical local replacement both report version `45.05.10.0701` and have the same length but different hashes. The replacement was useful comparison evidence but is no longer accepted by the install plan and is not a project asset.
 
 Vengeance Disc 1 contains a SafeDisc loader (`MW4.exe`, SHA-256 `b129d968…`) and the real version `01.06.11.0220` game image in `MW4.ICD`. A previously supplied replacement executable is version `01.20.07.2403`, matching the official 2.0 patch generation, but it is now comparison evidence only and is not an installer input. The version 2.0 RTP data names the installer mappings `AUTOCO~1.EXE` → `AutoConfig.exe`, `SCRIPT~1.DLL` → `ScriptStrings.dll`, and `MISSIO~1.DLL` → `MissionLang.dll`.
@@ -45,9 +47,9 @@ The supported Mercenaries route advances that retail tree to official PR1 before
 
 ## Working hypotheses
 
-1. A safe path may extract only validated Microsoft pack payloads, apply the matching official patch resources, and replace the obsolete entitlement check reproducibly without installing DRM drivers.
+1. The implemented safe path extracts only validated Microsoft pack payloads, applies the matching official patch resources, and replaces the obsolete table flags reproducibly without installing DRM drivers; its remaining gate is field roster visibility.
 2. Exact per-game core/resource differences and install-order effects must be derived from clean before/after trees, not assumed from community replacement files.
-3. Patch 3 demonstrably supplies the shared runtime/data update and can launch with the Inner Sphere resources while legacy SafeCast files are absent. Whether any separate entitlement marker still gates visible chassis/variants must be proven in game.
+3. Patch 3 demonstrably supplies the shared runtime/data update and can launch with the Inner Sphere resources while legacy SafeCast files are absent. The two table flags are the only remaining localized entitlement markers found in all three final archives; actual game visibility must still be proven.
 
 ## Open-source patch-tool evaluation
 

@@ -14,7 +14,8 @@ public sealed record MercenariesInstallRequest(
     string DiscOneRoot,
     string DiscTwoRoot,
     string? PointReleaseRoot = null,
-    string? PresentationCompatibilityRoot = null)
+    string? PresentationCompatibilityRoot = null,
+    IReadOnlyCollection<string>? EnabledMechPaks = null)
     : GameInstallRequest("mercenaries");
 
 public enum GameInstallationStage
@@ -199,6 +200,7 @@ public sealed class GameInstallationCoordinator
     private readonly OfficialMercenariesPr1Transform mercenariesPr1Transform;
     private readonly IBlackKnightEulaTransform blackKnightEulaTransform;
     private readonly IBlackKnightPr1Transform blackKnightPr1Transform;
+    private readonly MechPakActivationTransform mechPakActivationTransform;
     private readonly string patchHostPath;
     private readonly string blackKnightCaptureDllPath;
 
@@ -222,7 +224,8 @@ public sealed class GameInstallationCoordinator
         string? patchHostPath = null,
         IBlackKnightEulaTransform? blackKnightEulaTransform = null,
         IBlackKnightPr1Transform? blackKnightPr1Transform = null,
-        string? blackKnightCaptureDllPath = null)
+        string? blackKnightCaptureDllPath = null,
+        MechPakActivationTransform? mechPakActivationTransform = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
@@ -235,6 +238,7 @@ public sealed class GameInstallationCoordinator
         this.mercenariesPr1Transform = mercenariesPr1Transform ?? new OfficialMercenariesPr1Transform();
         this.blackKnightEulaTransform = blackKnightEulaTransform ?? new BlackKnightEulaTransform();
         this.blackKnightPr1Transform = blackKnightPr1Transform ?? new OfficialBlackKnightPr1Transform();
+        this.mechPakActivationTransform = mechPakActivationTransform ?? new MechPakActivationTransform();
         this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
         this.blackKnightCaptureDllPath = Path.GetFullPath(blackKnightCaptureDllPath ?? Path.Combine(AppContext.BaseDirectory, "BlackKnightPr1Capture.dll"));
     }
@@ -264,6 +268,7 @@ public sealed class GameInstallationCoordinator
         string? blackKnightTransformScratch = null;
         string? blackKnightEula = null;
         string? blackKnightPr1Scratch = null;
+        string? mechPakActivationScratch = null;
         IReadOnlyList<InstallFile>? blackKnightCompatibilityFiles = null;
         try
         {
@@ -409,6 +414,22 @@ public sealed class GameInstallationCoordinator
                 throw new InvalidDataException($"Install plan product '{plan.ProductId}' does not match request '{request.ProductId}'.");
             }
 
+            var enabledMechPaks = request switch
+            {
+                VengeanceInstallRequest => plan.Components.Where(component => component is "inner-sphere" or "clan").ToArray(),
+                MercenariesInstallRequest mercenariesRequest => mercenariesRequest.EnabledMechPaks?.ToArray() ?? [],
+                _ => [],
+            };
+            if (enabledMechPaks.Length > 0)
+            {
+                var parent = Directory.GetParent(destination)?.FullName
+                    ?? throw new InvalidDataException("Install destination must have a parent directory.");
+                Report(GameInstallationStage.Transforming, "Activating selected Mech Pak chassis from the official patched resource tables.");
+                mechPakActivationScratch = Path.Combine(parent, $".mech-pak-activation-{Guid.NewGuid():N}");
+                plan = mechPakActivationTransform.TransformPlan(
+                    plan, enabledMechPaks, mechPakActivationScratch, cancellationToken);
+            }
+
             Report(GameInstallationStage.Committing, "Staging and atomically committing owned files.");
             var preservingExistingFiles = Directory.Exists(destination);
             var manifest = transaction.Execute(plan, destination, cancellationToken);
@@ -433,6 +454,7 @@ public sealed class GameInstallationCoordinator
             if (vengeanceTransformScratch is not null) RemoveScratchTree(vengeanceTransformScratch);
             if (blackKnightTransformScratch is not null) RemoveScratchTree(blackKnightTransformScratch);
             if (blackKnightPr1Scratch is not null) RemoveScratchTree(blackKnightPr1Scratch);
+            if (mechPakActivationScratch is not null) RemoveScratchTree(mechPakActivationScratch);
         }
 
         void Report(GameInstallationStage stage, string message) =>

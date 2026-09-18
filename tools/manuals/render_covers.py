@@ -14,9 +14,7 @@ from PIL import Image
 MANUALS = (
     ("Mechwarrior 4 Black Knight Manual.pdf", (327.14, 510.36), None),
     ("Mechwarrior 4 Mercenaries Manual.pdf", (652.12, 510.26), None),
-    # The scanned Vengeance cover occupies the left five-sixths of its first
-    # landscape page; the remainder is the blank facing page.
-    ("Mechwarrior 4 Vengeance Manual.pdf", (611.76, 342.00), (0.0, 0.0, 5.0 / 6.0, 1.0)),
+    ("Mechwarrior 4 Vengeance Manual.pdf", (509.80, 342.00), None),
 )
 
 

@@ -16,6 +16,7 @@ from PIL import Image
 BK_NAME = "Mechwarrior 4 Black Knight Manual.pdf"
 MERC_NAME = "Mechwarrior 4 Mercenaries Manual.pdf"
 VENGEANCE_NAME = "Mechwarrior 4 Vengeance Manual.pdf"
+VENGEANCE_PAGE_WIDTH_FRACTION = 5.0 / 6.0
 
 
 def png_bytes(image: Image.Image) -> bytes:
@@ -78,7 +79,7 @@ def last_horizontal_detail_row(page: pymupdf.Page) -> int:
     return int(rows[-1]) if len(rows) else -1
 
 
-def clean_vengeance(source_path: Path, output_path: Path) -> int:
+def clean_vengeance(source_path: Path, output_path: Path) -> tuple[float, int]:
     source = pymupdf.open(source_path)
     if source.page_count != 98:
         raise ValueError(f"Unexpected Vengeance page count: {source.page_count}")
@@ -90,16 +91,17 @@ def clean_vengeance(source_path: Path, output_path: Path) -> int:
     if min(detail_rows) < 300 or max(detail_rows) > 360:
         raise ValueError(f"Vengeance content boundary is outside the reviewed range: {min(detail_rows)}..{max(detail_rows)}")
     crop_height = int(math.ceil((max(detail_rows) + 4) / 2) * 2)
+    crop_width = source[0].rect.width * VENGEANCE_PAGE_WIDTH_FRACTION
 
     output = pymupdf.open()
     output.insert_pdf(source)
     for page in output:
-        page.set_cropbox(pymupdf.Rect(0, 0, page.rect.width, crop_height))
+        page.set_cropbox(pymupdf.Rect(0, 0, crop_width, crop_height))
     output.set_metadata(common_metadata("MechWarrior 4: Vengeance - BattleTech Reference Manual"))
     output.save(output_path, garbage=4, deflate=True, reproducible=True, no_new_id=True)
     output.close()
     source.close()
-    return crop_height
+    return crop_width, crop_height
 
 
 def copy_mercenaries(source_path: Path, output_path: Path) -> None:
@@ -141,14 +143,14 @@ def main() -> int:
     vengeance = args.output_directory / VENGEANCE_NAME
     mercenaries = args.output_directory / MERC_NAME
     clean_black_knight(args.input_directory / BK_NAME, black_knight)
-    crop_height = clean_vengeance(args.input_directory / VENGEANCE_NAME, vengeance)
+    crop_width, crop_height = clean_vengeance(args.input_directory / VENGEANCE_NAME, vengeance)
     copy_mercenaries(args.input_directory / MERC_NAME, mercenaries)
 
     validate_output(black_knight, 36)
     validate_output(vengeance, 98)
     validate_output(mercenaries, 19)
     print(f"Black Knight: split cover spread; 36 output pages")
-    print(f"Vengeance: cropped 98 pages to {crop_height} points high")
+    print(f"Vengeance: cropped 98 pages to {crop_width:.2f} x {crop_height} points")
     print("Mercenaries: preserved 19 pages with normalized metadata")
     return 0
 

@@ -2,6 +2,17 @@
 
 This plan begins intentionally uncompleted. Checkmarks require retained evidence; completed detail moves to `archive/HISTORY.md`.
 
+## Immediate polish priorities
+
+The `0.6.22` field run established the first all-three-games-playable baseline. Work now proceeds in this order, without regressing original cinematics, 4:3 artwork, or media-only installation:
+
+1. [ ] Fix Vengeance's 16:9 opening-movie presentation so its image reaches the left and right edges of a widescreen display without stretching, altering the source movie, cropping gameplay, or changing Black Knight/Mercenaries' correct 4:3 presentation.
+2. [x] Re-crop the Vengeance manual to the cover artwork's true first-page bounds, apply that page size consistently to the remaining pages, regenerate the launcher cover, update the deterministic lock, and render every page for clipping/order review.
+3. [ ] Ship a conservative maximum-quality renderer profile for all three titles: retain a stable legacy game surface, upscale 3D rendering to the active monitor resolution, force 4x MSAA, 16x anisotropic filtering, and 32-bit color, enable only evidence-backed low-risk quality options, and preserve pixel-correct 2D UI/textures and aspect ratio.
+4. [ ] Convert installed Inner Sphere and Clan resource evidence into game-visible Mech Pak activation. The exact-hash-gated source transform now clears only the verified pack flags in `mechtable.mpt` and `mechchassistable.mpt` for Vengeance/Black Knight and independently for Mercenaries; source media is never changed. Automated real-archive and synthetic tests pass. Field-prove each selected pack's four chassis in Instant Action, multiplayer, and MechLab in all three games; do not alter campaign markets because the original packs did not promise campaign availability.
+5. [ ] Match the MW3 remaster's Alt-Tab behavior: presentation remains visible and paused/inactive instead of minimizing, other windows can be layered above it, and clicking or Alt-Tabbing back resumes cleanly in all three titles. The candidate now forces dgVoodoo's documented normal-band borderless full-screen-size window rather than an exclusive/fake-fullscreen application mode; field-test intro, menus, input capture, pause/inactivity, other-window composition, and return in every title before qualification.
+6. [x] Complete end-user attribution. Package a readable credits/third-party notice covering incorporated upstream/runtime and build-time work, exact versions/revisions where pinned, author/project, license/provenance links, and local use/modification; expose it from the installed folder and add a compact launcher Credits action beside Uninstall.
+
 ## 1. Evidence and legal boundary
 
 Outcome: supported inputs and publishable outputs are explicit and defensible.
@@ -55,7 +66,8 @@ Outcome: one MW4-styled launcher makes installed capabilities obvious and starts
 - [x] Create and wire the requested Vengeance remaster icon with the MW3 launcher's silver/gray lower-right `R`; retain original-art licensing as a release gate.
 - [x] Replace generic letter/manual markers with deterministic cover thumbnails generated from and packaged beside each cleaned manual.
 - [x] Reproduce and fix the field-confirmed incorrect-install failures; candidate `0.6.7` installed and reached the real menu in all three titles.
-- [ ] Field-qualify pilot creation after setup seeds and the bounded launch guard maintains each title's actual INI location. Black Knight's field trace proved the expansion reads CRLF `optionsx.ini` from the shared Vengeance runtime root during `PilotEntry.script`; `0.6.22` now maintains both shared-root and executable-local copies and launches from that root. The final dgVoodoo profile must prove aspect-preserving fullscreen/borderless presentation and Alt-Tab for all three titles; Black Knight is no longer intentionally forced windowed. Post-UAC topmost Setup behavior remains a user-visible gate.
+- [x] Field-qualify installation, launch, pilot creation, and playable game entry for Vengeance, Black Knight, and Mercenaries on the current NVIDIA/Windows test system using setup `0.6.22`.
+- [ ] Qualify the polished presentation profile: native-monitor 3D scaling, maximum safe in-game detail, 4x MSAA, 16x anisotropic filtering, 32-bit color, Vengeance-only widescreen intro framing, non-minimizing Alt-Tab, and clean return in all three titles. Post-UAC topmost Setup behavior remains a separate user-visible gate.
 
 ## 4. Manuals
 
@@ -63,7 +75,7 @@ Outcome: readable manuals are generated reproducibly from user-local scans and p
 
 - [x] Inspect page geometry and render every raw manual.
 - [x] Split Black Knight's combined cover, move the back cover to the end, and verify page order.
-- [x] Crop Vengeance pages to content bounds without clipping art, text, folios, or bleed.
+- [x] Re-crop Vengeance to the cover's exact visible page bounds and apply the resulting 509.8 x 342-point geometry consistently across all 98 pages; regenerate the unchanged visual cover, exact-lock the new PDF, and visually inspect every rendered page.
 - [x] Confirm Mercenaries needs no geometry cleanup.
 - [x] Add page-count, dimensions, content-presence, deterministic-output, and visual render checks.
 - [x] Generate, exact-hash, package, and visually verify one launcher cover thumbnail per manual.
@@ -78,7 +90,8 @@ Outcome: all installed titles and optional packs work on supported modern Window
 - [x] Re-audit current MW4 community recipes and maintained compatibility projects; identify dgVoodoo2 as the convergent Windows/Lutris path, record exact 2.86.5 archive and x86 DLL hashes/terms, pass Defender, and complete bounded three-title load smokes.
 - [x] Replace the DDrawCompat release payload with an exact-hash dgVoodoo2 import/profile and preserve a collision-safe, rollback-capable owned-install migration path for existing installs.
 - [x] Reproduce all 13 reviewed Vengeance InstallShield long-name mappings, including `Burnloop_lr_15.avi`, and route existing verified installs through the ownership-safe migration transaction so Vengeance and Black Knight can cross the shared intro-to-menu asset boundary.
-- [ ] Interactively qualify the exact staged dgVoodoo profile across all three startup movies, menus, Alt-Tab, pilot creation, and one mission before building a user-facing setup.
+- [x] Interactively qualify setup `0.6.22` through original startup movies, menus, pilot creation, and playable game entry for all three titles on the current NVIDIA/Windows system.
+- [ ] Qualify the new presentation profile through the same paths plus non-minimizing Alt-Tab and return, screenshot layering, and one retained save/load cycle per title.
 - [x] Move optional multiplayer firewall authorization into the elevated setup as an explicit private-network choice, keep silent installs opt-in, and remove only project-named rules during uninstall.
 - [ ] Verify Black Knight startup video, all in-engine cinematics, and real Alt-Tab return using the final title-specific package.
 - [ ] Add only evidence-backed compatibility changes with disable/rollback paths.

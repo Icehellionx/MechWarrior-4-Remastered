@@ -29,6 +29,7 @@ internal sealed class MainForm : Form
     private readonly FlowLayoutPanel packRow = new();
     private readonly Label statusLine = new();
     private readonly List<Button> actionButtons = new();
+    private Button? creditsButton;
     private Button? uninstallButton;
 
     public MainForm(
@@ -138,8 +139,9 @@ internal sealed class MainForm : Form
 
     private Control CreateFooter()
     {
-        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2 };
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
         statusLine.Dock = DockStyle.Fill;
@@ -147,6 +149,26 @@ internal sealed class MainForm : Form
         statusLine.Font = new Font("Consolas", 9F, FontStyle.Bold);
         statusLine.ForeColor = Muted;
         footer.Controls.Add(statusLine, 0, 0);
+
+        var creditsPath = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md");
+        creditsButton = new OperationButton
+        {
+            Text = "CREDITS",
+            Size = new Size(100, 32),
+            Margin = new Padding(0, 0, 12, 0),
+            Anchor = AnchorStyles.Right,
+            Enabled = File.Exists(creditsPath),
+            BackColor = Panel,
+            ForeColor = TextColor,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            AccessibleName = "Open credits and third-party notices",
+        };
+        creditsButton.FlatAppearance.BorderColor = Edge;
+        creditsButton.FlatAppearance.MouseOverBackColor = PanelHover;
+        creditsButton.Click += (_, _) => TryAction(() => documentOpener.Open(creditsPath));
+        actionButtons.Add(creditsButton);
+        footer.Controls.Add(creditsButton, 1, 0);
 
         uninstallButton = new OperationButton
         {
@@ -163,7 +185,7 @@ internal sealed class MainForm : Form
         uninstallButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(54, 30, 26);
         uninstallButton.Click += async (_, _) => await UninstallAllAsync();
         actionButtons.Add(uninstallButton);
-        footer.Controls.Add(uninstallButton, 1, 0);
+        footer.Controls.Add(uninstallButton, 2, 0);
         return footer;
     }
 
@@ -183,6 +205,7 @@ internal sealed class MainForm : Form
                 large: false), index, 1);
         }
         statusLine.Text = "CHECKING INSTALLED GAMES…";
+        if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (uninstallButton is not null) uninstallButton.Enabled = false;
     }
 
@@ -203,6 +226,7 @@ internal sealed class MainForm : Form
         }
 
         RenderStatuses(statuses);
+        if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
     }
 
@@ -378,6 +402,7 @@ internal sealed class MainForm : Form
         }
 
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
+        if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
     }
 
     private bool TryAction(Action action)

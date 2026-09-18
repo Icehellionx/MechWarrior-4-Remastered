@@ -2,6 +2,14 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## First all-three-games-playable field baseline — 2026-09-17
+
+- The user confirmed setup `0.6.22` installs and reaches playable state in Vengeance, Black Knight, and Mercenaries, including the original startup presentation and successful pilot/account creation.
+- Mech Pak research localized the eight original roster gates in both `mechtable.mpt` and `mechchassistable.mpt` across the qualified Vengeance, Black Knight, and Mercenaries archives. A narrow exact-input transform now activates selected packs for both install families without shipping a community crack or invoking C-Dilla/SafeCast; runtime roster confirmation remains open.
+- This closes the primary modern-Windows execution blocker on the current NVIDIA/Windows system. It does not qualify Mech Pak visibility, polished scaling/quality, Alt-Tab presentation, repair/uninstall, other GPUs, signing, or public redistribution.
+- Corrected the Vengeance manual's remaining scan-canvas defect: the cover established a five-sixths-width page boundary, now applied as a 509.8 x 342-point crop to all 98 pages. The cleaned PDF is deterministic at SHA-256 `01404597…`; the existing cover render remains visually and byte-identical, and all pages passed render/contact-sheet review.
+- Internal `0.6.23` assembled the first polish candidate after the all-playable baseline: deterministic Mech Pak activation including Mercenaries, corrected Vengeance manual, launcher credits, maximum-quality renderer settings, and forced borderless presentation. Its two 21-file stages were byte-identical and both staged payload and setup passed current Defender scanning; interactive qualification remains open.
+
 ## Black Knight pilot-entry INI diagnosis — 2026-09-17
 
 - Packaged static v4 crossed startup and reached the real Black Knight menu, retiring the frame-one executable-transform failure.
