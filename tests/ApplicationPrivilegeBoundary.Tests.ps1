@@ -26,9 +26,13 @@ $launchOrchestrator = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remaster
 $capture = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightPr1ImageCapture.cs') -Raw
 $transform = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightPr1ExecutableTransform.cs') -Raw
 $transformDefinition = Get-Content -LiteralPath (Join-Path $root 'assets/compatibility/black-knight-pr1-static-transform.json') -Raw | ConvertFrom-Json
-Assert-True ($capture -match 'CaptureDllSha256' -and $capture -match 'Process\.Start' -and $capture -notmatch 'CreateRemoteThread|WriteProcessMemory|VirtualAllocEx|VersionInjector') 'Black Knight setup capture must exact-hash its DLL and must not inject from a project helper.'
+Assert-True ($capture -match 'CaptureDllSha256' -and $capture -match 'CreateProcessW' -and $capture -notmatch 'CreateRemoteThread|WriteProcessMemory|VirtualAllocEx|VersionInjector') 'Black Knight setup capture must exact-hash its DLL and must not inject from a project helper.'
 Assert-True ($capture -match 'DeleteCaptureArtifact' -and $capture -match 'TimeSpan\.FromSeconds\(15\)') 'Black Knight setup capture must wait for the temporary protected child to release exact setup artifacts before cleanup.'
 Assert-True ($capture -match 'JobObjectLimitKillOnJobClose' -and $capture -match 'AssignProcessToJobObject') 'Black Knight setup capture must contain and terminate only its owned SafeDisc process family before artifact cleanup.'
+$createIndex = $capture.IndexOf('if (!CreateProcessW(', [StringComparison]::Ordinal)
+$assignIndex = $capture.IndexOf('processJob.Assign(processHandle);', [StringComparison]::Ordinal)
+$resumeIndex = $capture.IndexOf('if (ResumeThread(created.Thread)', [StringComparison]::Ordinal)
+Assert-True ($createIndex -ge 0 -and $assignIndex -gt $createIndex -and $resumeIndex -gt $assignIndex -and $capture -notmatch 'Process\.Start\(') 'Black Knight setup capture must create the launcher suspended, assign it to the owned job, and only then resume it.'
 Assert-True ($transform -match 'OutputLength' -and $transform -match 'CleanImageSize' -and $transform -match 'WriteUInt16LittleEndian') 'Black Knight transform must exclude the SafeDisc-only tail sections from the installed image.'
 Assert-True ($transform -match 'patched != 127' -and $transform -match 'RejectResidualTailBranches' -and $transform -match 'still targets removed SafeDisc code') 'Black Knight transform must repair the complete qualified branch map and reject any executable branch left in the removed SafeDisc tail.'
 Assert-True ($transform -match 'ApplyIatCorrections\(protectedBytes' -and $transform -match 'patched\.Count != 110') 'Black Knight static output must apply and count the reviewed import-slot correction set.'
