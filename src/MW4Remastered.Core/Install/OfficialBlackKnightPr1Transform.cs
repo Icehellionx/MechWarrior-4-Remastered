@@ -22,7 +22,7 @@ public interface IBlackKnightPr1Transform
 
 public sealed class OfficialBlackKnightPr1Transform : IBlackKnightPr1Transform
 {
-    public const string TransformId = "black-knight-official-pr1-45.30.04.1908-static-v3";
+    public const string TransformId = "black-knight-official-pr1-45.30.04.1908-static-v4";
 
     private static readonly QualifiedPath[] PatchedOutputs =
     [

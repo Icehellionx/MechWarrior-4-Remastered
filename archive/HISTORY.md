@@ -2,6 +2,12 @@
 
 Completed implementation, verification, durable decisions, and disproven investigations belong here in reverse chronological order. Current state and next work stay in `active/`.
 
+## Black Knight static PR1 v3 field rejection — 2026-09-17
+
+- Field setup `0.6.20` installed successfully and Vengeance reached gameplay, but Black Knight static v3 `7761c41d…` crashed on frame 1 by attempting to execute stack memory.
+- Exact installed-tree A/B ruled out packaging drift and dgVoodoo. Structural comparison found 108 indirect CALL/JMP operands plus two entry-point MOV operands wired to the wrong imports; the MOVs had been misclassified as `SendMessageA` callsites.
+- Static v4 records and exact-validates 110 canonical corrections and emits `b31bd051…`. Its production-shaped runtime tree stayed correctly titled and responsive for 60 seconds, but packaged/focused interactive qualification remains open.
+
 ## dinputto8 candidate intake — 2026-09-17
 
 - Resolved official Zlib-licensed `dinputto8` v1.1.100.0 to tag commit `46e7ea7b76dd64ea1066f899212e2102774cc0d2`, recorded exact binary/source hashes, confirmed x86 architecture, and passed current Defender scanning.

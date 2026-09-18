@@ -19,7 +19,8 @@ The historical PR1 replacement executable was used only as ignored, Defender-sca
 - Use the exact source-built GPL capture DLL only inside setup-owned scratch to obtain the already decrypted mapped image. Contain the protected launcher and inherited temporary child in an owned kill-on-close Windows job so scratch cleanup cannot race or orphan the SafeDisc process family. Do not build or use `VersionInjector`, a project injector, a launch helper, a service, a driver, or broad process-name termination.
 - Reconstruct a static five-section game executable using the qualified import descriptor and FirstThunk slot ordering, not merely the same set of APIs.
 - Repair exactly 127 qualified branches out of the removed SafeDisc tail and scan all executable code for residual direct `E8` or `E9` targets in `0x008A3000..0x008A7FFF`. Any residual target fails installation closed.
-- Truncate both SafeDisc-only tails and exact-hash gate the resulting 3,743,744-byte `MW4x.exe` as `7761c41d03e52f33091c6e9055ba4bb545be83d22082dbfed53b01faa630442b`.
+- Exact-validate and repair the 110 import operands that v3 misclassified, including the two entry-point MOV loads for `InsertMenuItemA` and `EnableMenuItem`; reject duplicate, unknown, unexpected, or non-code correction entries.
+- Truncate both SafeDisc-only tails and exact-hash gate the resulting 3,743,744-byte v4 `MW4x.exe` as `b31bd0518311eb88e0f94a38e7b5a7ee6e98f4431f8cf585276b3df1166b8a1e`.
 - Delete the capture DLL, configuration, mapped image, and capture scratch before manifest generation. Install only the deterministic static executable and the separately qualified setup-accepted EULA module.
 - Start the installed executable directly as the current user. Runtime must not depend on capture artifacts, injection, mounted media, UAC, or the historical comparison executable.
 
@@ -27,6 +28,7 @@ The historical PR1 replacement executable was used only as ignored, Defender-sca
 
 - Launch-time app-local SafeDiscLoader2: rejected because it injects into the temporary protected process and was field-proven unstable.
 - Keep static v2 `04fe9acf…`: rejected because it missed 32 tail branches and changed effective import-slot semantics.
+- Keep static v3 `7761c41d…`: rejected because its callsite classifier rewired 110 operands and field testing crashed on frame 1.
 - Ship the historical replacement executable: rejected for provenance, redistribution, reproducibility, and security-review reasons.
 - Suppress original videos: rejected because cinematics are part of the preserved presentation and do not solve the executable defect.
 

@@ -8,9 +8,9 @@ namespace MW4Remastered.Core.Install;
 
 public sealed class BlackKnightPr1ExecutableTransform
 {
-    public const string TransformId = "black-knight-pr1-static-clean-v3";
+    public const string TransformId = "black-knight-pr1-static-clean-v4";
     public const string InputSha256 = "be9c15731b2ab59471f35add8df4935ea65355cbb4672bc48b63295ad83632b0";
-    public const string OutputSha256 = "7761c41d03e52f33091c6e9055ba4bb545be83d22082dbfed53b01faa630442b";
+    public const string OutputSha256 = "b31bd0518311eb88e0f94a38e7b5a7ee6e98f4431f8cf585276b3df1166b8a1e";
     public const long InputLength = 4_735_573;
     public const int MappedImageLength = 0x4A8000;
     public const int OutputLength = 0x392000;
@@ -66,6 +66,7 @@ public sealed class BlackKnightPr1ExecutableTransform
 
         RebuildImports(protectedBytes, pe, root.GetProperty("imports"));
         RetargetCallsites(protectedBytes, pe, root.GetProperty("callsites"), root.GetProperty("imports"));
+        ApplyIatCorrections(protectedBytes, pe, root.GetProperty("iatCorrections"), root.GetProperty("imports"));
         RestoreTailBranches(protectedBytes, pe, root.GetProperty("tailBranches"), root.GetProperty("imports"));
         RejectResidualTailBranches(protectedBytes, pe);
         PatchSetupValidation(protectedBytes);
@@ -238,6 +239,40 @@ public sealed class BlackKnightPr1ExecutableTransform
             patched.Add(rva);
         }
         if (patched.Count != 2_990) throw new InvalidDataException($"Unexpected Black Knight PR1 callsite count: {patched.Count}.");
+    }
+
+    private static void ApplyIatCorrections(
+        byte[] bytes,
+        Pe32Image pe,
+        JsonElement corrections,
+        JsonElement imports)
+    {
+        var slots = BuildCanonicalSlots(imports);
+        var patched = new HashSet<uint>();
+        var text = pe.RequireSection(".text");
+        foreach (var entry in corrections.EnumerateArray())
+        {
+            var rva = entry[0].GetUInt32();
+            if (!patched.Add(rva)) throw new InvalidDataException($"Duplicate Black Knight PR1 IAT correction at 0x{rva:X8}.");
+            var expectedSlotVa = entry[1].GetUInt32();
+            var key = ImportKey(entry[2].GetString()!, entry[3].GetString()!);
+            if (!slots.TryGetValue(key, out var slotRva))
+                throw new InvalidDataException($"Black Knight PR1 IAT correction 0x{rva:X8} names an unknown import.");
+            var offset = pe.RvaToOffset(rva);
+            var isIndirectBranchOperand = offset >= 2 && bytes[offset - 2] == 0xFF && bytes[offset - 1] is 0x15 or 0x25;
+            var isEntryPointLoadOperand = rva is 0x334C23 or 0x334C2A &&
+                offset >= 2 && bytes[offset - 2] == 0x8B && bytes[offset - 1] is 0x3D or 0x2D;
+            if (rva < text.VirtualAddress || rva >= text.VirtualAddress + text.RawSize ||
+                (!isIndirectBranchOperand && !isEntryPointLoadOperand))
+                throw new InvalidDataException($"Black Knight PR1 IAT correction 0x{rva:X8} is not a qualified code operand.");
+            var actualSlotVa = ReadUInt32(bytes, offset);
+            if (actualSlotVa != expectedSlotVa)
+                throw new InvalidDataException(
+                    $"Black Knight PR1 IAT correction 0x{rva:X8} expected 0x{expectedSlotVa:X8}, found 0x{actualSlotVa:X8}.");
+            WriteUInt32(bytes, offset, ImageBase + slotRva);
+        }
+        if (patched.Count != 110)
+            throw new InvalidDataException($"Unexpected Black Knight PR1 IAT correction count: {patched.Count}.");
     }
 
     private static void RestoreTailBranches(byte[] bytes, Pe32Image pe, JsonElement branches, JsonElement imports)

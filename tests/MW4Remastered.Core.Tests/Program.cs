@@ -179,6 +179,9 @@ finally
     if (Directory.Exists(blackKnightPr1TransformRejectionRoot)) Directory.Delete(blackKnightPr1TransformRejectionRoot, true);
 }
 
+Check(BlackKnightPr1ExecutableTransform.TransformId.EndsWith("static-clean-v4", StringComparison.Ordinal) &&
+    BlackKnightPr1ExecutableTransform.OutputSha256 == "b31bd0518311eb88e0f94a38e7b5a7ee6e98f4431f8cf585276b3df1166b8a1e",
+    "Black Knight static transform exposes the reviewed v4 output identity");
 var blackKnightStaticTransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-black-knight-static-rejection-" + Guid.NewGuid().ToString("N"));
 try
 {
