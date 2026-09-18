@@ -54,24 +54,23 @@ public sealed class BlackKnightPr1ImageCapture
             start.Environment[OutputEnvironmentVariable] = mappedImage;
             process = Process.Start(start) ?? throw new InvalidOperationException("Could not start Black Knight PR1 image capture.");
             processJob.Assign(process);
-            using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            timeout.CancelAfter(TimeSpan.FromSeconds(60));
-            try
+            var captureDeadline = Stopwatch.StartNew();
+            while (captureDeadline.Elapsed < TimeSpan.FromSeconds(60))
             {
-                process.WaitForExitAsync(timeout.Token).GetAwaiter().GetResult();
-            }
-            catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
-            {
-                if (!process.HasExited) process.Kill(entireProcessTree: true);
-                throw new TimeoutException("Black Knight PR1 image capture timed out.");
-            }
-            if (process.ExitCode != 0)
-                throw new InvalidDataException($"Black Knight PR1 image capture failed with exit code {process.ExitCode}.");
+                cancellationToken.ThrowIfCancellationRequested();
+                if (IsCompleteMappedImage(mappedImage, MappedImageLength)) return mappedImage;
 
-            var output = RequireRegularFile(mappedImage, "Black Knight PR1 mapped image");
-            if (new FileInfo(output).Length != MappedImageLength)
-                throw new InvalidDataException("Black Knight PR1 image capture produced an unexpected image size.");
-            return output;
+                // The protected launcher can return before its temporary SafeDisc
+                // child reaches the OEP hook. Keep the owned job alive and wait for
+                // the exact capture artifact instead of treating the launcher's exit
+                // code as the result of the child process.
+                if (!process.HasExited) process.WaitForExit(100);
+                else Thread.Sleep(100);
+            }
+
+            if (!process.HasExited) process.Kill(entireProcessTree: true);
+            var exitDetail = process.HasExited ? $"; launcher exit code {process.ExitCode}" : string.Empty;
+            throw new TimeoutException($"Black Knight PR1 image capture timed out before producing its complete mapped image{exitDetail}.");
         }
         catch (OperationCanceledException)
         {
@@ -86,6 +85,25 @@ public sealed class BlackKnightPr1ImageCapture
             process?.Dispose();
             DeleteCaptureArtifact(adjacentConfiguration);
             DeleteCaptureArtifact(adjacentDll);
+        }
+    }
+
+    internal static bool IsCompleteMappedImage(string path, long expectedLength)
+    {
+        if (!File.Exists(path)) return false;
+        try
+        {
+            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.None);
+            if (stream.Length != expectedLength)
+                throw new InvalidDataException(
+                    $"Black Knight PR1 image capture produced an unexpected image size: {stream.Length}; expected {expectedLength}.");
+            return true;
+        }
+        catch (IOException)
+        {
+            // The capture hook creates the file before writing the mapped image.
+            // A sharing violation means its child still owns the output.
+            return false;
         }
     }
 
