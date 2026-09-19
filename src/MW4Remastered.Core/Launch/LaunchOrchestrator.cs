@@ -141,7 +141,7 @@ public sealed class LaunchOrchestrator
         startInfo.ArgumentList.Add(resolution.ToString());
         startInfo.ArgumentList.Add("-gl");
         startInfo.ArgumentList.Add("-GameTime.MaxVariableFps");
-        startInfo.ArgumentList.Add("60");
+        startInfo.ArgumentList.Add("30");
         startInfo.ArgumentList.Add("/gosNoJoystick");
     }
 }

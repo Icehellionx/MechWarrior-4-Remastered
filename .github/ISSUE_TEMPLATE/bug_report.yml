@@ -25,7 +25,7 @@ body:
     id: version
     attributes:
       label: Remastered installer version
-      placeholder: 0.6.40
+      placeholder: 0.6.43
     validations:
       required: true
   - type: textarea

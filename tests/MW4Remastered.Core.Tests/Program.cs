@@ -482,7 +482,7 @@ try
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
     Check(gameWindowLifecycleGuard.LastProcessId == 4242, "launch orchestration starts the window lifecycle guard for the exact game process");
-    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1440", "-gl", "-GameTime.MaxVariableFps", "60", "/gosNoJoystick" };
+    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1440", "-gl", "-GameTime.MaxVariableFps", "30", "/gosNoJoystick" };
     var blackKnightArguments = new[] { "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Vengeance requests the monitor-height 4:3 surface for aspect-preserving dgVoodoo presentation");

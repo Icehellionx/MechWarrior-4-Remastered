@@ -50,7 +50,7 @@ Assert-True ($build -match 'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc
 Assert-True ($build -match 'DgVoodooArchive' -and $build -match '5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850') 'Package must exact-hash the complete evaluated dgVoodoo2 archive.'
 Assert-True ($build -match '612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e' -and $build -match '6a0ca214784be04b7c8b547105aa9d79acf4dc26c0b6f8702b437ddca54058b2') 'Package must exact-hash the stock x86 DirectX wrapper files.'
 Assert-True ($build -match 'dgVoodoo-MW4\.conf' -and $inno -match 'Compatibility\\dgVoodoo2') 'Package must install the project-owned MW4 dgVoodoo profile and exact wrapper files.'
-Assert-True ($build -match '72b27b7bbebb7d1a3a3dd136b83f88c79aebcb20ba8edcc20a4703a40c0300a6') 'Package staging must exact-hash the reviewed D3D12 MW4 dgVoodoo profile.'
+Assert-True ($build -match 'fd9413ae24ef4028c19b304b48f7062d53871f25942baaa17d554bfeb1261b93') 'Package staging must exact-hash the reviewed D3D12 MW4 dgVoodoo profile.'
 Assert-True ($build -match 'DgVoodooSourceRoot' -and $build -match 'build-dgvoodoo-mw4-addon\.ps1' -and $build -match '33e7fae1c1cb2d297c05c14b5d4f886676fcd492c44eab0602d8e4465bc71ef0') 'Package staging must build and exact-hash the reproducible MW4 presentation add-on from pinned source.'
 Assert-True ($build -match 'BlackKnightCaptureBundle' -and $build -match [regex]::Escape('7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc')) 'A hosted Black Knight capture bundle must be exact-hash validated before packaging.'
 Assert-True ($build -notmatch 'BlackKnightCaptureHost|MW4RemasteredBlackKnightCaptureHost') 'Package build must not compile or stage the retired project process-injection helper.'

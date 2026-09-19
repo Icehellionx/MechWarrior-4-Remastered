@@ -5,7 +5,7 @@
   "tag": "v2.87.5",
   "binaryArchiveMirror": "https://github.com/masterotaku/dgVoodoo-binaries/blob/main/dgVoodoo2_87_5.zip",
   "archiveSha256": "5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850",
-  "profileSha256": "72b27b7bbebb7d1a3a3dd136b83f88c79aebcb20ba8edcc20a4703a40c0300a6",
+  "profileSha256": "fd9413ae24ef4028c19b304b48f7062d53871f25942baaa17d554bfeb1261b93",
   "redistribution": "Official readme permits individual dgVoodoo files to ship with a game or game mod; standalone redistribution requires the complete ZIP.",
   "files": {
     "MS/x86/DDraw.dll": "612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e",
