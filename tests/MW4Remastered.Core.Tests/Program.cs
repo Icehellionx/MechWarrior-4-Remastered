@@ -211,6 +211,31 @@ finally
     if (Directory.Exists(blackKnightCaptureCompletionRoot)) Directory.Delete(blackKnightCaptureCompletionRoot, true);
 }
 
+var blackKnightCaptureAttempts = 0;
+var blackKnightCaptureRetryResult = BlackKnightPr1ImageCapture.ExecuteWithRetries(attempt =>
+{
+    blackKnightCaptureAttempts++;
+    if (attempt < 3) throw new TimeoutException($"synthetic timeout {attempt}");
+    return "complete";
+});
+Check(blackKnightCaptureRetryResult == "complete" && blackKnightCaptureAttempts == 3,
+    "Black Knight capture retries isolated timeouts and returns the first successful attempt");
+var blackKnightCaptureExhausted = false;
+try
+{
+    _ = BlackKnightPr1ImageCapture.ExecuteWithRetries<string>(attempt =>
+        throw new TimeoutException($"synthetic timeout {attempt}"));
+}
+catch (TimeoutException exception)
+{
+    blackKnightCaptureExhausted = exception.Message.Contains(
+        $"failed after {BlackKnightPr1ImageCapture.MaxCaptureAttempts} isolated attempts", StringComparison.Ordinal) &&
+        exception.Message.Contains("attempt 1: synthetic timeout 1", StringComparison.Ordinal) &&
+        exception.Message.Contains($"attempt {BlackKnightPr1ImageCapture.MaxCaptureAttempts}: synthetic timeout {BlackKnightPr1ImageCapture.MaxCaptureAttempts}", StringComparison.Ordinal);
+}
+Check(blackKnightCaptureExhausted,
+    "Black Knight capture reports every isolated attempt when all retries are exhausted");
+
 Check(BlackKnightPr1ExecutableTransform.TransformId.EndsWith("static-clean-v4", StringComparison.Ordinal) &&
     BlackKnightPr1ExecutableTransform.OutputSha256 == "b31bd0518311eb88e0f94a38e7b5a7ee6e98f4431f8cf585276b3df1166b8a1e",
     "Black Knight static transform exposes the reviewed v4 output identity");

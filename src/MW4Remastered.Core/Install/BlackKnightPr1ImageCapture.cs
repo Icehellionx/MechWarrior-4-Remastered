@@ -13,9 +13,11 @@ public sealed class BlackKnightPr1ImageCapture
     public const long CaptureDllLength = 91_648;
     public const string CaptureDllSha256 = "7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc";
     public const int MappedImageLength = BlackKnightPr1ExecutableTransform.MappedImageLength;
+    internal const int MaxCaptureAttempts = 4;
 
     private const string OutputEnvironmentVariable = "MW4_PR1_IMAGE_OUTPUT";
     private const string Configuration = "{\"HookOEP\":\"true\"}";
+    private static readonly TimeSpan AttemptTimeout = TimeSpan.FromSeconds(15);
 
     public string Capture(
         string protectedExecutablePath,
@@ -32,9 +34,30 @@ public sealed class BlackKnightPr1ImageCapture
             throw new IOException("Black Knight image-capture scratch path already exists.");
         Directory.CreateDirectory(scratch);
 
+        return ExecuteWithRetries(attempt =>
+        {
+            var mappedImage = Path.Combine(scratch, $"MW4x.mapped.attempt-{attempt}.bin");
+            try
+            {
+                return CaptureAttempt(executable, captureDll, gameRoot, mappedImage, cancellationToken);
+            }
+            catch (TimeoutException)
+            {
+                DeleteCaptureArtifact(mappedImage);
+                throw;
+            }
+        });
+    }
+
+    private static string CaptureAttempt(
+        string executable,
+        string captureDll,
+        string gameRoot,
+        string mappedImage,
+        CancellationToken cancellationToken)
+    {
         var adjacentDll = Path.Combine(gameRoot, "version.dll");
         var adjacentConfiguration = Path.Combine(gameRoot, "version.json");
-        var mappedImage = Path.Combine(scratch, "MW4x.mapped.bin");
         if (File.Exists(adjacentDll) || Directory.Exists(adjacentDll) ||
             File.Exists(adjacentConfiguration) || Directory.Exists(adjacentConfiguration))
             throw new InvalidDataException("Black Knight PR1 capture requires unoccupied app-local compatibility paths.");
@@ -48,7 +71,7 @@ public sealed class BlackKnightPr1ImageCapture
             processJob = OwnedProcessJob.Create();
             process = StartContainedSuspended(executable, gameRoot, mappedImage, processJob);
             var captureDeadline = Stopwatch.StartNew();
-            while (captureDeadline.Elapsed < TimeSpan.FromSeconds(60))
+            while (captureDeadline.Elapsed < AttemptTimeout)
             {
                 cancellationToken.ThrowIfCancellationRequested();
                 if (IsCompleteMappedImage(mappedImage, MappedImageLength)) return mappedImage;
@@ -62,8 +85,9 @@ public sealed class BlackKnightPr1ImageCapture
             }
 
             if (!process.HasExited) process.Kill(entireProcessTree: true);
-            var exitDetail = process.HasExited ? $"; launcher exit code {process.ExitCode}" : string.Empty;
-            throw new TimeoutException($"Black Knight PR1 image capture timed out before producing its complete mapped image{exitDetail}.");
+            var processState = process.HasExited ? "launcher exited" : "launcher still active";
+            throw new TimeoutException(
+                $"capture produced no complete mapped image within {AttemptTimeout.TotalSeconds:0} seconds ({processState})");
         }
         catch (OperationCanceledException)
         {
@@ -79,6 +103,26 @@ public sealed class BlackKnightPr1ImageCapture
             DeleteCaptureArtifact(adjacentConfiguration);
             DeleteCaptureArtifact(adjacentDll);
         }
+    }
+
+    internal static T ExecuteWithRetries<T>(Func<int, T> attempt)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+        var failures = new List<string>(MaxCaptureAttempts);
+        for (var index = 1; index <= MaxCaptureAttempts; index++)
+        {
+            try
+            {
+                return attempt(index);
+            }
+            catch (TimeoutException error)
+            {
+                failures.Add($"attempt {index}: {error.Message}");
+            }
+        }
+
+        throw new TimeoutException(
+            $"Black Knight PR1 image capture failed after {MaxCaptureAttempts} isolated attempts: {string.Join("; ", failures)}.");
     }
 
     internal static bool IsCompleteMappedImage(string path, long expectedLength)
