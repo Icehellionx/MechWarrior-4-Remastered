@@ -6,9 +6,9 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered v0.6.43 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.43/MechWarrior-4-Remastered-Setup-0.6.43.exe)
+### [Download MechWarrior 4 Remastered v0.6.44 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.44/MechWarrior-4-Remastered-Setup-0.6.44.exe)
 
-Current release: [v0.6.43](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.43)
+Current release: [v0.6.44](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.44)
 
 Most people only need the installer above. It does **not** contain the games: setup asks for your original ISOs or ZIP archives and builds the installed games from those files.
 
@@ -32,14 +32,14 @@ If the direct link does not work, open the [latest release page](https://github.
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for v0.6.43:
+SHA-256 for v0.6.44:
 
 ```text
-860abdfae1281e99209f0a515838eed19fe220dcf4e1a38c4122ce37056edf87
+a3fdde1fbe6265c51c9a15258ea8ec79272a8e6430b9585bb6257275f5fed786
 ```
 
 ```powershell
-Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.43.exe -Algorithm SHA256
+Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.44.exe -Algorithm SHA256
 ```
 
 ## What you need

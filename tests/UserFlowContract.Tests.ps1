@@ -45,7 +45,8 @@ Assert-True ($launch -match 'resolution\.ToString\(\)' -and $launch -match 'prod
 Assert-True ($registration -match 'ValuesMatchOrWereConsumed' -and $registration -notmatch 'SetValue\("FIRSTRUN"') 'Launch validation must accept the games consuming all setup values without writing a guessed FIRSTRUN marker.'
 Assert-True ($blackKnightEula -match 'd150fcebe8560bdfd5389b4eec9fa7f82b134f8714ef42591ad6daeb4afac85b' -and $blackKnightEula -match 'AcceptedExport') 'Black Knight must install the exact qualified setup-accepted EULA transform.'
 Assert-True ($installerProgram -notmatch 'Application\.Run|InstallerForm' -and $installerProgram -match 'InstallWorkerArguments') 'The package must not launch a second visible installer UI.'
-Assert-True ($setup -match 'CurStepChanged' -and $setup -match 'SW_HIDE' -and $setup -match 'ewWaitUntilTerminated') 'The sole visible setup wizard must invoke its contained worker synchronously and hidden.'
+Assert-True ($installerProgram -match 'IsAdministrator\(\)' -and $installerProgram -match 'WindowsBuiltInRole\.Administrator' -and $installerProgram -match 'requires administrative privileges') 'The contained worker must fail before media processing if its explicit setup elevation boundary was bypassed.'
+Assert-True ($setup -match 'CurStepChanged' -and $setup -match "ShellExec\('runas'" -and $setup -match 'SW_HIDE' -and $setup -match 'ewWaitUntilTerminated') 'The sole visible setup wizard must invoke its contained worker synchronously, hidden, and with an explicitly requested administrative token.'
 Assert-True ($setup -match '--install-worker' -and $setup -match '--destination' -and $setup -match '--media') 'The sole setup wizard must forward its destination and every selected media path to the contained worker.'
 Assert-True ($setup -match 'postinstall nowait skipifsilent' -and $setup -match 'MW4RemasteredLauncher\.exe') 'Successful unified setup may offer to open only the launcher.'
 

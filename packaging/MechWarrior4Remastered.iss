@@ -322,9 +322,17 @@ begin
 
   WorkerLog := ExpandConstant('{app}\Logs\InstallWorker.log');
   WizardForm.StatusLabel.Caption := 'Installing and verifying selected MechWarrior 4 games...';
-  if not Exec(ExpandConstant('{app}\MW4RemasteredInstallWorker.exe'), GetMediaParameters(''),
-    ExpandConstant('{app}'), SW_HIDE, ewWaitUntilTerminated, ResultCode) then
-    RaiseException('Setup could not start its contained game-installation worker.');
+  { The outer Inno loader normally elevates because PrivilegesRequired=admin,
+    but a downloaded setup can still be started through a non-elevated shell
+    path on some systems.  Require the worker's token explicitly instead of
+    relying on how Setup itself was launched.  From an already elevated Setup
+    this does not add another consent prompt; otherwise Windows displays the
+    normal UAC prompt before any original-media transformation begins. }
+  if not ShellExec('runas', ExpandConstant('{app}\MW4RemasteredInstallWorker.exe'),
+    GetMediaParameters(''), ExpandConstant('{app}'), SW_HIDE,
+    ewWaitUntilTerminated, ResultCode) then
+    RaiseException('Setup could not start its game-installation worker with the required administrative privileges: ' +
+      SysErrorMessage(ResultCode));
   if ResultCode <> 0 then
   begin
     RetainedWorkerLog := ExpandConstant('{localappdata}\MechWarrior 4 Remastered\Logs\InstallWorker.log');

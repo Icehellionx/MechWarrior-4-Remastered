@@ -12,6 +12,7 @@ function Assert-True {
 }
 
 Assert-True ($inno -match 'PrivilegesRequired=admin') 'Package setup must own the single elevation boundary required for ISO mounting.'
+Assert-True ($inno -match "ShellExec\('runas',\s*ExpandConstant\('\{app\}\\MW4RemasteredInstallWorker\.exe'\)" -and $inno -notmatch "(?s)Exec\(ExpandConstant\('\{app\}\\MW4RemasteredInstallWorker\.exe'\)") 'Setup must explicitly request an administrative token for its hidden worker even when the outer executable was started from a non-elevated download shell.'
 Assert-True ($inno -match 'Flags:\s*postinstall nowait skipifsilent runasoriginaluser') 'Post-install launcher must return to the original non-elevated user token.'
 Assert-True ($inno -match 'DefaultDirName=\{localappdata\}\\Programs\\MechWarrior 4 Remastered') 'Package root must remain in the current user profile.'
 Assert-True ($inno -match 'Uninstallable=yes') 'Package must retain the standard Inno uninstaller.'

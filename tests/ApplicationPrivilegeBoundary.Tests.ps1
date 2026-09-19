@@ -22,6 +22,12 @@ foreach ($component in @('MW4Remastered.Installer', 'MW4Remastered.Launcher', 'M
     Assert-True ($executionLevel.uiAccess -eq 'false') "$component must not request UIAccess."
 }
 
+$installerProgram = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/Program.cs') -Raw
+$setup = Get-Content -LiteralPath (Join-Path $root 'packaging/MechWarrior4Remastered.iss') -Raw
+Assert-True ($setup -match 'PrivilegesRequired=admin' -and $setup -match "ShellExec\('runas'.*MW4RemasteredInstallWorker" -and
+    $installerProgram -match 'WindowsBuiltInRole\.Administrator') 'Setup must explicitly elevate only its internal installation worker and the worker must reject an unelevated token.'
+Assert-True ($setup -match 'runasoriginaluser') 'The post-install launcher must return to the original non-elevated user token.'
+
 $launchOrchestrator = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
 $capture = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightPr1ImageCapture.cs') -Raw
 $transform = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightPr1ExecutableTransform.cs') -Raw
