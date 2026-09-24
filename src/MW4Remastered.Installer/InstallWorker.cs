@@ -64,6 +64,16 @@ internal sealed class InstallWorker
         var plan = planner.Plan(selection.Current, args.DestinationPath, alreadyReady);
         ValidatePlan(selection.Current, plan, alreadyReady);
 
+        var registration = new LegacyGameRegistration();
+        foreach (var planned in plan.Products)
+        {
+            foreach (var componentId in planned.EffectiveComponents)
+            {
+                var product = ProductCatalog.All.Single(item => item.Id == componentId);
+                registration.ValidateAvailable(product, planned.DestinationPath);
+            }
+        }
+
         var sessionFactory = new MediaSelectionSessionFactory(sourceSessions, inspection);
         var coordinator = new GameInstallationCoordinator();
         var installedThisRun = new List<string>();
@@ -100,7 +110,6 @@ internal sealed class InstallWorker
             configuration.EnsureDefaults(status, configuration.ResolveResolution());
             TryAppendLog(args.LogPath, $"Prepared modern graphics configuration for {status.Product.DisplayName}.");
         }
-        var registration = new LegacyGameRegistration();
         var compatibilityReplacement = new OwnedInstallFileReplacementTransaction();
         var compatibilityRoot = Path.Combine(args.DestinationPath, "Compatibility", "dgVoodoo2");
         var registeredThisRun = new List<ProductStatus>();
@@ -195,7 +204,13 @@ internal sealed class InstallWorker
 
     private static void ValidatePlan(MediaSelectionSnapshot selection, InstallDestinationPlan plan, HashSet<string> alreadyReady)
     {
-        if (!plan.HasSelectedGames) throw new InvalidDataException("The selected files do not contain a complete supported game media set.");
+        if (!plan.HasSelectedGames)
+        {
+            var blackKnightDisc = selection.Capabilities.Any(item => item.ProductId == "black-knight" && item.IsComplete);
+            if (blackKnightDisc)
+                throw new InvalidDataException("Black Knight is an expansion. Select both Vengeance discs and the Black Knight disc together; the Inner Sphere or Clan Mech Pak disc is also required for its official Point Release 1 update.");
+            throw new InvalidDataException("The selected files do not contain a complete supported game media set. Vengeance and Mercenaries each require both original discs.");
+        }
         if (plan.BlockedProducts.Count > 0)
             throw new InvalidDataException(string.Join("; ", plan.BlockedProducts.Select(item =>
                 $"{item.DisplayName} requires {string.Join(" + ", item.MissingDependencyIds)}")));

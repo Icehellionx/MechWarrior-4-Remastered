@@ -30,6 +30,35 @@ public readonly record struct GameResolution(int Width, int Height)
     }
 }
 
+public sealed record GameResolutionPreset(GameResolution Resolution, string Label)
+{
+    public static IReadOnlyList<GameResolutionPreset> Choices { get; } =
+    [
+        new(new(800, 600), "800 × 600 (classic)"),
+        new(new(1024, 768), "1024 × 768 (classic)"),
+        new(new(1600, 1200), "1600 × 1200 (1920 × 1200 screen equivalent)"),
+    ];
+
+    public static bool IsSelectable(GameResolution resolution) =>
+        Choices.Any(choice => choice.Resolution == resolution);
+
+    public static GameResolution BestFitting(GameResolution displayArea) =>
+        Choices.LastOrDefault(choice => choice.Resolution.Width <= displayArea.Width &&
+                                        choice.Resolution.Height <= displayArea.Height)?.Resolution ??
+        new GameResolution(1024, 768);
+}
+
+public readonly record struct GameDisplayGeometry(GameResolution Monitor, GameResolution Gameplay)
+{
+    public int LeftPillarboxWidth => Math.Max(0, Monitor.Width - Gameplay.Width) / 2;
+    public int RightPillarboxWidth => Math.Max(0, Monitor.Width - Gameplay.Width) - LeftPillarboxWidth;
+    public int TopLetterboxHeight => Math.Max(0, Monitor.Height - Gameplay.Height) / 2;
+    public int BottomLetterboxHeight => Math.Max(0, Monitor.Height - Gameplay.Height) - TopLetterboxHeight;
+
+    public static GameDisplayGeometry ForMonitor(int width, int height) =>
+        new(new GameResolution(width, height), GameResolution.LargestFourByThree(width, height));
+}
+
 public interface IGameResolutionProvider
 {
     GameResolution GetResolution();
@@ -41,9 +70,11 @@ public sealed class ActiveMonitorResolutionProvider : IGameResolutionProvider
     private const int SmCxScreen = 0;
     private const int SmCyScreen = 1;
 
-    public GameResolution GetResolution()
+    public GameResolution GetResolution() => GameResolutionPreset.BestFitting(GetDisplayGeometry().Gameplay);
+
+    public GameDisplayGeometry GetDisplayGeometry()
     {
-        if (!OperatingSystem.IsWindows()) return new GameResolution(1024, 768);
+        if (!OperatingSystem.IsWindows()) return GameDisplayGeometry.ForMonitor(1024, 768);
 
         // Launch is requested by the foreground launcher. Resolve its monitor at
         // that moment instead of assuming the primary display. The launcher is
@@ -52,12 +83,12 @@ public sealed class ActiveMonitorResolutionProvider : IGameResolutionProvider
         var monitorInfo = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
         if (monitor != IntPtr.Zero && GetMonitorInfo(monitor, ref monitorInfo))
         {
-            return GameResolution.LargestFourByThree(
+            return GameDisplayGeometry.ForMonitor(
                 monitorInfo.Monitor.Right - monitorInfo.Monitor.Left,
                 monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top);
         }
 
-        return GameResolution.LargestFourByThree(
+        return GameDisplayGeometry.ForMonitor(
             GetSystemMetrics(SmCxScreen), GetSystemMetrics(SmCyScreen));
     }
 
@@ -84,6 +115,63 @@ public sealed class ActiveMonitorResolutionProvider : IGameResolutionProvider
 
     [DllImport("user32.dll", CharSet = CharSet.Unicode)]
     private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
+}
+
+public sealed class ConfiguredGameResolutionProvider : IGameResolutionProvider
+{
+    private readonly string preferencePath;
+    private readonly IGameResolutionProvider monitor;
+
+    public ConfiguredGameResolutionProvider(string applicationRoot, IGameResolutionProvider? monitor = null)
+    {
+        preferencePath = Path.Combine(Path.GetFullPath(applicationRoot), "Compatibility", "dgVoodoo2", "gameplay-resolution.txt");
+        this.monitor = monitor ?? new ActiveMonitorResolutionProvider();
+    }
+
+    public GameResolution GetResolution()
+    {
+        var saved = ReadSaved();
+        return saved is { } selected && GameResolutionPreset.IsSelectable(selected)
+            ? selected
+            : GameResolutionPreset.BestFitting(monitor.GetResolution());
+    }
+
+    public GameResolution? ReadSaved()
+    {
+        if (!File.Exists(preferencePath)) return null;
+        var parent = Path.GetDirectoryName(preferencePath)!;
+        StagedInstallTransaction.RejectContainedFilePath(parent, preferencePath);
+        var value = File.ReadAllText(preferencePath).Trim();
+        var parts = value.Split('x');
+        if (parts.Length != 2 || !int.TryParse(parts[0], out var width) ||
+            !int.TryParse(parts[1], out var height) || width < 800 || height < 600 ||
+            width * 3 != height * 4)
+            throw new InvalidDataException("The saved gameplay resolution is invalid.");
+        return new GameResolution(width, height);
+    }
+
+    public void Save(GameResolution? resolution)
+    {
+        var parent = Path.GetDirectoryName(preferencePath)!;
+        if (!Directory.Exists(parent) || (File.GetAttributes(parent) & FileAttributes.ReparsePoint) != 0)
+            throw new InvalidDataException("The compatibility settings directory is unavailable.");
+        if (resolution is { } selected &&
+            !GameResolutionPreset.IsSelectable(selected))
+            throw new ArgumentOutOfRangeException(nameof(resolution));
+        if (File.Exists(preferencePath)) StagedInstallTransaction.RejectContainedFilePath(parent, preferencePath);
+        if (resolution is null)
+        {
+            if (File.Exists(preferencePath)) File.Delete(preferencePath);
+            return;
+        }
+        var temporary = Path.Combine(parent, $".gameplay-resolution-{Guid.NewGuid():N}.tmp");
+        try
+        {
+            File.WriteAllText(temporary, resolution.Value.ToString() + Environment.NewLine);
+            File.Move(temporary, preferencePath, overwrite: true);
+        }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
 }
 
 public sealed class LegacyGameConfiguration : ILegacyGameConfiguration
@@ -170,8 +258,8 @@ HudTargetDamageMode=false
     public GameResolution ResolveResolution()
     {
         var resolution = resolutionProvider.GetResolution();
-        if (resolution.Width < 800 || resolution.Height < 600 || resolution.Width * 3 != resolution.Height * 4)
-            throw new InvalidOperationException($"Invalid 4:3 game resolution: {resolution}.");
+        if (!GameResolutionPreset.IsSelectable(resolution))
+            throw new InvalidOperationException($"Unsupported game render resolution: {resolution}.");
         return resolution;
     }
 
@@ -188,8 +276,8 @@ HudTargetDamageMode=false
     private void EnsureCore(ProductStatus status, GameResolution resolution, bool applyMaximumGraphicsDefaults)
     {
         ArgumentNullException.ThrowIfNull(status);
-        if (resolution.Width < 800 || resolution.Height < 600 || resolution.Width * 3 != resolution.Height * 4)
-            throw new InvalidOperationException($"Invalid 4:3 game resolution: {resolution}.");
+        if (!GameResolutionPreset.IsSelectable(resolution))
+            throw new InvalidOperationException($"Unsupported game render resolution: {resolution}.");
         if (status.Product.Id is not ("vengeance" or "black-knight" or "mercenaries")) return;
         if (status.State != ProductInstallState.Ready || string.IsNullOrWhiteSpace(status.InstallPath))
             throw new InvalidOperationException($"{status.Product.DisplayName} does not have a verified configuration root.");

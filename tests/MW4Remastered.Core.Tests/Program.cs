@@ -99,6 +99,30 @@ finally
     if (Directory.Exists(patch3TransformRejectionRoot)) Directory.Delete(patch3TransformRejectionRoot, true);
 }
 
+var patch3OptionalOutputRoot = Path.Combine(Path.GetTempPath(), "mw4-patch3-optional-output-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(patch3OptionalOutputRoot);
+    Check(!OfficialVengeancePatch3Transform.HasQualifiedOptionalShortcut(patch3OptionalOutputRoot),
+        "Patch 3 accepts the baseline output without a dedicated-server shortcut");
+    var shortcut = Path.Combine(patch3OptionalOutputRoot, "MW4 Dedicated Server.bat");
+    File.WriteAllText(shortcut, "MW4.exe -win32dedicated\r\n", System.Text.Encoding.ASCII);
+    Check(OfficialVengeancePatch3Transform.HasQualifiedOptionalShortcut(patch3OptionalOutputRoot),
+        "Patch 3 accepts only the pinned original-disc dedicated-server shortcut");
+    File.AppendAllText(shortcut, "extra", System.Text.Encoding.ASCII);
+    var changedShortcutRejected = false;
+    try { _ = OfficialVengeancePatch3Transform.HasQualifiedOptionalShortcut(patch3OptionalOutputRoot); }
+    catch (InvalidDataException error)
+    {
+        changedShortcutRejected = error.Message.Contains("length=", StringComparison.Ordinal) &&
+            error.Message.Contains("sha256=", StringComparison.Ordinal);
+    }
+    Check(changedShortcutRejected, "Patch 3 rejects a modified optional shortcut");
+}
+finally
+{
+    if (Directory.Exists(patch3OptionalOutputRoot)) Directory.Delete(patch3OptionalOutputRoot, true);
+}
 var mercenariesTransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-mercenaries-transform-rejection-" + Guid.NewGuid().ToString("N"));
 try
 {
@@ -387,6 +411,12 @@ foreach (var layout in MediaCatalog.Layouts)
 
 var incomplete = recognizer.Recognize(new[] { "MW4.EXE", "RESOURCE/CORE.MW4" });
 Check(incomplete.Status == MediaRecognitionStatus.Unknown, "partial Vengeance media is rejected");
+var nearVengeance = new MediaRecognizer().Recognize(MediaCatalog.Layouts.Single(item => item.Id == "vengeance-disc-1")
+    .RequiredPaths.Where(path => !path.Equals("MW4.ICD", StringComparison.OrdinalIgnoreCase)));
+Check(nearVengeance.Status == MediaRecognitionStatus.Unknown &&
+      nearVengeance.Message.Contains("Closest known layout: MechWarrior 4: Vengeance Disc 1", StringComparison.Ordinal) &&
+      nearVengeance.Message.Contains("missing: MW4.ICD", StringComparison.Ordinal),
+    "near-match media reports the missing expected file without accepting an unqualified edition");
 
 var unsafeInventory = recognizer.Recognize(new[] { "MW4.EXE", "../outside.dll" });
 Check(unsafeInventory.Status == MediaRecognitionStatus.UnsafeInventory, "parent traversal is rejected before recognition");
@@ -455,7 +485,7 @@ try
         string.Equals(installedStatuses["black-knight"].LaunchPath, Path.Combine(destination, "MW4X", "MW4X.EXE"), StringComparison.OrdinalIgnoreCase),
         $"status reader exposes Black Knight from the shared Vengeance-family manifest and MW4X path ({installedStatuses["black-knight"].State}; {installedStatuses["black-knight"].LaunchPath}; {installedStatuses["black-knight"].Detail})");
     Check(installedStatuses["vengeance"].InstallPath == destination, "status reader exposes the verified product root for ownership-safe removal");
-    var configuration = new LegacyGameConfiguration(new FixedGameResolutionProvider(1920, 1440));
+    var configuration = new LegacyGameConfiguration(new FixedGameResolutionProvider(1600, 1200));
     var testResolution = configuration.ResolveResolution();
     Check(GameResolution.LargestFourByThree(2560, 1440) == new GameResolution(1920, 1440) &&
           GameResolution.LargestFourByThree(1920, 1080) == new GameResolution(1440, 1080) &&
@@ -463,6 +493,19 @@ try
           GameResolution.LargestFourByThree(1280, 1024) == new GameResolution(1280, 960) &&
           GameResolution.LargestFourByThree(1919, 1079) == new GameResolution(1436, 1077),
         "monitor adaptation derives the largest integral 4:3 surface for wide, narrow, and irregular displays");
+    var ultraWide = GameDisplayGeometry.ForMonitor(5120, 2160);
+    var wide = GameDisplayGeometry.ForMonitor(3440, 1440);
+    var ten = GameDisplayGeometry.ForMonitor(1920, 1200);
+    Check(ultraWide.Monitor == new GameResolution(5120, 2160) &&
+          ultraWide.Gameplay == new GameResolution(2880, 2160) &&
+          ultraWide.LeftPillarboxWidth == 1120 && ultraWide.RightPillarboxWidth == 1120 &&
+          wide.Gameplay == new GameResolution(1920, 1440) && wide.LeftPillarboxWidth == 760 &&
+          ten.Gameplay == new GameResolution(1600, 1200) && ten.RightPillarboxWidth == 160 &&
+          GameDisplayGeometry.ForMonitor(1280, 1024).TopLetterboxHeight == 32 &&
+          GameDisplayGeometry.ForMonitor(1280, 1024).BottomLetterboxHeight == 32 &&
+          GameDisplayGeometry.ForMonitor(1919, 1079).LeftPillarboxWidth == 241 &&
+          GameDisplayGeometry.ForMonitor(1919, 1079).RightPillarboxWidth == 242,
+        "settings preview distinguishes physical monitor, actual 4:3 gameplay surface, and each pillarbox");
     configuration.Ensure(installedStatuses["black-knight"], testResolution);
     Check(File.Exists(Path.Combine(destination, "MW4X", "optionsx.ini")),
         "shared-tree Black Knight configuration is seeded beside MW4X.exe for bootstrap");
@@ -482,27 +525,27 @@ try
     Check(processStarter.LastStart?.FileName == installedStatuses["vengeance"].LaunchPath && processStarter.LastStart?.WorkingDirectory == destination, "launch orchestration uses the verified executable and its working directory");
     Check(gameRegistration.LastValidated == installedStatuses["vengeance"], "launch orchestration only validates setup-owned registration before starting Vengeance");
     Check(gameWindowLifecycleGuard.LastProcessId == 4242, "launch orchestration starts the window lifecycle guard for the exact game process");
-    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1920x1440", "-gl", "-GameTime.MaxVariableFps", "30", "/gosNoJoystick" };
+    var modernArguments = new[] { "-32", "-noautoconfig", "-f", "1600x1200", "-gl", "-GameTime.MaxVariableFps", "30", "/gosNoJoystick" };
     var blackKnightArguments = new[] { "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
-        "Vengeance requests the monitor-height 4:3 surface for aspect-preserving dgVoodoo presentation");
+        "Vengeance requests a HUD-supported 4:3 render size for aspect-preserving dgVoodoo presentation");
     var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
     Check(vengeanceOptions.Contains("[graphics options]", StringComparison.OrdinalIgnoreCase) &&
-          vengeanceOptions.Contains("screenwidth=1920", StringComparison.OrdinalIgnoreCase) &&
-          vengeanceOptions.Contains("screenheight=1440", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("screenwidth=1600", StringComparison.OrdinalIgnoreCase) &&
+          vengeanceOptions.Contains("screenheight=1200", StringComparison.OrdinalIgnoreCase) &&
           vengeanceOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration seeding preserves existing controls and adds the graphics page required by pilot scripts");
     configuration.Ensure(installedStatuses["vengeance"], testResolution);
     Check(File.ReadAllText(Path.Combine(destination, "options.ini")) == vengeanceOptions,
         "configuration seeding is byte-stable after the required graphics page exists");
     File.WriteAllText(Path.Combine(destination, "options.ini"), vengeanceOptions
-        .Replace("screenwidth=1920", "ScreenWidth=800", StringComparison.OrdinalIgnoreCase)
-        .Replace("screenheight=1440", "ScreenHeight=600", StringComparison.OrdinalIgnoreCase)
+        .Replace("screenwidth=1600", "ScreenWidth=800", StringComparison.OrdinalIgnoreCase)
+        .Replace("screenheight=1200", "ScreenHeight=600", StringComparison.OrdinalIgnoreCase)
         .Replace("bitdepth=32", "bitdepth=16", StringComparison.OrdinalIgnoreCase));
     configuration.Ensure(installedStatuses["vengeance"], testResolution);
     var repairedOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
-    Check(repairedOptions.Contains("ScreenWidth=1920", StringComparison.OrdinalIgnoreCase) &&
-          repairedOptions.Contains("ScreenHeight=1440", StringComparison.OrdinalIgnoreCase) &&
+    Check(repairedOptions.Contains("ScreenWidth=1600", StringComparison.OrdinalIgnoreCase) &&
+          repairedOptions.Contains("ScreenHeight=1200", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("bitdepth=32", StringComparison.OrdinalIgnoreCase) &&
           repairedOptions.Contains("BiThrottleCenter=0.300000", StringComparison.Ordinal),
         "configuration guard repairs the resolution page MW4 rewrites during startup without discarding controls");
@@ -1016,6 +1059,7 @@ MercenariesPr1ArchiveExtractorSmoke.Run(failures);
 MediaSourceInspectorSmoke.Run(failures);
 MediaSelectionSetSmoke.Run(failures);
 MediaSourceSessionSmoke.Run(failures);
+CueMode1MediaSmoke.Run(failures);
 MediaSelectionSessionSmoke.Run(failures);
 MechPakIsoProjectionSmoke.Run(failures);
 MechPakResourceOverlayPlanSmoke.Run(failures);
@@ -1023,6 +1067,7 @@ MechPakActivationTransformSmoke.Run(failures);
 MechPakOwnedExecutableUpgradeSmoke.Run(failures);
 OwnedInstallOverlayTransactionSmoke.Run(failures);
 OwnedInstallFileReplacementTransactionSmoke.Run(failures);
+GraphicsSettingsSmoke.Run(failures);
 
 if (failures.Count > 0)
 {

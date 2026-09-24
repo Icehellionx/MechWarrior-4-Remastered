@@ -179,7 +179,8 @@ public sealed class OfficialMercenariesPr1Transform
         using var stream = File.OpenRead(path);
         var hash = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
         if (stream.Length != expected.Length || !hash.Equals(expected.Sha256, StringComparison.Ordinal))
-            throw new InvalidDataException($"Unsupported {description} {expected.RelativePath}.");
+            throw new InvalidDataException(
+                $"Unsupported {description} {expected.RelativePath}: length={stream.Length}, sha256={hash}.");
         return path;
     }
 

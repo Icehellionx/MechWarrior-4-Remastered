@@ -19,12 +19,22 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
 
     public bool IsAttached(string imagePath)
     {
-        var output = Run($"$image=Get-DiskImage -ImagePath {Literal(imagePath)} -ErrorAction Stop; if ($image.Attached) {{ 'attached' }} else {{ 'detached' }}");
+        var output = Run($"$images=@(Get-DiskImage -ImagePath {Literal(imagePath)} -ErrorAction Stop); " +
+            "if ($images.Count -ne 1) { throw 'Windows returned no unique disk-image record.' }; " +
+            "if ($images[0].Attached) { 'attached' } else { 'detached' }");
+        return ParseAttachmentState(output);
+    }
+
+    internal static bool ParseAttachmentState(string output)
+    {
         return output.Trim() switch
         {
             "attached" => true,
             "detached" => false,
-            _ => throw new InvalidDataException($"Unexpected disk-image query output: {output.Trim()}"),
+            "" => throw new InvalidDataException(
+                "Windows returned no disk-image attachment state. Verify that the ISO is accessible and retry; Setup did not mount or change it."),
+            _ => throw new InvalidDataException(
+                $"Unexpected disk-image attachment state: {output.Trim()}"),
         };
     }
 
@@ -73,8 +83,20 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
         }
         var output = outputTask.GetAwaiter().GetResult();
         var error = errorTask.GetAwaiter().GetResult();
-        if (process.ExitCode != 0) throw new IOException($"Disk-image command failed with code {process.ExitCode}: {error.Trim()}");
+        if (process.ExitCode != 0) throw CommandFailure(process.ExitCode, error);
         return output;
+    }
+
+    internal static Exception CommandFailure(int exitCode, string standardError)
+    {
+        // Redirected Windows PowerShell can serialize errors as CLIXML, including
+        // the user's full ISO and temporary paths. Classify without echoing it.
+        if (standardError.Contains("Access denied", StringComparison.OrdinalIgnoreCase) ||
+            standardError.Contains("0x80041003", StringComparison.OrdinalIgnoreCase))
+            return new UnauthorizedAccessException(
+                "Windows denied access to disk-image management. Start Setup normally and approve its UAC prompt; Setup did not mount or change the ISO.");
+        return new IOException(
+            $"Windows disk-image operation failed (PowerShell exit {exitCode}). Check that the ISO is accessible and retry; Setup will release any image it mounted.");
     }
 
     private static string Literal(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";

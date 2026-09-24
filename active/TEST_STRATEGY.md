@@ -42,6 +42,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 
 - Input fixtures use synthetic trees or hashes/metadata; tests never copy proprietary game payloads into source.
 - Media matching rejects unknown or partially matching revisions safely.
+- CUE/BIN intake accepts only one same-directory MODE1/2352 data track at index zero, rejects missing/escaped/reparse/corrupt BINs, cleans conversion and mounts on failure, and projects Mech Paks without materializing their legacy setup/DRM files. Synthetic sector round-trips and a locally supplied real pack image test the container path; alternate game-file revisions still require transform and field qualification.
 - Binary transforms require exact input and output hashes and fail without mutation on mismatch.
 - Official Patch 3 application accepts only the locked user-media engine/payload hashes, runs in contained scratch through the source-owned `asInvoker` x86 host, exact-validates every result, and excludes the engine, RTP payload, raw ICD, C-Dilla, ARTP client, and patch utilities from the installed tree.
 - Internal compatibility bundles require exact inventory and hashes for installed binaries/notices plus any distribution-only corresponding source; extra files fail even when installed destinations are otherwise allowlisted.
@@ -58,6 +59,7 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Uninstall validates the exact install root and ownership manifest before deletion, rejects links/reparse points, preserves only documented user data, and retains recovery data if restore fails.
 - Launcher removal may target a verified or repair-required product directory, but never a merely inferred path; whole-application removal is owned separately by the standard package uninstaller.
 - The package requests one setup elevation for ISO access and all install-time mutation, starts the post-install launcher with the original user token, contains no broad uninstall-delete rule, and must preserve unowned game/save/configuration files during shell uninstall.
+- Setup must create an inbound firewall decision for each installed game executable before first launch: Private allow when multiplayer is selected or Private block when declined, plus Public block in either case. Elevated field testing must inspect exact program paths and profiles, launch all three on an active Public network without a firewall prompt, verify Private multiplayer when selected, and confirm uninstall removes only the project-owned rule pairs. An isolated F: install must not reuse or delete live C: rule names.
 - Two clean release builds from identical declared inputs must produce byte-identical setup executables and checksum sidecars.
 - Launcher status is derived from verified files/configuration, not registry keys alone.
 - Manual transforms assert page count/order/dimensions and render all pages for visual QA.
@@ -74,6 +76,8 @@ Native WinForms rendering is captured with the actual window renderer to check h
 - Release tests block ISOs, BIN/CUE/MDF/MDS, serial files, raw cracks, `.env`, dumps, and unintended executables.
 - Defender qualification scans every assembled package, extracted package tree, and representative installed tree with the current engine/intelligence. A clean exit alone is insufficient because exit `0` can also mean successful remediation; the scan gate also rejects new matching detection/remediation events.
 - Presentation qualification must visibly confirm strict 4:3 geometry outside the separately scoped Vengeance opening movie, non-minimizing fake-fullscreen Alt-Tab/return, and absence of the dgVoodoo watermark in all three titles. A parsed profile or staged-file hash is necessary but cannot replace the visible gate because a missing/ignored config falls back to wrapper defaults.
+- Global display settings may change only the pinned dgVoodoo profile's final resampling, DirectX filtering, and DirectX antialiasing lines, plus the launcher's bounded optional 4:3 render-resolution preference. Synthetic coverage must verify the exact default and all-title manifest ownership, reject running games and repair-required trees before mutation, restore earlier trees if a later replacement fails, and preserve saves and uninstall behavior. Field qualification must time the first dialog opening, click SETTINGS repeatedly, then exercise each choice through menu, cinematic, gameplay, Alt-Tab, repair, and uninstall on representative hardware.
+- Shareable diagnostics must reverify owned game files, use only fixed product and file names, and contain no local paths, raw verifier errors, logs, or file contents. Synthetic ready and damaged trees must prove those boundaries before packaged dialog review.
 
 ## Behavioral slice record
 

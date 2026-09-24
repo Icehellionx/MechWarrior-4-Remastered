@@ -16,7 +16,7 @@ public static class LegacyPresentationCompatibility
             ["DirtyGlass.png"] = "dc507d14880cde567b192aaf444769586a906c0165ec2432ee43d0cead4fcbc5",
         };
     private const string ConfigName = "dgVoodoo.conf";
-    private const string ConfigSha256 = "fd9413ae24ef4028c19b304b48f7062d53871f25942baaa17d554bfeb1261b93";
+    public const string ConfigSha256 = "7ea9e4576a421157927de2d41551e3fdef8b4c76cd3adcc2d02ef19706f249a4";
 
     public static IReadOnlyList<InstallFile> CreateVengeanceFiles(string root, bool includeBlackKnight = false)
     {

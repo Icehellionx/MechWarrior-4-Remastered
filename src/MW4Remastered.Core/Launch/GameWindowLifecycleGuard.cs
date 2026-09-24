@@ -190,7 +190,10 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
         {
             if (process.HasExited || !IsWindow(window)) return null;
             var windowRect = new NativeRect();
-            if (GetWindowRect(window, ref windowRect) && Covers(windowRect, monitorRect)) return windowRect;
+            // dgVoodoo can create a borderless window a few pixels larger than
+            // the monitor. Pin the physical monitor bounds, not that initial
+            // oversized rectangle, so ultrawide edges remain visible.
+            if (GetWindowRect(window, ref windowRect) && Covers(windowRect, monitorRect)) return monitorRect;
             cancellationToken.WaitHandle.WaitOne(PollInterval);
         }
 

@@ -5,7 +5,9 @@ param(
     [Parameter(Mandatory)]
     [string]$OutputDirectory,
     [string]$MsBuildPath,
-    [string]$FxcPath
+    [string]$FxcPath,
+    [ValidateSet(0, 1, 2, 5)]
+    [int]$ExperimentalGameplayCropPixels = 5
 )
 
 $ErrorActionPreference = 'Stop'
@@ -50,6 +52,19 @@ try {
     Copy-Item -LiteralPath (Join-Path $source 'dgVoodooAPI') -Destination $scratchSource -Recurse
 
     $patch = Join-Path $projectRoot 'tools/compatibility/patches/dgVoodoo2-MW4-Presentation.patch'
+    if ($ExperimentalGameplayCropPixels -ne 5) {
+        # Keep the production patch byte-for-byte pinned. This explicit test
+        # option changes only the two gameplay source-coordinate offsets in a
+        # disposable scratch copy; the output carries its exact variant patch.
+        $variantPatch = Join-Path $scratch 'dgVoodoo2-MW4-Presentation-experiment.patch'
+        $patchText = [IO.File]::ReadAllText($patch)
+        $original = '(isGameplay3DActive ? 5.0f : 0.0f)'
+        $matches = [regex]::Matches($patchText, [regex]::Escape($original)).Count
+        if ($matches -ne 2) { throw "Expected two gameplay crop offsets; found $matches." }
+        $replacement = '(isGameplay3DActive ? ' + $ExperimentalGameplayCropPixels.ToString([Globalization.CultureInfo]::InvariantCulture) + '.0f : 0.0f)'
+        [IO.File]::WriteAllText($variantPatch, $patchText.Replace($original, $replacement))
+        $patch = $variantPatch
+    }
     & git -C $scratchSource apply -p0 --check $patch
     if ($LASTEXITCODE -ne 0) { throw "MW4 presentation patch validation failed with exit code $LASTEXITCODE." }
     & git -C $scratchSource apply -p0 $patch

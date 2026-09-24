@@ -82,7 +82,74 @@ public sealed class MediaSourceSessionFactory
         {
             return OpenArchive(source, cancellationToken);
         }
-        throw new InvalidDataException("Media source must be a directory, ISO, or ZIP containing ISO files.");
+        if (string.Equals(Path.GetExtension(source), ".cue", StringComparison.OrdinalIgnoreCase))
+        {
+            return OpenCueBin(source, cancellationToken);
+        }
+        throw new InvalidDataException("Media source must be a directory, ISO, CUE with its sibling BIN, or ZIP containing ISO files.");
+    }
+
+    private IMediaSourceSession OpenCueBin(string cuePath, CancellationToken cancellationToken)
+    {
+        var scratch = Path.Combine(Path.GetTempPath(), "mw4-media-session-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(scratch);
+        OwnedIsoMediaSession? mounted = null;
+        try
+        {
+            var projected = Path.Combine(scratch, "mech-pak");
+            using (var candidate = new CueMode1DataStream(cuePath))
+            {
+                if (mechPakProjection.TryProject(candidate, projected, cancellationToken))
+                {
+                    return new MediaSourceSession(
+                        MediaSourceKind.CueBin,
+                        [new OpenMediaItem(null, projected)],
+                        Array.Empty<string>(),
+                        Array.Empty<IDisposable>(),
+                        scratch);
+                }
+            }
+
+            using var data = new CueMode1DataStream(cuePath);
+            var scratchVolume = new DriveInfo(Path.GetPathRoot(scratch)!);
+            if (scratchVolume.AvailableFreeSpace < checked(data.Length + 128L * 1024 * 1024))
+                throw new IOException("Not enough temporary disk space to inspect this CUE/BIN game disc.");
+            var image = Path.Combine(scratch, "disc.iso");
+            using (var output = new FileStream(image, FileMode.CreateNew, FileAccess.Write, FileShare.None))
+            {
+                var buffer = new byte[1024 * 1024];
+                int read;
+                while ((read = data.Read(buffer)) > 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    output.Write(buffer, 0, read);
+                }
+                if (output.Length != data.Length)
+                    throw new InvalidDataException("CUE/BIN data length changed during ISO conversion.");
+            }
+            cancellationToken.ThrowIfCancellationRequested();
+            mounted = isoSessions.Open(image, cancellationToken);
+            var result = new MediaSourceSession(
+                MediaSourceKind.CueBin,
+                [new OpenMediaItem(null, mounted.RootPath)],
+                Array.Empty<string>(),
+                [mounted],
+                scratch);
+            mounted = null;
+            return result;
+        }
+        catch
+        {
+            try
+            {
+                mounted?.Dispose();
+            }
+            finally
+            {
+                if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
+            }
+            throw;
+        }
     }
 
     private IMediaSourceSession OpenArchive(string archivePath, CancellationToken cancellationToken)

@@ -124,8 +124,8 @@ var
 begin
   SelectedFiles := TStringList.Create;
   try
-    if GetOpenFileNameMulti('Choose original MechWarrior 4 ISO or ZIP files', SelectedFiles, '',
-      'Original media (*.iso;*.zip)|*.iso;*.zip|All files (*.*)|*.*', '') then
+    if GetOpenFileNameMulti('Choose original MechWarrior 4 ISO, CUE/BIN, or ZIP files', SelectedFiles, '',
+      'Original media (*.iso;*.zip;*.cue)|*.iso;*.zip;*.cue|All files (*.*)|*.*', '') then
       for Index := 0 to SelectedFiles.Count - 1 do
         if MediaFiles.IndexOf(SelectedFiles[Index]) < 0 then
           MediaFiles.Add(SelectedFiles[Index]);
@@ -176,7 +176,7 @@ begin
   MediaFiles.CaseSensitive := False;
   AddCommandLineMedia(ExpandConstant('{param:MEDIAFILES|}'));
   MediaPage := CreateCustomPage(wpWelcome, 'Choose original game media',
-    'Add every MechWarrior 4 ISO or ISO-containing ZIP. For Mercenaries, also add the supported fix ZIP containing the official mercpr1.exe update.');
+    'Add every MechWarrior 4 ISO, single-track MODE1/2352 CUE with its matching BIN, or ISO-containing ZIP. For Mercenaries, also add the supported fix ZIP containing the official mercpr1.exe update.');
   LicensePage := CreateInputOptionPage(MediaPage.ID, 'Original game license',
     'Accept the license terms included with your selected original media',
     'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
@@ -184,10 +184,10 @@ begin
   LicensePage.Add('I accept the original Microsoft license terms included with the media I selected.');
   LicensePage.Values[0] := ExpandConstant('{param:ACCEPTLICENSE|0}') = '1';
   FirewallPage := CreateInputOptionPage(LicensePage.ID, 'Multiplayer network access',
-    'Choose whether setup prepares Windows Defender Firewall now',
-    'This prevents a Windows firewall prompt from interrupting first launch. Setup allows the exact installed game executables on private networks and explicitly blocks inbound access on public networks. Uninstall removes both rules.',
+    'Choose private-network multiplayer access during setup',
+    'Setup makes the firewall decision before first launch. Selected: allow the installed games on private networks and block them on public networks. Unselected: block inbound access on both. Uninstall removes these rules.',
     True, False);
-  FirewallPage.Add('Prepare safe private/public firewall rules for the installed MechWarrior 4 games.');
+  FirewallPage.Add('Allow multiplayer connections to installed MechWarrior 4 games on private networks.');
   if ExpandConstant('{param:ALLOWPRIVATEFIREWALL|}') = '1' then
     FirewallPage.Values[0] := True
   else if ExpandConstant('{param:ALLOWPRIVATEFIREWALL|}') = '0' then
@@ -203,7 +203,7 @@ begin
   AddMediaButton := TNewButton.Create(MediaPage);
   AddMediaButton.Parent := MediaPage.Surface;
   AddMediaButton.SetBounds(0, ScaleY(202), ScaleX(150), ScaleY(30));
-  AddMediaButton.Caption := 'Add ISO / ZIP files...';
+  AddMediaButton.Caption := 'Add ISO / CUE / ZIP...';
   AddMediaButton.OnClick := @AddMediaButtonClick;
 
   RemoveMediaButton := TNewButton.Create(MediaPage);
@@ -246,7 +246,7 @@ begin
   Result := True;
   if (CurPageID = MediaPage.ID) and (MediaFiles.Count = 0) then
   begin
-    MsgBox('Add at least one original MechWarrior 4 ISO, ISO-containing ZIP, or supported official-update ZIP before continuing.', mbError, MB_OK);
+    MsgBox('Add at least one original MechWarrior 4 ISO, CUE with its matching BIN, ISO-containing ZIP, or supported official-update ZIP before continuing.', mbError, MB_OK);
     Result := False;
   end;
   if (CurPageID = LicensePage.ID) and (not LicensePage.Values[0]) then
@@ -277,17 +277,23 @@ begin
     SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
-function ConfigureFirewallRules(RuleName: String; ExecutablePath: String): Boolean;
+function ConfigureFirewallRules(RuleName: String; ExecutablePath: String;
+  AllowPrivate: Boolean): Boolean;
 var
   ResultCode: Integer;
   Parameters: String;
+  PrivateAction: String;
 begin
   Result := True;
   if not FileExists(ExecutablePath) then
     exit;
 
+  if AllowPrivate then
+    PrivateAction := 'allow'
+  else
+    PrivateAction := 'block';
   Parameters := 'advfirewall firewall add rule name="' + RuleName +
-    '" dir=in action=allow program="' + ExecutablePath +
+    '" dir=in action=' + PrivateAction + ' program="' + ExecutablePath +
     '" enable=yes profile=private edge=no protocol=any';
   Result := Exec(ExpandConstant('{sys}\netsh.exe'), Parameters, '',
     SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
@@ -300,7 +306,7 @@ begin
       SW_HIDE, ewWaitUntilTerminated, ResultCode) and (ResultCode = 0);
   end;
   if Result then
-    Log('Configured private allow and public block firewall rules: ' + RuleName)
+    Log('Configured private ' + PrivateAction + ' and public block firewall rules: ' + RuleName)
   else
   begin
     Log('Could not configure complete firewall policy: ' + RuleName);
@@ -339,25 +345,24 @@ begin
     ForceDirectories(ExtractFileDir(RetainedWorkerLog));
     if not CopyFile(WorkerLog, RetainedWorkerLog, False) then
       RetainedWorkerLog := WorkerLog;
+    if ResultCode = 2 then
+      RaiseException('A different MechWarrior 4 installation is still registered and its game executable is present. Remove that installation before installing a second copy at this destination. Setup did not change the existing registration. Diagnostic log: ' + RetainedWorkerLog);
     RaiseException('Selected game installation failed safely. The retained diagnostic log is available at: ' + RetainedWorkerLog);
   end;
 
   RemoveFirewallRules('MechWarrior 4 Remastered - Vengeance');
   RemoveFirewallRules('MechWarrior 4 Remastered - Black Knight');
   RemoveFirewallRules('MechWarrior 4 Remastered - Mercenaries');
-  if FirewallPage.Values[0] then
-  begin
-    FirewallWarning := '';
-    if not ConfigureFirewallRules('MechWarrior 4 Remastered - Vengeance',
-      ExpandConstant('{app}\vengeance\MW4.exe')) then
-      FirewallWarning := 'Setup could not prepare the Vengeance private-network firewall rule.';
-    if not ConfigureFirewallRules('MechWarrior 4 Remastered - Black Knight',
-      ExpandConstant('{app}\vengeance\MW4X\MW4X.exe')) then
-      FirewallWarning := FirewallWarning + #13#10 + 'Setup could not prepare the Black Knight private-network firewall rule.';
-    if not ConfigureFirewallRules('MechWarrior 4 Remastered - Mercenaries',
-      ExpandConstant('{app}\mercenaries\MW4Mercs.exe')) then
-      FirewallWarning := FirewallWarning + #13#10 + 'Setup could not prepare the Mercenaries private-network firewall rule.';
-    if FirewallWarning <> '' then
-      FirewallWarning := 'Game installation succeeded, but Windows firewall preparation was incomplete:' + #13#10 + FirewallWarning;
-  end;
+  FirewallWarning := '';
+  if not ConfigureFirewallRules('MechWarrior 4 Remastered - Vengeance',
+    ExpandConstant('{app}\vengeance\MW4.exe'), FirewallPage.Values[0]) then
+    FirewallWarning := 'Setup could not prepare the Vengeance firewall rules.';
+  if not ConfigureFirewallRules('MechWarrior 4 Remastered - Black Knight',
+    ExpandConstant('{app}\vengeance\MW4X\MW4X.exe'), FirewallPage.Values[0]) then
+    FirewallWarning := FirewallWarning + #13#10 + 'Setup could not prepare the Black Knight firewall rules.';
+  if not ConfigureFirewallRules('MechWarrior 4 Remastered - Mercenaries',
+    ExpandConstant('{app}\mercenaries\MW4Mercs.exe'), FirewallPage.Values[0]) then
+    FirewallWarning := FirewallWarning + #13#10 + 'Setup could not prepare the Mercenaries firewall rules.';
+  if FirewallWarning <> '' then
+    FirewallWarning := 'Game installation succeeded, but Windows firewall preparation was incomplete:' + #13#10 + FirewallWarning;
 end;

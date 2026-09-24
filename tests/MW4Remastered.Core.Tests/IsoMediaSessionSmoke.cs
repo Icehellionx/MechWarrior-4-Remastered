@@ -4,6 +4,33 @@ internal static class IsoMediaSessionSmoke
 {
     public static void Run(List<string> failures)
     {
+        Check(PowerShellDiskImageBackend.ParseAttachmentState(" attached \r\n") &&
+              !PowerShellDiskImageBackend.ParseAttachmentState("detached\r\n"),
+            "disk-image query parses only explicit attachment states", failures);
+        var blankStateRejected = false;
+        try { _ = PowerShellDiskImageBackend.ParseAttachmentState(" \r\n"); }
+        catch (InvalidDataException error)
+        {
+            blankStateRejected = error.Message.Contains("no disk-image attachment state", StringComparison.Ordinal) &&
+                error.Message.Contains("did not mount", StringComparison.Ordinal);
+        }
+        Check(blankStateRejected, "empty disk-image query output reports a safe, actionable failure", failures);
+        var ambiguousStateRejected = false;
+        try { _ = PowerShellDiskImageBackend.ParseAttachmentState("attached\r\ndetached\r\n"); }
+        catch (InvalidDataException) { ambiguousStateRejected = true; }
+        Check(ambiguousStateRejected, "disk-image query rejects ambiguous attachment output", failures);
+        var privatePath = @"C:\Users\Example\Private\disc.iso";
+        var serializedAccessError = $"#< CLIXML <S S=\"Error\">Get-DiskImage : Access denied {privatePath} 0x80041003</S>";
+        var classified = PowerShellDiskImageBackend.CommandFailure(1, serializedAccessError);
+        Check(classified is UnauthorizedAccessException &&
+              classified.Message.Contains("approve its UAC prompt", StringComparison.Ordinal) &&
+              !classified.Message.Contains(privatePath, StringComparison.Ordinal) &&
+              !classified.Message.Contains("CLIXML", StringComparison.Ordinal),
+            "disk-image privilege failures are actionable and never echo serialized private paths", failures);
+        var otherFailure = PowerShellDiskImageBackend.CommandFailure(5, $"Unexpected path {privatePath}");
+        Check(otherFailure is IOException && !otherFailure.Message.Contains(privatePath, StringComparison.Ordinal),
+            "other disk-image failures do not export raw PowerShell stderr", failures);
+
         var root = Path.Combine(Path.GetTempPath(), "mw4-iso-session-test-" + Guid.NewGuid().ToString("N"));
         try
         {
@@ -26,9 +53,9 @@ internal static class IsoMediaSessionSmoke
             {
                 new OwnedIsoMediaSessionFactory(attached).Open(image);
             }
-            catch (InvalidOperationException)
+            catch (InvalidOperationException error)
             {
-                attachedRejected = true;
+                attachedRejected = error.Message.Contains("Eject that virtual disc", StringComparison.Ordinal);
             }
             Check(attachedRejected && attached.MountCount == 0 && attached.DismountCount == 0, "ISO session refuses pre-attached images without taking cleanup ownership", failures);
 

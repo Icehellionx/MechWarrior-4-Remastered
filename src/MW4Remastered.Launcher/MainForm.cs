@@ -26,12 +26,20 @@ internal sealed class MainForm : Form
     private readonly ApplicationUninstallOrchestrator applicationUninstaller;
     private readonly ILegacyGameRegistration gameRegistration;
     private readonly IGameWindowLifecycleGuard gameWindowLifecycleGuard;
+    private readonly GraphicsSettingsService graphicsSettings;
+    private readonly ConfiguredGameResolutionProvider resolutionSettings;
+    private readonly InstallationDiagnosticsService diagnostics;
     private readonly TableLayoutPanel operationGrid = new();
     private readonly FlowLayoutPanel packRow = new();
     private readonly Label statusLine = new();
     private readonly List<Button> actionButtons = new();
     private Button? creditsButton;
+    private Button? settingsButton;
+    private Button? diagnosticsButton;
     private Button? uninstallButton;
+    private bool settingsAvailable;
+    private bool settingsOpening;
+    private IReadOnlyList<ProductStatus>? lastStatuses;
     private bool closeWhenGameExits;
 
     public MainForm(
@@ -41,7 +49,9 @@ internal sealed class MainForm : Form
         OwnedInstallUninstaller gameUninstaller,
         ApplicationUninstallOrchestrator applicationUninstaller,
         ILegacyGameRegistration gameRegistration,
-        IGameWindowLifecycleGuard gameWindowLifecycleGuard)
+        IGameWindowLifecycleGuard gameWindowLifecycleGuard,
+        GraphicsSettingsService graphicsSettings,
+        InstallationDiagnosticsService diagnostics)
     {
         this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
@@ -50,6 +60,9 @@ internal sealed class MainForm : Form
         this.applicationUninstaller = applicationUninstaller ?? throw new ArgumentNullException(nameof(applicationUninstaller));
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
         this.gameWindowLifecycleGuard = gameWindowLifecycleGuard ?? throw new ArgumentNullException(nameof(gameWindowLifecycleGuard));
+        this.graphicsSettings = graphicsSettings ?? throw new ArgumentNullException(nameof(graphicsSettings));
+        resolutionSettings = new ConfiguredGameResolutionProvider(AppContext.BaseDirectory);
+        this.diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
 
         Text = "MechWarrior 4 Remastered";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -168,8 +181,10 @@ internal sealed class MainForm : Form
 
     private Control CreateFooter()
     {
-        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 3 };
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5 };
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
 
@@ -178,6 +193,44 @@ internal sealed class MainForm : Form
         statusLine.Font = new Font("Consolas", 9F, FontStyle.Bold);
         statusLine.ForeColor = Muted;
         footer.Controls.Add(statusLine, 0, 0);
+
+        settingsButton = new OperationButton
+        {
+            Text = "SETTINGS",
+            Size = new Size(108, 32),
+            Margin = new Padding(0, 0, 12, 0),
+            Anchor = AnchorStyles.Right,
+            Enabled = false,
+            BackColor = Panel,
+            ForeColor = TextColor,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            TextAlign = ContentAlignment.MiddleCenter,
+            AccessibleName = "Global display settings for installed games",
+        };
+        settingsButton.FlatAppearance.BorderColor = Edge;
+        settingsButton.FlatAppearance.MouseOverBackColor = PanelHover;
+        settingsButton.Click += async (_, _) => await OpenGraphicsSettingsAsync();
+        actionButtons.Add(settingsButton);
+        footer.Controls.Add(settingsButton, 1, 0);
+
+        diagnosticsButton = new OperationButton
+        {
+            Text = "DIAGNOSTICS",
+            Size = new Size(126, 32),
+            Margin = new Padding(0, 0, 12, 0),
+            Anchor = AnchorStyles.Right,
+            BackColor = Panel,
+            ForeColor = TextColor,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            AccessibleName = "Read-only installation diagnostics",
+        };
+        diagnosticsButton.FlatAppearance.BorderColor = Edge;
+        diagnosticsButton.FlatAppearance.MouseOverBackColor = PanelHover;
+        diagnosticsButton.Click += async (_, _) => await OpenDiagnosticsAsync();
+        actionButtons.Add(diagnosticsButton);
+        footer.Controls.Add(diagnosticsButton, 2, 0);
 
         var creditsPath = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md");
         creditsButton = new OperationButton
@@ -197,7 +250,7 @@ internal sealed class MainForm : Form
         creditsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         creditsButton.Click += (_, _) => TryAction(() => documentOpener.Open(creditsPath));
         actionButtons.Add(creditsButton);
-        footer.Controls.Add(creditsButton, 1, 0);
+        footer.Controls.Add(creditsButton, 3, 0);
 
         uninstallButton = new OperationButton
         {
@@ -214,7 +267,7 @@ internal sealed class MainForm : Form
         uninstallButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(54, 30, 26);
         uninstallButton.Click += async (_, _) => await UninstallAllAsync();
         actionButtons.Add(uninstallButton);
-        footer.Controls.Add(uninstallButton, 2, 0);
+        footer.Controls.Add(uninstallButton, 4, 0);
         return footer;
     }
 
@@ -234,6 +287,7 @@ internal sealed class MainForm : Form
                 large: false), index, 1);
         }
         statusLine.Text = "CHECKING INSTALLED GAMES…";
+        if (settingsButton is not null) settingsButton.Enabled = false;
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (uninstallButton is not null) uninstallButton.Enabled = false;
     }
@@ -250,11 +304,17 @@ internal sealed class MainForm : Form
         {
             statusLine.Text = "INSTALLATION STATUS COULD NOT BE VERIFIED";
             statusLine.ForeColor = Warning;
+            settingsAvailable = false;
+            if (settingsButton is not null) settingsButton.Enabled = false;
             MessageBox.Show(this, error.Message, "Status check failed safely", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
 
         RenderStatuses(statuses);
+        lastStatuses = statuses;
+        settingsAvailable = statuses.Any(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.Ready) &&
+            !statuses.Any(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.NeedsRepair);
+        if (settingsButton is not null) settingsButton.Enabled = settingsAvailable;
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
     }
@@ -421,6 +481,89 @@ internal sealed class MainForm : Form
         }
     }
 
+    private async Task OpenGraphicsSettingsAsync()
+    {
+        if (settingsOpening) return;
+        settingsOpening = true;
+        if (settingsButton is not null) settingsButton.Enabled = false;
+        try
+        {
+            var geometry = new ActiveMonitorResolutionProvider().GetDisplayGeometry();
+            using var dialog = new GraphicsSettingsForm(geometry);
+            IReadOnlyList<ProductStatus>? statuses = null;
+            Exception? loadError = null;
+            dialog.Shown += async (_, _) =>
+            {
+                try
+                {
+                    statuses = lastStatuses ?? await Task.Run(statusReader.Read);
+                    var current = await Task.Run(() => graphicsSettings.ReadChoices(statuses));
+                    var savedResolution = resolutionSettings.ReadSaved();
+                    if (!dialog.IsDisposed) dialog.SetCurrent(current, savedResolution);
+                }
+                catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException)
+                {
+                    loadError = error;
+                    if (!dialog.IsDisposed) dialog.Close();
+                }
+            };
+            var result = dialog.ShowDialog(this);
+            if (loadError is not null) throw loadError;
+            if (result != DialogResult.OK) return;
+            statuses = await Task.Run(statusReader.Read);
+
+            SetBusy(true);
+            statusLine.Text = "UPDATING VERIFIED DISPLAY PROFILES…";
+            var previousResolution = resolutionSettings.ReadSaved();
+            if (gameWindowLifecycleGuard.HasActiveSessions)
+                throw new InvalidOperationException("Close all MechWarrior 4 games before changing display settings.");
+            resolutionSettings.Save(dialog.SelectedResolution);
+            try { await Task.Run(() => graphicsSettings.ApplyChoices(statuses, dialog.Selection)); }
+            catch
+            {
+                resolutionSettings.Save(previousResolution);
+                throw;
+            }
+            await RefreshStatusesAsync();
+        }
+        catch (AggregateException error)
+        {
+            MessageBox.Show(this, error.Message, "Display settings need repair", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            await RefreshStatusesAsync();
+        }
+        catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException or Win32Exception)
+        {
+            MessageBox.Show(this, error.Message, "Display settings unchanged", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            await RefreshStatusesAsync();
+        }
+        finally
+        {
+            settingsOpening = false;
+            SetBusy(false);
+        }
+    }
+
+    private async Task OpenDiagnosticsAsync()
+    {
+        SetBusy(true);
+        statusLine.Text = "VERIFYING FILES FOR DIAGNOSTICS…";
+        try
+        {
+            var report = await Task.Run(() => diagnostics.Build(statusReader.Read()));
+            using var dialog = new DiagnosticsForm(report);
+            dialog.ShowDialog(this);
+        }
+        catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException)
+        {
+            MessageBox.Show(this, error.Message, "Diagnostics unavailable", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+        }
+        finally
+        {
+            await RefreshStatusesAsync();
+            SetBusy(false);
+        }
+    }
+
     private void SetBusy(bool busy)
     {
         UseWaitCursor = busy;
@@ -432,6 +575,8 @@ internal sealed class MainForm : Form
 
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
+        if (settingsButton is not null) settingsButton.Enabled = settingsAvailable;
+        if (diagnosticsButton is not null) diagnosticsButton.Enabled = true;
     }
 
     private bool TryAction(Action action)
@@ -544,7 +689,8 @@ internal sealed class MainForm : Form
                 Font,
                 textBounds,
                 Muted,
-                TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
+                (TextAlign == ContentAlignment.MiddleCenter ? TextFormatFlags.HorizontalCenter : TextFormatFlags.Left) |
+                TextFormatFlags.VerticalCenter | TextFormatFlags.WordBreak | TextFormatFlags.NoPrefix);
         }
     }
 }

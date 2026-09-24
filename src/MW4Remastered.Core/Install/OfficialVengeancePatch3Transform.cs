@@ -51,6 +51,12 @@ public sealed class OfficialVengeancePatch3Transform
         new("ScriptStrings.dll", 147456, "3b7abc2bb57130e554fa88a4f8f5057c8f252089fd802ca5df73fa848acbc505"),
     ];
 
+    // Original-disc Patch 3 has been reported to emit this path. Accept only
+    // the shortcut already qualified in local official-update output.
+    // It is never installed.
+    private static readonly QualifiedPath OptionalDedicatedServerShortcut =
+        new("MW4 Dedicated Server.bat", 25, "ff81e867d3fb7dc9fec4b65213a8ae3ba9800f5d0c2265ba508e5bef7f21aaa0");
+
     private static readonly string[] RetainedPatchedFiles =
     [
         "AutoConfig.exe",
@@ -114,7 +120,7 @@ public sealed class OfficialVengeancePatch3Transform
             var engine = RequireRegularFile(ContainedPath(mediaRoot, EngineRelativePath), "official Patch 3 engine");
             var patch = RequireRegularFile(ContainedPath(mediaRoot, PatchRelativePath), "official Patch 3 payload");
             RunHost(host, engine, workRoot, patch, cancellationToken);
-            VerifyExactInventory(workRoot, PatchedInventory, "official Patch 3 output");
+            VerifyPatchedInventory(workRoot);
 
             Directory.CreateDirectory(outputRoot);
             foreach (var relativePath in RetainedPatchedFiles)
@@ -237,6 +243,22 @@ public sealed class OfficialVengeancePatch3Transform
         }
     }
 
+    private static void VerifyPatchedInventory(string root)
+    {
+        QualifiedPath[] expected = HasQualifiedOptionalShortcut(root)
+            ? [.. PatchedInventory, OptionalDedicatedServerShortcut]
+            : PatchedInventory;
+        VerifyExactInventory(root, expected, "official Patch 3 output");
+    }
+
+    internal static bool HasQualifiedOptionalShortcut(string root)
+    {
+        var shortcut = ContainedPath(root, OptionalDedicatedServerShortcut.RelativePath);
+        if (!File.Exists(shortcut)) return false;
+        _ = RequireQualifiedFile(root, OptionalDedicatedServerShortcut, "official Patch 3 output");
+        return true;
+    }
+
     private static void VerifyRetainedPayload(string outputRoot)
     {
         var retained = PatchedInventory.Where(item => RetainedPatchedFiles.Contains(item.RelativePath, StringComparer.OrdinalIgnoreCase)).ToList();
@@ -248,9 +270,11 @@ public sealed class OfficialVengeancePatch3Transform
     {
         var path = RequireRegularFile(ContainedPath(root, expected.RelativePath), description);
         var info = new FileInfo(path);
-        if (info.Length != expected.Length || !ComputeSha256(path).Equals(expected.Sha256, StringComparison.Ordinal))
+        var hash = ComputeSha256(path);
+        if (info.Length != expected.Length || !hash.Equals(expected.Sha256, StringComparison.Ordinal))
         {
-            throw new InvalidDataException($"Unsupported {description} {expected.RelativePath}.");
+            throw new InvalidDataException(
+                $"Unsupported {description} {expected.RelativePath}: length={info.Length}, sha256={hash}.");
         }
         return path;
     }

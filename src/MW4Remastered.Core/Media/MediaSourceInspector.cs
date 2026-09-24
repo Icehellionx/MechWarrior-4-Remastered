@@ -5,6 +5,7 @@ public enum MediaSourceKind
     Directory,
     Iso,
     Zip,
+    CueBin,
 }
 
 public sealed record InspectedMediaItem(

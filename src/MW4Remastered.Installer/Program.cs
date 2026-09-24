@@ -1,4 +1,5 @@
 using System.Security.Principal;
+using MW4Remastered.Core.Launch;
 
 namespace MW4Remastered.Installer;
 
@@ -17,6 +18,11 @@ internal static class Program
                     "The game-installation worker requires administrative privileges. Restart Setup normally and approve the Windows User Account Control prompt.");
             }
             return new InstallWorker().Run(worker);
+        }
+        catch (ExistingGameRegistrationException error)
+        {
+            InstallWorker.TryAppendLog(worker?.LogPath, $"FAILED: {error}");
+            return 2;
         }
         catch (Exception error) when (error is ArgumentException or IOException or UnauthorizedAccessException or
                                            InvalidDataException or InvalidOperationException or TimeoutException or

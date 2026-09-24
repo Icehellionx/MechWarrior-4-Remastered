@@ -42,7 +42,22 @@ public sealed class MediaRecognizer
 
         if (matches.Length == 0)
         {
-            return new MediaRecognitionResult(MediaRecognitionStatus.Unknown, null, Array.Empty<string>(), "Media does not match a supported layout.");
+            var nearest = MediaCatalog.Layouts
+                .Select(layout => new
+                {
+                    Layout = layout,
+                    Present = layout.RequiredPaths.Count(normalized.Contains),
+                    Missing = layout.RequiredPaths.Where(path => !normalized.Contains(path)).ToArray(),
+                })
+                .Where(item => item.Present >= 2 && item.Missing.Length <= 2)
+                .OrderByDescending(item => item.Present)
+                .ThenBy(item => item.Missing.Length)
+                .ToArray();
+            var unknownMessage = nearest.Length > 0 &&
+                (nearest.Length == 1 || nearest[0].Present > nearest[1].Present || nearest[0].Missing.Length < nearest[1].Missing.Length)
+                ? $"Media does not match a supported layout. Closest known layout: {nearest[0].Layout.DisplayName}; missing: {string.Join(", ", nearest[0].Missing)}."
+                : "Media does not match a supported layout.";
+            return new MediaRecognitionResult(MediaRecognitionStatus.Unknown, null, Array.Empty<string>(), unknownMessage);
         }
 
         if (matches.Length > 1)

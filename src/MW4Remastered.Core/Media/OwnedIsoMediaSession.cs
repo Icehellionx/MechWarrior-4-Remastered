@@ -32,7 +32,7 @@ public sealed class OwnedIsoMediaSessionFactory
         }
         if (backend.IsAttached(image))
         {
-            throw new InvalidOperationException("Refusing to reuse a disc image that this process did not mount.");
+            throw new InvalidOperationException("This ISO is already mounted outside Setup. Eject that virtual disc in Windows, then retry installation; Setup will mount and release its own images.");
         }
 
         try

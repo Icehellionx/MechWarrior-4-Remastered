@@ -9,7 +9,8 @@ param(
     [string]$DgVoodooArchive,
     [string]$DgVoodooSourceRoot,
     [string]$MercenariesPr1Archive,
-    [switch]$StageOnly
+    [switch]$StageOnly,
+    [switch]$UseExistingRestore
 )
 
 $ErrorActionPreference = 'Stop'
@@ -17,6 +18,8 @@ $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Pat
 $output = [IO.Path]::GetFullPath($OutputDirectory)
 if (Test-Path -LiteralPath $output) { throw "Release output already exists: $output" }
 if ($Version -notmatch '^\d+\.\d+\.\d+(\.\d+)?$') { throw 'Version must contain three or four numeric components.' }
+if ($UseExistingRestore -and -not $StageOnly) { throw 'UseExistingRestore is permitted only for an internal stage, never a setup package.' }
+[string[]]$restoreOption = if ($UseExistingRestore) { @('--no-restore') } else { @() }
 
 $scratch = Join-Path ([IO.Path]::GetTempPath()) ('mw4-release-build-' + [Guid]::NewGuid().ToString('N'))
 $payload = Join-Path $scratch 'payload'
@@ -32,15 +35,15 @@ try {
     New-Item -ItemType Directory -Path $payload -Force | Out-Null
     & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.Installer/MW4Remastered.Installer.csproj') `
         --configuration Release --runtime win-x64 --self-contained true `
-        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishInstaller
+        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishInstaller @restoreOption
     if ($LASTEXITCODE -ne 0) { throw "Installer publish failed with exit code $LASTEXITCODE." }
     & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj') `
         --configuration Release --runtime win-x64 --self-contained true `
-        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishLauncher
+        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishLauncher @restoreOption
     if ($LASTEXITCODE -ne 0) { throw "Launcher publish failed with exit code $LASTEXITCODE." }
     & dotnet publish (Join-Path $projectRoot 'src/MW4Remastered.RtpPatchHost/MW4Remastered.RtpPatchHost.csproj') `
         --configuration Release --runtime win-x86 --self-contained true `
-        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishPatchHost
+        -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false --output $publishPatchHost @restoreOption
     if ($LASTEXITCODE -ne 0) { throw "Patch host publish failed with exit code $LASTEXITCODE." }
     if ([string]::IsNullOrWhiteSpace($BlackKnightCaptureBundle)) {
         if ([string]::IsNullOrWhiteSpace($SafeDiscLoader2SourceRoot)) {
@@ -120,7 +123,7 @@ try {
     }
     $dgVoodooProfile = Join-Path $projectRoot 'assets/compatibility/dgVoodoo-MW4.conf'
     $dgVoodooProfileHash = (Get-FileHash -LiteralPath $dgVoodooProfile -Algorithm SHA256).Hash.ToLowerInvariant()
-    if ($dgVoodooProfileHash -ne 'fd9413ae24ef4028c19b304b48f7062d53871f25942baaa17d554bfeb1261b93') {
+    if ($dgVoodooProfileHash -ne '7ea9e4576a421157927de2d41551e3fdef8b4c76cd3adcc2d02ef19706f249a4') {
         throw "Unsupported MW4 dgVoodoo profile SHA-256: $dgVoodooProfileHash"
     }
     Copy-Item -LiteralPath $dgVoodooProfile -Destination (Join-Path $presentationDestination 'dgVoodoo.conf')

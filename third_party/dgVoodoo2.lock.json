@@ -5,7 +5,7 @@
   "tag": "v2.87.5",
   "binaryArchiveMirror": "https://github.com/masterotaku/dgVoodoo-binaries/blob/main/dgVoodoo2_87_5.zip",
   "archiveSha256": "5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850",
-  "profileSha256": "fd9413ae24ef4028c19b304b48f7062d53871f25942baaa17d554bfeb1261b93",
+  "profileSha256": "7ea9e4576a421157927de2d41551e3fdef8b4c76cd3adcc2d02ef19706f249a4",
   "redistribution": "Official readme permits individual dgVoodoo files to ship with a game or game mod; standalone redistribution requires the complete ZIP.",
   "files": {
     "MS/x86/DDraw.dll": "612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e",
@@ -22,5 +22,5 @@
     "reproducibility": "two clean builds were byte-identical"
   },
   "productBindings": ["vengeance", "black-knight", "mercenaries"],
-  "qualification": "Defender-clean wrapper archive and extracted-tree scan. On the Vengeance field tree, the stock 2.87.5 x86 wrappers kept Windows at 2560x1440, rendered a centered 1920x1440 4:3 surface, and showed no watermark. Exact-window captures on a 2560x1440 display proved that the embedded Microsoft/FASA segment remained centered and uncropped at 4:3, while only the later GAMEOPEN.MPG live-action segment received proportional 30:17 cover presentation across the final display target. The following 4:3 menu remained untouched. The source-built D3D12 add-on was reproduced byte-for-byte twice. The five-source-pixel bottom-right-anchored gameplay crop is implemented behind a high-resolution source-rectangle gate, but a fresh real-gameplay capture is still required before declaring the seam closed. Black Knight/Mercenaries gameplay and additional GPU coverage remain open."
+  "qualification": "Defender-clean wrapper archive and extracted-tree scan. On the Vengeance field tree, the stock 2.87.5 x86 wrappers kept Windows at 2560x1440, rendered a centered 1920x1440 4:3 surface, and showed no watermark. Exact-window captures on a 2560x1440 display proved that the embedded Microsoft/FASA segment remained centered and uncropped at 4:3, while only the later GAMEOPEN.MPG live-action segment received proportional 30:17 cover presentation across the final display target. The following 4:3 menu remained untouched. The source-built D3D12 add-on was reproduced byte-for-byte twice. The 2026-09-24 profile revision withdraws dynamic max_4_3 enumeration and unsupported 900, 960, 1080, and 1440 render heights after F: Vengeance mission crashes and exact executable HUD-table inspection in all three titles. The corrected profile hash is pinned, but this revision has not been packaged or runtime qualified. The five-source-pixel bottom-right-anchored gameplay crop is implemented behind a high-resolution source-rectangle gate, but a fresh real-gameplay capture is still required before declaring the seam closed. Black Knight/Mercenaries gameplay and additional GPU coverage remain open."
 }

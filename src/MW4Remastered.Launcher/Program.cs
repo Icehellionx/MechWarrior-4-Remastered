@@ -16,11 +16,15 @@ internal static class Program
         using var gameWindowLifecycleGuard = new SystemGameWindowLifecycleGuard();
         Application.Run(new MainForm(
             new InstallStatusReader(root),
-            new LaunchOrchestrator(processStarter, gameRegistration, gameWindowLifecycleGuard: gameWindowLifecycleGuard),
+            new LaunchOrchestrator(processStarter, gameRegistration,
+                gameConfiguration: new LegacyGameConfiguration(new ConfiguredGameResolutionProvider(root)),
+                gameWindowLifecycleGuard: gameWindowLifecycleGuard),
             new DocumentOpener(processStarter),
             new OwnedInstallUninstaller(),
             new ApplicationUninstallOrchestrator(root, processStarter),
             gameRegistration,
-            gameWindowLifecycleGuard));
+            gameWindowLifecycleGuard,
+            new GraphicsSettingsService(root),
+            new InstallationDiagnosticsService()));
     }
 }

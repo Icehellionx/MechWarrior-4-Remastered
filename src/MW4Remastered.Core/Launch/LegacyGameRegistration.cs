@@ -1,4 +1,5 @@
 using Microsoft.Win32;
+using System.Runtime.Versioning;
 
 namespace MW4Remastered.Core.Launch;
 
@@ -9,8 +10,38 @@ public interface ILegacyGameRegistration
     void RemoveOwned(ProductStatus status);
 }
 
+public sealed class ExistingGameRegistrationException : InvalidOperationException
+{
+    public ExistingGameRegistrationException(string productName)
+        : base($"A different {productName} installation is still registered and its executable is present. Remove or relocate that installation before installing another copy; Setup left its registration unchanged.")
+    {
+    }
+}
+
 public sealed class LegacyGameRegistration : ILegacyGameRegistration
 {
+    public void ValidateAvailable(ProductDefinition product, string installPath)
+    {
+        ArgumentNullException.ThrowIfNull(product);
+        ArgumentException.ThrowIfNullOrWhiteSpace(installPath);
+        if (product.Kind != ProductKind.Game || product.ExecutableCandidates.Length != 1)
+            throw new ArgumentException("A planned game must have one qualified executable path.", nameof(product));
+
+        var executable = Path.GetFullPath(Path.Combine(installPath,
+            product.ExecutableCandidates[0].Replace('/', Path.DirectorySeparatorChar)
+                .Replace('\\', Path.DirectorySeparatorChar)));
+        var status = new ProductStatus(product, ProductInstallState.Missing, executable, null, null,
+            installPath, null);
+        var registration = Describe(status)!;
+        if (!OperatingSystem.IsWindows())
+            throw new PlatformNotSupportedException("Legacy MechWarrior 4 registration is supported only on Windows.");
+
+        var view = registration.Use32BitView ? RegistryView.Registry32 : RegistryView.Default;
+        using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
+        using var key = currentUser.OpenSubKey(registration.KeyPath, writable: false);
+        if (key is not null) RejectLiveConflict(status, registration, key);
+    }
+
     public void Ensure(ProductStatus status)
     {
         var registration = Describe(status);
@@ -22,18 +53,7 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
         using var currentUser = RegistryKey.OpenBaseKey(RegistryHive.CurrentUser, view);
         using var key = currentUser.CreateSubKey(registration.KeyPath, writable: true) ??
             throw new UnauthorizedAccessException("Windows did not permit the per-user MechWarrior 4 compatibility registration.");
-        var existingExecutable = key.GetValue("EXE Path") as string;
-        if (!string.IsNullOrWhiteSpace(existingExecutable) &&
-            !PathsEqual(existingExecutable, registration.ExecutablePath) &&
-            !CanReplaceStaleRegistration(
-                registration,
-                key.GetValue("CDPath") as string,
-                existingExecutable,
-                key.GetValue("Version")))
-        {
-            throw new InvalidOperationException(
-                $"A different {status.Product.DisplayName} installation already owns the per-user compatibility registration: {existingExecutable}");
-        }
+        RejectLiveConflict(status, registration, key);
 
         key.SetValue("CDPath", registration.CdPath, RegistryValueKind.String);
         key.SetValue("EXE Path", registration.ExecutablePath, RegistryValueKind.String);
@@ -101,6 +121,22 @@ public sealed class LegacyGameRegistration : ILegacyGameRegistration
             status.Product.Id == "black-knight" ? @"L:\" : installPath,
             Path.GetFullPath(status.LaunchPath),
             4);
+    }
+
+    [SupportedOSPlatform("windows")]
+    private static void RejectLiveConflict(ProductStatus status, LegacyRegistrationDescription registration, RegistryKey key)
+    {
+        var existingExecutable = key.GetValue("EXE Path") as string;
+        if (!string.IsNullOrWhiteSpace(existingExecutable) &&
+            !PathsEqual(existingExecutable, registration.ExecutablePath) &&
+            !CanReplaceStaleRegistration(
+                registration,
+                key.GetValue("CDPath") as string,
+                existingExecutable,
+                key.GetValue("Version")))
+        {
+            throw new ExistingGameRegistrationException(status.Product.DisplayName);
+        }
     }
 
     internal static bool ValuesMatchOrWereConsumed(

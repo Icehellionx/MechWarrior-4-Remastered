@@ -40,16 +40,21 @@ public sealed class InstallStatusReader
 
     public IReadOnlyList<ProductStatus> Read()
     {
-        return ProductCatalog.All.Select(ReadProduct).ToArray();
+        // Vengeance, Black Knight, and both Mech Paks share one physical tree.
+        // Hash it once for this snapshot instead of four times on every launcher refresh.
+        var verifications = new Dictionary<string, InstallVerificationResult>(StringComparer.OrdinalIgnoreCase);
+        return ProductCatalog.All.Select(product => ReadProduct(product, verifications)).ToArray();
     }
 
-    private ProductStatus ReadProduct(ProductDefinition product)
+    private ProductStatus ReadProduct(
+        ProductDefinition product,
+        Dictionary<string, InstallVerificationResult> verifications)
     {
         var manualPath = FindManual(product);
         if (product.Kind == ProductKind.OptionalPack)
         {
             var vengeanceRoot = Path.Combine(installationRoot, "vengeance");
-            var packVerification = verifier.Verify(vengeanceRoot, InstallVerificationScope.OwnedFiles);
+            var packVerification = VerifyPhysical("vengeance", verifications);
             var installed = packVerification.IsValid && packVerification.Manifest is not null &&
                 packVerification.Manifest.ProductId.Equals("vengeance", StringComparison.OrdinalIgnoreCase) &&
                 (packVerification.Manifest.HasComponent(product.Id) || MechPakInstalledEvidence.IsPresent(packVerification.Manifest, product.Id));
@@ -71,8 +76,16 @@ public sealed class InstallStatusReader
                 name.Replace('/', Path.DirectorySeparatorChar).Replace('\\', Path.DirectorySeparatorChar)))
             .FirstOrDefault(File.Exists);
 
-        var verification = verifier.Verify(productRoot, InstallVerificationScope.OwnedFiles);
+        var verification = VerifyPhysical(physicalProductId, verifications);
         var ownsComponent = verification.Manifest is not null && verification.Manifest.HasComponent(product.Id);
+        if (product.Id.Equals("black-knight", StringComparison.OrdinalIgnoreCase) &&
+            verification.IsValid && verification.Manifest is not null &&
+            verification.Manifest.ProductId.Equals("vengeance", StringComparison.OrdinalIgnoreCase) &&
+            !ownsComponent)
+        {
+            return new ProductStatus(product, ProductInstallState.Missing, null, null, manualPath, null,
+                "Expansion not installed");
+        }
         if (executable is null || !verification.IsValid ||
             !string.Equals(verification.Manifest?.ProductId, physicalProductId, StringComparison.OrdinalIgnoreCase) ||
             !ownsComponent)
@@ -85,6 +98,20 @@ public sealed class InstallStatusReader
         // Runtime helpers are intentionally unsupported. Setup prepares every
         // compatibility artifact up front and normal launch executes the game directly.
         return new ProductStatus(product, ProductInstallState.Ready, executable, null, manualPath, productRoot, "Verified installation");
+    }
+
+    private InstallVerificationResult VerifyPhysical(
+        string physicalProductId,
+        Dictionary<string, InstallVerificationResult> verifications)
+    {
+        if (!verifications.TryGetValue(physicalProductId, out var result))
+        {
+            result = verifier.Verify(
+                Path.Combine(installationRoot, physicalProductId),
+                InstallVerificationScope.OwnedFiles);
+            verifications.Add(physicalProductId, result);
+        }
+        return result;
     }
 
     private string? FindManual(ProductDefinition product)
