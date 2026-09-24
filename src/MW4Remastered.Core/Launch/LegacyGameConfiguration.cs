@@ -59,6 +59,18 @@ public readonly record struct GameDisplayGeometry(GameResolution Monitor, GameRe
         new(new GameResolution(width, height), GameResolution.LargestFourByThree(width, height));
 }
 
+public sealed record GameDisplayPreset(GameResolution Monitor, string Label)
+{
+    // Presentation examples only. MW4 keeps a separately validated 4:3
+    // render mode while dgVoodoo fits the image to the Windows monitor.
+    public static IReadOnlyList<GameDisplayPreset> UltrawideChoices { get; } =
+    [
+        new(new(2560, 1080), "2560 × 1080 (ultrawide, 1080p height)"),
+        new(new(3440, 1440), "3440 × 1440 (ultrawide, 1440p height)"),
+        new(new(5120, 2160), "5120 × 2160 (ultrawide, 4K height)"),
+    ];
+}
+
 public interface IGameResolutionProvider
 {
     GameResolution GetResolution();

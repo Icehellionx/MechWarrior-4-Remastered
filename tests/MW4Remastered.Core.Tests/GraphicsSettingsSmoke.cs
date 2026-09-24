@@ -49,6 +49,18 @@ internal static class GraphicsSettingsSmoke
                   !GameResolutionPreset.IsSelectable(new GameResolution(1920, 1440)) &&
                   !GameResolutionPreset.IsSelectable(new GameResolution(2880, 2160)),
                 "monitor equivalents use modes whose heights are accepted by all three HUD tables", failures);
+            var ultrawide = GameDisplayGeometry.ForMonitor(5120, 2160);
+            var smallerUltrawide = GameDisplayGeometry.ForMonitor(3440, 1440);
+            var hdUltrawide = GameDisplayGeometry.ForMonitor(2560, 1080);
+            Check(ultrawide.Gameplay == new GameResolution(2880, 2160) &&
+                  ultrawide.LeftPillarboxWidth == 1120 && ultrawide.RightPillarboxWidth == 1120 &&
+                  smallerUltrawide.Gameplay == new GameResolution(1920, 1440) &&
+                  smallerUltrawide.LeftPillarboxWidth == 760 && smallerUltrawide.RightPillarboxWidth == 760 &&
+                  hdUltrawide.Gameplay == new GameResolution(1440, 1080) &&
+                  hdUltrawide.LeftPillarboxWidth == 560 && hdUltrawide.RightPillarboxWidth == 560 &&
+                  GameDisplayPreset.UltrawideChoices.Select(choice => choice.Monitor).SequenceEqual(
+                  [new GameResolution(2560, 1080), new GameResolution(3440, 1440), new GameResolution(5120, 2160)]),
+                "ultrawide monitors calculate centered 4:3 presentation bounds without unsafe game render heights", failures);
             var unsupportedRejected = false;
             try { resolutionPreference.Save(new GameResolution(1440, 1080)); }
             catch (ArgumentOutOfRangeException) { unsupportedRejected = true; }

@@ -406,10 +406,10 @@ index ec611d6..4230e62 100644
 +				// lifecycle does: menus and startup movies remain on the untouched 2D
 +				// path, while gameplay and in-engine cinematics own that device.
 +				// Keep right/bottom fixed to anchor the result there while trimming
-+				// five source pixels from the defective top and left edges.
++				// two source pixels from the defective top and left edges.
 +				const bool isGameplay3DActive = mediaState == 0 && IsGameplay3DActive ();
-+				float cropLeft = (float) iCtx.srcRect.left + (isGameplay3DActive ? 5.0f : 0.0f);
-+				float cropTop = (float) iCtx.srcRect.top + (isGameplay3DActive ? 5.0f : 0.0f);
++				float cropLeft = (float) iCtx.srcRect.left + (isGameplay3DActive ? 2.0f : 0.0f);
++				float cropTop = (float) iCtx.srcRect.top + (isGameplay3DActive ? 2.0f : 0.0f);
 +				float cropRight = (float) iCtx.srcRect.right;
 +				float cropBottom = (float) iCtx.srcRect.bottom;
 +				if (isVengeanceOpening) {

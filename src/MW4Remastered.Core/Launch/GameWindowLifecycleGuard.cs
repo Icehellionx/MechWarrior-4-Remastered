@@ -34,6 +34,10 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
     private const uint SwpNoZOrder = 0x0004;
     private const uint SwpNoActivate = 0x0010;
     private const uint SwpShowWindow = 0x0040;
+    private const int SmXVirtualScreen = 76;
+    private const int SmYVirtualScreen = 77;
+    private const int SmCxVirtualScreen = 78;
+    private const int SmCyVirtualScreen = 79;
     private static readonly TimeSpan WindowTimeout = TimeSpan.FromSeconds(45);
     private static readonly TimeSpan PollInterval = TimeSpan.FromMilliseconds(25);
 
@@ -68,7 +72,8 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
         if (disposed) return;
         disposed = true;
         foreach (var cancellation in sessions.Values) cancellation.Cancel();
-        _ = ClipCursor(IntPtr.Zero);
+        // Each session releases only the clip it actually claimed. Clearing the
+        // desktop-wide clip here could undo the game's or another app's capture.
     }
 
     private void Complete(int processId, CancellationTokenSource cancellation)
@@ -91,47 +96,59 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
             var monitorInfo = new MonitorInfo { Size = Marshal.SizeOf<MonitorInfo>() };
             var monitor = MonitorFromWindow(window, MonitorDefaultToNearest);
             if (monitor == IntPtr.Zero || !GetMonitorInfo(monitor, ref monitorInfo)) return;
-            var presentationRect = WaitForDesktopPresentation(process, window, monitorInfo.Monitor, cancellationToken);
-            if (presentationRect is null) return;
+            if (!WaitForDesktopPresentation(process, window, monitorInfo.Monitor, cancellationToken)) return;
 
             var cursorOwned = false;
+            var wasActive = false;
+            var captureRect = monitorInfo.Monitor;
+            var virtualRect = GetVirtualScreenRect();
             try
             {
                 while (!cancellationToken.IsCancellationRequested && !process.HasExited && IsWindow(window))
                 {
                     if (IsIconic(window)) _ = ShowWindowAsync(window, SwShowNoActivate);
 
-                    var currentRect = new NativeRect();
-                    if (GetWindowRect(window, ref currentRect) && !currentRect.Equals(presentationRect.Value))
+                    if (TryGetWindowAndClientRect(window, out var currentRect, out var clientRect) &&
+                        !clientRect.Equals(monitorInfo.Monitor))
                     {
+                        // A framed dgVoodoo window can have a monitor-sized client
+                        // with an outer rectangle several pixels larger. Resizing
+                        // the outer rectangle to the monitor clips that client.
+                        var target = FitOuterToClient(currentRect, clientRect, monitorInfo.Monitor);
                         _ = SetWindowPos(
                             window,
                             IntPtr.Zero,
-                            presentationRect.Value.Left,
-                            presentationRect.Value.Top,
-                            presentationRect.Value.Right - presentationRect.Value.Left,
-                            presentationRect.Value.Bottom - presentationRect.Value.Top,
+                            target.Left,
+                            target.Top,
+                            target.Right - target.Left,
+                            target.Bottom - target.Top,
                             SwpNoZOrder | SwpNoActivate | SwpShowWindow);
                     }
 
                     var isActive = GetAncestor(GetForegroundWindow(), GaRoot) == window;
-                    if (isActive)
+                    if (isActive && !wasActive && !captureRect.Equals(virtualRect))
                     {
-                        var captureRect = monitorInfo.Monitor;
-                        cursorOwned = ClipCursor(ref captureRect);
+                        var existingClip = new NativeRect();
+                        // dgVoodoo owns mouse capture when it has already set a
+                        // tighter region. Claim only an unrestricted cursor and
+                        // only once per activation; repeated ClipCursor calls
+                        // can override the wrapper's game-coordinate mapping.
+                        if (GetClipCursor(ref existingClip) && existingClip.Equals(virtualRect))
+                            cursorOwned = ClipCursor(ref captureRect);
                     }
-                    else if (cursorOwned)
+                    else if (!isActive && wasActive && cursorOwned)
                     {
-                        _ = ClipCursor(IntPtr.Zero);
+                        ReleaseOwnedCursor(captureRect);
                         cursorOwned = false;
                     }
+                    wasActive = isActive;
 
                     cancellationToken.WaitHandle.WaitOne(PollInterval);
                 }
             }
             finally
             {
-                if (cursorOwned) _ = ClipCursor(IntPtr.Zero);
+                if (cursorOwned) ReleaseOwnedCursor(captureRect);
             }
         }
         catch (Exception error) when (error is ArgumentException or InvalidOperationException or System.ComponentModel.Win32Exception)
@@ -179,7 +196,7 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
         return result;
     }
 
-    private static NativeRect? WaitForDesktopPresentation(
+    private static bool WaitForDesktopPresentation(
         Process process,
         IntPtr window,
         NativeRect monitorRect,
@@ -188,25 +205,66 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
         var deadline = DateTime.UtcNow + WindowTimeout;
         while (!cancellationToken.IsCancellationRequested && DateTime.UtcNow < deadline)
         {
-            if (process.HasExited || !IsWindow(window)) return null;
+            if (process.HasExited || !IsWindow(window)) return false;
             var windowRect = new NativeRect();
-            // dgVoodoo can create a borderless window a few pixels larger than
-            // the monitor. Pin the physical monitor bounds, not that initial
-            // oversized rectangle, so ultrawide edges remain visible.
-            if (GetWindowRect(window, ref windowRect) && Covers(windowRect, monitorRect)) return monitorRect;
+            // Wait for dgVoodoo's desktop presentation rather than repositioning
+            // an early 800x600 shell window. The outer frame may exceed the
+            // monitor even when the actual client already fits exactly.
+            if (GetWindowRect(window, ref windowRect) && Covers(windowRect, monitorRect)) return true;
             cancellationToken.WaitHandle.WaitOne(PollInterval);
         }
 
-        return null;
+        return false;
     }
 
     private static bool Covers(NativeRect outer, NativeRect inner) =>
         outer.Left <= inner.Left && outer.Top <= inner.Top && outer.Right >= inner.Right && outer.Bottom >= inner.Bottom;
 
+    private static bool TryGetWindowAndClientRect(IntPtr window, out NativeRect outer, out NativeRect clientOnScreen)
+    {
+        outer = new NativeRect();
+        clientOnScreen = new NativeRect();
+        var client = new NativeRect();
+        var origin = new NativePoint();
+        if (!GetWindowRect(window, ref outer) || !GetClientRect(window, ref client) ||
+            !ClientToScreen(window, ref origin)) return false;
+        clientOnScreen = new NativeRect(origin.X, origin.Y,
+            origin.X + client.Right - client.Left, origin.Y + client.Bottom - client.Top);
+        return true;
+    }
+
+    private static NativeRect FitOuterToClient(NativeRect outer, NativeRect client, NativeRect monitor) =>
+        new(monitor.Left - (client.Left - outer.Left),
+            monitor.Top - (client.Top - outer.Top),
+            monitor.Right + (outer.Right - client.Right),
+            monitor.Bottom + (outer.Bottom - client.Bottom));
+
+    private static NativeRect GetVirtualScreenRect()
+    {
+        var left = GetSystemMetrics(SmXVirtualScreen);
+        var top = GetSystemMetrics(SmYVirtualScreen);
+        return new NativeRect(left, top,
+            left + GetSystemMetrics(SmCxVirtualScreen),
+            top + GetSystemMetrics(SmCyVirtualScreen));
+    }
+
+    private static void ReleaseOwnedCursor(NativeRect claimedRect)
+    {
+        var current = new NativeRect();
+        if (GetClipCursor(ref current) && current.Equals(claimedRect))
+            _ = ClipCursor(IntPtr.Zero);
+    }
+
     [StructLayout(LayoutKind.Sequential)]
     private readonly record struct NativeRect(int Left, int Top, int Right, int Bottom)
     {
         public NativeRect() : this(0, 0, 0, 0) { }
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private readonly record struct NativePoint(int X, int Y)
+    {
+        public NativePoint() : this(0, 0) { }
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
@@ -225,6 +283,8 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
     [DllImport("user32.dll")] private static extern bool IsIconic(IntPtr window);
     [DllImport("user32.dll")] private static extern bool ShowWindowAsync(IntPtr window, int command);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr window, ref NativeRect rect);
+    [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr window, ref NativeRect rect);
+    [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr window, ref NativePoint point);
     [DllImport("user32.dll")] private static extern bool SetWindowPos(IntPtr window, IntPtr insertAfter, int x, int y, int width, int height, uint flags);
     [DllImport("user32.dll")] private static extern IntPtr GetForegroundWindow();
     [DllImport("user32.dll")] private static extern IntPtr GetAncestor(IntPtr window, uint flags);
@@ -232,4 +292,6 @@ public sealed class SystemGameWindowLifecycleGuard : IGameWindowLifecycleGuard
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
     [DllImport("user32.dll")] private static extern bool ClipCursor(ref NativeRect rect);
     [DllImport("user32.dll")] private static extern bool ClipCursor(IntPtr rect);
+    [DllImport("user32.dll")] private static extern bool GetClipCursor(ref NativeRect rect);
+    [DllImport("user32.dll")] private static extern int GetSystemMetrics(int index);
 }

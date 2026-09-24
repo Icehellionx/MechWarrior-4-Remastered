@@ -136,10 +136,10 @@ try {
         -SourceRoot $DgVoodooSourceRoot -OutputDirectory $addonBundle
     if ($LASTEXITCODE -ne 0) { throw "dgVoodoo MW4 add-on build failed with exit code $LASTEXITCODE." }
     $qualifiedAddonFiles = [ordered]@{
-        'SampleAddon.dll' = '33e7fae1c1cb2d297c05c14b5d4f886676fcd492c44eab0602d8e4465bc71ef0'
+        'SampleAddon.dll' = '24e6fe3e7eea55aa2271223bf08e444597e58580f78126ea440db0e2cefb254b'
         'SampleAddon.ini' = 'f21bb13f1e5ecb33595677ed5f8eba156576fcb2f2f5123138147809ae9b9edb'
         'DirtyGlass.png' = 'dc507d14880cde567b192aaf444769586a906c0165ec2432ee43d0cead4fcbc5'
-        'dgVoodoo2-MW4-Presentation.patch' = '590649a7ace57addf189b8264420bec7bbb8b963f045f338d8431f13c484e919'
+        'dgVoodoo2-MW4-Presentation.patch' = 'd078f1176bedc53a4224dc55624cc6664b7751043754e8181b239e6094ddd954'
     }
     foreach ($entry in $qualifiedAddonFiles.GetEnumerator()) {
         $path = Join-Path $addonBundle $entry.Key

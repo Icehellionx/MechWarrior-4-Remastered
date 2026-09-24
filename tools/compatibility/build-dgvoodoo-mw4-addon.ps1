@@ -7,7 +7,7 @@ param(
     [string]$MsBuildPath,
     [string]$FxcPath,
     [ValidateSet(0, 1, 2, 5)]
-    [int]$ExperimentalGameplayCropPixels = 5
+    [int]$ExperimentalGameplayCropPixels = 2
 )
 
 $ErrorActionPreference = 'Stop'
@@ -18,7 +18,8 @@ $expectedCommit = 'de5f360b43c1fa61cc2c47ccfc48bbdd995badf7'
 
 if (-not (Test-Path -LiteralPath $source -PathType Container)) { throw "dgVoodoo2 source root is missing: $source" }
 if (Test-Path -LiteralPath $output) { throw "Add-on output already exists: $output" }
-$actualCommit = (& git -C $source rev-parse HEAD 2>$null).Trim()
+$commitOutput = & git -C $source rev-parse HEAD 2>$null
+$actualCommit = if ($commitOutput) { ([string]($commitOutput | Select-Object -Last 1)).Trim() } else { '' }
 if ($LASTEXITCODE -ne 0 -or $actualCommit -ne $expectedCommit) {
     throw "dgVoodoo2 source must be exact commit $expectedCommit; found '$actualCommit'."
 }
@@ -52,13 +53,13 @@ try {
     Copy-Item -LiteralPath (Join-Path $source 'dgVoodooAPI') -Destination $scratchSource -Recurse
 
     $patch = Join-Path $projectRoot 'tools/compatibility/patches/dgVoodoo2-MW4-Presentation.patch'
-    if ($ExperimentalGameplayCropPixels -ne 5) {
+    if ($ExperimentalGameplayCropPixels -ne 2) {
         # Keep the production patch byte-for-byte pinned. This explicit test
         # option changes only the two gameplay source-coordinate offsets in a
         # disposable scratch copy; the output carries its exact variant patch.
         $variantPatch = Join-Path $scratch 'dgVoodoo2-MW4-Presentation-experiment.patch'
         $patchText = [IO.File]::ReadAllText($patch)
-        $original = '(isGameplay3DActive ? 5.0f : 0.0f)'
+        $original = '(isGameplay3DActive ? 2.0f : 0.0f)'
         $matches = [regex]::Matches($patchText, [regex]::Escape($original)).Count
         if ($matches -ne 2) { throw "Expected two gameplay crop offsets; found $matches." }
         $replacement = '(isGameplay3DActive ? ' + $ExperimentalGameplayCropPixels.ToString([Globalization.CultureInfo]::InvariantCulture) + '.0f : 0.0f)'

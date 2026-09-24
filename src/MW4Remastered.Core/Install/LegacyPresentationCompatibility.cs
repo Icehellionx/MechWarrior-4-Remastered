@@ -11,7 +11,7 @@ public static class LegacyPresentationCompatibility
             ["D3DImm.dll"] = "93c534f2d17419ea78f15551f7e0aac78b3c503733a840914fa063708a5afe8e",
             ["D3D8.dll"] = "d03e2562178db1fcf3493fc0a0b23a465e35c55d73adb3ec095be866cd662704",
             ["D3D9.dll"] = "6a0ca214784be04b7c8b547105aa9d79acf4dc26c0b6f8702b437ddca54058b2",
-            ["SampleAddon.dll"] = "33e7fae1c1cb2d297c05c14b5d4f886676fcd492c44eab0602d8e4465bc71ef0",
+            ["SampleAddon.dll"] = "24e6fe3e7eea55aa2271223bf08e444597e58580f78126ea440db0e2cefb254b",
             ["SampleAddon.ini"] = "f21bb13f1e5ecb33595677ed5f8eba156576fcb2f2f5123138147809ae9b9edb",
             ["DirtyGlass.png"] = "dc507d14880cde567b192aaf444769586a906c0165ec2432ee43d0cead4fcbc5",
         };

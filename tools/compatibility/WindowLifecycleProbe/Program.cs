@@ -27,6 +27,7 @@ internal static class Program
     private const long WsThickFrame = 0x00040000L;
     private const long WsExTopMost = 0x00000008L;
     private const int EnumCurrentSettings = -1;
+    private const uint DwMWAExtendedFrameBounds = 9;
 
     [STAThread]
     private static int Main(string[] args)
@@ -72,12 +73,7 @@ internal static class Program
             var screen = Screen.FromHandle(gameWindow).Bounds;
             if (options.Guard)
             {
-                var presentationRect = new RectNative();
-                if (!GetWindowRect(gameWindow, ref presentationRect))
-                {
-                    throw new InvalidOperationException("Could not read the initial presentation rectangle.");
-                }
-                guard = new WindowLifecycleGuard(gameWindow, ToRect(screen), presentationRect);
+                guard = new WindowLifecycleGuard(gameWindow, ToRect(screen));
                 guard.Start();
             }
             var baseline = Snapshot("active-before", gameWindow, initialMode, screen);
@@ -117,17 +113,17 @@ internal static class Program
             {
                 ["borderless"] = (activeAfterClick.Style & (WsCaption | WsThickFrame)) == 0,
                 ["notTopMost"] = (activeAfterClick.ExStyle & WsExTopMost) == 0,
-                ["desktopSized"] = Covers(activeAfterClick.WindowRect, ToRect(screen)),
+                ["desktopSized"] = activeAfterClick.ClientScreenRect.Equals(ToRect(screen)),
                 ["displayModeUnchanged"] = new[] { baseline, activeAfterClick, altTabbedAway, altTabbedBack, beforeClickReturn, clickedBack }.All(item => item.DisplayMode.Equals(initialMode)),
                 ["notMinimizedAfterAltTabAway"] = !altTabbedAway.IsMinimized && altTabbedAway.IsVisible,
                 ["initialActivationSucceeded"] = initialActivationSucceeded,
                 ["altTabAwaySucceeded"] = altTabAwaySucceeded,
                 ["altTabReturnedToGame"] = altTabReturnSucceeded && altTabbedBack.ForegroundRootWindow == gameWindow && !altTabbedBack.IsMinimized,
-                ["presentationRectPreservedAfterAltTab"] = altTabbedBack.WindowRect.Equals(activeAfterClick.WindowRect),
+                ["presentationRectPreservedAfterAltTab"] = altTabbedBack.ClientScreenRect.Equals(activeAfterClick.ClientScreenRect),
                 ["witnessActivationSucceeded"] = witnessActivationSucceeded,
                 ["notMinimizedBeforeClickReturn"] = !beforeClickReturn.IsMinimized && beforeClickReturn.IsVisible,
                 ["clickReturnedToGame"] = clickReturnSucceeded && clickedBack.ForegroundRootWindow == gameWindow && !clickedBack.IsMinimized,
-                ["presentationRectPreservedAfterClick"] = clickedBack.WindowRect.Equals(activeAfterClick.WindowRect),
+                ["presentationRectPreservedAfterClick"] = clickedBack.ClientScreenRect.Equals(activeAfterClick.ClientScreenRect),
                 ["focusActuallyLeftGame"] = awayForeground != IntPtr.Zero && awayForeground != gameWindow,
                 ["cursorCapturedWhenActive"] = !activeAfterClick.CursorClip.Equals(virtualScreen) || activeAfterClick.GuiCaptureWindow == gameWindow,
                 ["cursorReleasedWhileInactive"] = altTabbedAway.CursorClip.Equals(virtualScreen) && altTabbedAway.GuiCaptureWindow == IntPtr.Zero,
@@ -204,6 +200,26 @@ internal static class Program
             throw new InvalidOperationException($"GetWindowRect failed during {phase}.");
         }
 
+        var client = new RectNative();
+        var clientOrigin = new PointNative();
+        if (!GetClientRect(gameWindow, ref client) || !ClientToScreen(gameWindow, ref clientOrigin))
+        {
+            throw new InvalidOperationException($"Could not locate the game client area during {phase}.");
+        }
+        var clientOnScreen = new RectNative(
+            clientOrigin.X, clientOrigin.Y,
+            clientOrigin.X + client.Right - client.Left,
+            clientOrigin.Y + client.Bottom - client.Top);
+        var extendedFrame = new RectNative();
+        RectNative? extendedFrameOnScreen = DwmGetWindowAttribute(
+            gameWindow, DwMWAExtendedFrameBounds, ref extendedFrame, Marshal.SizeOf<RectNative>()) == 0
+            ? extendedFrame : null;
+        var cursorPosition = new PointNative();
+        if (!GetCursorPos(ref cursorPosition))
+        {
+            throw new InvalidOperationException($"Could not locate the cursor during {phase}.");
+        }
+
         var clip = new RectNative();
         if (!GetClipCursor(ref clip))
         {
@@ -224,8 +240,13 @@ internal static class Program
             GetWindowLongPtr(gameWindow, GwlStyle).ToInt64(),
             GetWindowLongPtr(gameWindow, GwlExStyle).ToInt64(),
             rect,
+            clientOnScreen,
+            extendedFrameOnScreen,
             ToRect(screen),
             clip,
+            cursorPosition,
+            GetDpiForWindow(gameWindow),
+            GetAwarenessFromDpiAwarenessContext(GetWindowDpiAwarenessContext(gameWindow)),
             gui.ActiveWindow,
             gui.FocusWindow,
             gui.CaptureWindow,
@@ -574,16 +595,17 @@ internal static class Program
     {
         private readonly IntPtr gameWindow;
         private RectNative captureRect;
-        private readonly RectNative presentationRect;
+        private readonly RectNative virtualRect;
         private readonly CancellationTokenSource cancellation = new();
         private Thread? thread;
         private bool cursorWasCaptured;
+        private bool wasActive;
 
-        public WindowLifecycleGuard(IntPtr gameWindow, RectNative captureRect, RectNative presentationRect)
+        public WindowLifecycleGuard(IntPtr gameWindow, RectNative captureRect)
         {
             this.gameWindow = gameWindow;
             this.captureRect = captureRect;
-            this.presentationRect = presentationRect;
+            virtualRect = ToRect(SystemInformation.VirtualScreen);
         }
 
         public int RestoreCount { get; private set; }
@@ -610,15 +632,20 @@ internal static class Program
                 }
 
                 var currentRect = new RectNative();
-                if (GetWindowRect(gameWindow, ref currentRect) && !currentRect.Equals(presentationRect))
+                var client = new RectNative();
+                var origin = new PointNative();
+                if (GetWindowRect(gameWindow, ref currentRect) &&
+                    GetClientRect(gameWindow, ref client) && ClientToScreen(gameWindow, ref origin))
                 {
-                    if (SetWindowPos(
+                    var clientScreen = new RectNative(origin.X, origin.Y,
+                        origin.X + client.Right - client.Left, origin.Y + client.Bottom - client.Top);
+                    if (!clientScreen.Equals(captureRect) && SetWindowPos(
                         gameWindow,
                         IntPtr.Zero,
-                        presentationRect.Left,
-                        presentationRect.Top,
-                        presentationRect.Right - presentationRect.Left,
-                        presentationRect.Bottom - presentationRect.Top,
+                        captureRect.Left - (clientScreen.Left - currentRect.Left),
+                        captureRect.Top - (clientScreen.Top - currentRect.Top),
+                        captureRect.Right - captureRect.Left + clientScreen.Left - currentRect.Left + currentRect.Right - clientScreen.Right,
+                        captureRect.Bottom - captureRect.Top + clientScreen.Top - currentRect.Top + currentRect.Bottom - clientScreen.Bottom,
                         SwpNoZOrder | SwpNoActivate | SwpShowWindow))
                     {
                         RepositionCount++;
@@ -626,32 +653,41 @@ internal static class Program
                 }
 
                 var isActive = GetAncestor(GetForegroundWindow(), GaRoot) == gameWindow;
-                if (isActive)
+                if (isActive && !wasActive && !captureRect.Equals(virtualRect))
                 {
-                    if (ClipCursor(ref captureRect))
+                    var currentClip = new RectNative();
+                    if (GetClipCursor(ref currentClip) && currentClip.Equals(virtualRect) && ClipCursor(ref captureRect))
                     {
                         CaptureSuccessCount++;
                         cursorWasCaptured = true;
                     }
-                    else
+                    else if (!GetClipCursor(ref currentClip))
                     {
                         CaptureFailureCount++;
                     }
                 }
-                else if (cursorWasCaptured)
+                else if (!isActive && wasActive && cursorWasCaptured)
                 {
-                    _ = ClipCursor(IntPtr.Zero);
+                    ReleaseOwnedCursor();
                     cursorWasCaptured = false;
                 }
+                wasActive = isActive;
 
                 Thread.Sleep(25);
             }
 
             if (cursorWasCaptured)
             {
-                _ = ClipCursor(IntPtr.Zero);
+                ReleaseOwnedCursor();
                 cursorWasCaptured = false;
             }
+        }
+
+        private void ReleaseOwnedCursor()
+        {
+            var currentClip = new RectNative();
+            if (GetClipCursor(ref currentClip) && currentClip.Equals(captureRect))
+                _ = ClipCursor(IntPtr.Zero);
         }
 
         public void Dispose()
@@ -696,7 +732,7 @@ internal static class Program
     }
 
     private sealed record Report(string Name, string Executable, int ProcessId, IntPtr GameWindow, IntPtr WitnessWindow, Rectangle Screen, Rectangle VirtualScreen, DisplayMode InitialDisplayMode, bool GuardEnabled, int GuardRestoreCount, int GuardRepositionCount, int GuardCaptureSuccessCount, int GuardCaptureFailureCount, int AltTabReturnCount, IReadOnlyDictionary<string, bool> Checks, IReadOnlyList<WindowSnapshot> Snapshots);
-    private sealed record WindowSnapshot(string Phase, IntPtr ForegroundWindow, IntPtr ForegroundRootWindow, bool IsVisible, bool IsMinimized, bool IsHung, long Style, long ExStyle, RectNative WindowRect, RectNative ScreenRect, RectNative CursorClip, IntPtr GuiActiveWindow, IntPtr GuiFocusWindow, IntPtr GuiCaptureWindow, DisplayMode DisplayMode, DisplayMode ExpectedDisplayMode);
+    private sealed record WindowSnapshot(string Phase, IntPtr ForegroundWindow, IntPtr ForegroundRootWindow, bool IsVisible, bool IsMinimized, bool IsHung, long Style, long ExStyle, RectNative WindowRect, RectNative ClientScreenRect, RectNative? DwmExtendedFrameRect, RectNative ScreenRect, RectNative CursorClip, PointNative CursorPosition, uint WindowDpi, int DpiAwareness, IntPtr GuiActiveWindow, IntPtr GuiFocusWindow, IntPtr GuiCaptureWindow, DisplayMode DisplayMode, DisplayMode ExpectedDisplayMode);
     private sealed record DisplayMode(int Width, int Height, int BitsPerPixel, int Frequency);
 
     [StructLayout(LayoutKind.Sequential)]
@@ -809,6 +845,12 @@ internal static class Program
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] private static extern int GetClassName(IntPtr window, System.Text.StringBuilder className, int maximumCount);
     [DllImport("user32.dll")] private static extern bool IsWindowEnabled(IntPtr window);
     [DllImport("user32.dll")] private static extern bool GetWindowRect(IntPtr window, ref RectNative rect);
+    [DllImport("user32.dll")] private static extern bool GetClientRect(IntPtr window, ref RectNative rect);
+    [DllImport("user32.dll")] private static extern bool ClientToScreen(IntPtr window, ref PointNative point);
+    [DllImport("user32.dll")] private static extern uint GetDpiForWindow(IntPtr window);
+    [DllImport("user32.dll")] private static extern IntPtr GetWindowDpiAwarenessContext(IntPtr window);
+    [DllImport("user32.dll")] private static extern int GetAwarenessFromDpiAwarenessContext(IntPtr context);
+    [DllImport("dwmapi.dll")] private static extern int DwmGetWindowAttribute(IntPtr window, uint attribute, ref RectNative value, int size);
     [DllImport("user32.dll")] private static extern bool PrintWindow(IntPtr window, IntPtr deviceContext, uint flags);
     [DllImport("user32.dll")] private static extern bool GetClipCursor(ref RectNative rect);
     [DllImport("user32.dll")] private static extern bool ClipCursor(ref RectNative rect);
