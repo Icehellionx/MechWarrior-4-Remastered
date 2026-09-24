@@ -61,6 +61,26 @@ internal static class GraphicsSettingsSmoke
                   GameDisplayPreset.UltrawideChoices.Select(choice => choice.Monitor).SequenceEqual(
                   [new GameResolution(2560, 1080), new GameResolution(3440, 1440), new GameResolution(5120, 2160)]),
                 "ultrawide monitors calculate centered 4:3 presentation bounds without unsafe game render heights", failures);
+            var standardLayouts = new[]
+            {
+                (Monitor: new GameResolution(1600, 900), Image: new GameResolution(1200, 900), Pillar: 200),
+                (Monitor: new GameResolution(1920, 1080), Image: new GameResolution(1440, 1080), Pillar: 240),
+                (Monitor: new GameResolution(2560, 1440), Image: new GameResolution(1920, 1440), Pillar: 320),
+                (Monitor: new GameResolution(3840, 2160), Image: new GameResolution(2880, 2160), Pillar: 480),
+                (Monitor: new GameResolution(1920, 1200), Image: new GameResolution(1600, 1200), Pillar: 160),
+                (Monitor: new GameResolution(2560, 1600), Image: new GameResolution(2132, 1599), Pillar: 214),
+            };
+            Check(GameDisplayPreset.StandardChoices.Select(choice => choice.Monitor)
+                      .SequenceEqual(standardLayouts.Select(layout => layout.Monitor)) &&
+                  GameDisplayPreset.Choices.Count == standardLayouts.Length + GameDisplayPreset.UltrawideChoices.Count &&
+                  standardLayouts.All(layout =>
+                  {
+                      var bounds = GameDisplayGeometry.ForMonitor(layout.Monitor.Width, layout.Monitor.Height);
+                      return bounds.Gameplay == layout.Image &&
+                             bounds.LeftPillarboxWidth == layout.Pillar &&
+                             bounds.RightPillarboxWidth == layout.Pillar;
+                  }),
+                "standard 16:9 and 16:10 presets remain alongside ultrawide previews with centered 4:3 bounds", failures);
             var unsupportedRejected = false;
             try { resolutionPreference.Save(new GameResolution(1440, 1080)); }
             catch (ArgumentOutOfRangeException) { unsupportedRejected = true; }

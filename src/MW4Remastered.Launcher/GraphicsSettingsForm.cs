@@ -5,6 +5,7 @@ namespace MW4Remastered.Launcher;
 
 internal sealed class GraphicsSettingsForm : Form
 {
+    private readonly GameDisplayGeometry activeGeometry;
     private readonly ComboBox resampling = new();
     private readonly ComboBox displayPreview = new();
     private readonly ComboBox resolution = new();
@@ -17,6 +18,7 @@ internal sealed class GraphicsSettingsForm : Form
 
     public GraphicsSettingsForm(GameDisplayGeometry geometry)
     {
+        activeGeometry = geometry;
         Text = "Display settings";
         ClientSize = new Size(540, 620);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -35,7 +37,7 @@ internal sealed class GraphicsSettingsForm : Form
         displayPreview.Width = 490;
         displayPreview.Items.Add(new DisplayPreviewOption(
             $"Current monitor ({geometry.Monitor.Width} × {geometry.Monitor.Height}) — used at launch", geometry));
-        foreach (var preset in GameDisplayPreset.UltrawideChoices)
+        foreach (var preset in GameDisplayPreset.Choices)
             displayPreview.Items.Add(new DisplayPreviewOption(preset.Label,
                 GameDisplayGeometry.ForMonitor(preset.Monitor.Width, preset.Monitor.Height)));
         displayPreview.SelectedIndex = 0;
@@ -83,7 +85,7 @@ internal sealed class GraphicsSettingsForm : Form
         Controls.Add(loading);
 
         Controls.Add(Label(
-            "Preview choices show pillarboxes at common ultrawide sizes. The game uses your current Windows monitor at launch. MW4 render heights stay at 600, 768, or 1200 to preserve the HUD.",
+            "Preview 4:3 pillarboxes for standard and ultrawide screens. Launch uses your current Windows monitor. Only the listed render modes are safe for MW4's HUD.",
             24, 507, 490, 48, 9F));
 
         apply.Text = "APPLY";
@@ -111,10 +113,10 @@ internal sealed class GraphicsSettingsForm : Form
     private void UpdateGeometry()
     {
         var preview = ((DisplayPreviewOption)displayPreview.SelectedItem!).Geometry;
-        var selected = SelectedResolution ?? GameResolutionPreset.BestFitting(preview.Gameplay);
-        gameplayLine.Text = $"Render: {selected.Width} × {selected.Height}; 4:3 image: {preview.Gameplay.Width} × {preview.Gameplay.Height}";
+        var selected = SelectedResolution ?? GameResolutionPreset.BestFitting(activeGeometry.Gameplay);
+        gameplayLine.Text = $"Launch render: {selected.Width} × {selected.Height}; preview image: {preview.Gameplay.Width} × {preview.Gameplay.Height}";
         barsLine.Text = $"Pillarboxes: {preview.LeftPillarboxWidth}px each side; letterboxes: {preview.TopLetterboxHeight}px top/bottom";
-        loading.Text = selected.Width > preview.Gameplay.Width || selected.Height > preview.Gameplay.Height
+        loading.Text = selected.Width > activeGeometry.Gameplay.Width || selected.Height > activeGeometry.Gameplay.Height
             ? "Above monitor size: downsampling is experimental; check gameplay."
             : string.Empty;
     }

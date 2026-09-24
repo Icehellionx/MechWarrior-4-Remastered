@@ -63,12 +63,25 @@ public sealed record GameDisplayPreset(GameResolution Monitor, string Label)
 {
     // Presentation examples only. MW4 keeps a separately validated 4:3
     // render mode while dgVoodoo fits the image to the Windows monitor.
+    public static IReadOnlyList<GameDisplayPreset> StandardChoices { get; } =
+    [
+        new(new(1600, 900), "1600 × 900 (16:9, 900p)"),
+        new(new(1920, 1080), "1920 × 1080 (16:9, 1080p)"),
+        new(new(2560, 1440), "2560 × 1440 (16:9, 1440p)"),
+        new(new(3840, 2160), "3840 × 2160 (16:9, 4K)"),
+        new(new(1920, 1200), "1920 × 1200 (16:10)"),
+        new(new(2560, 1600), "2560 × 1600 (16:10)"),
+    ];
+
     public static IReadOnlyList<GameDisplayPreset> UltrawideChoices { get; } =
     [
         new(new(2560, 1080), "2560 × 1080 (ultrawide, 1080p height)"),
         new(new(3440, 1440), "3440 × 1440 (ultrawide, 1440p height)"),
         new(new(5120, 2160), "5120 × 2160 (ultrawide, 4K height)"),
     ];
+
+    public static IReadOnlyList<GameDisplayPreset> Choices { get; } =
+        [.. StandardChoices, .. UltrawideChoices];
 }
 
 public interface IGameResolutionProvider
