@@ -8,6 +8,7 @@ body:
     attributes:
       value: |
         Do not attach game ISOs, extracted game files, serial keys, credentials, or unrelated crash artifacts. Redact personal paths from logs before uploading them.
+        If you are reinstalling into a folder used by an earlier copy, first back up saves/settings you want to keep, uninstall the old copy, delete the leftover installation folder, and retry. Tell us whether that changed the result.
   - type: dropdown
     id: game
     attributes:
@@ -25,7 +26,7 @@ body:
     id: version
     attributes:
       label: Remastered installer version
-      placeholder: 0.6.44
+      placeholder: 0.6.45.9012
     validations:
       required: true
   - type: textarea
@@ -49,7 +50,7 @@ body:
     id: environment
     attributes:
       label: Windows and graphics hardware
-      description: Windows version, GPU model, driver version, monitor resolution/layout, and media type (ISO or ZIP). Do not include serial keys.
+      description: Windows version, GPU model, driver version, monitor resolution/layout, and media type (ISO, CUE/BIN, or ZIP). Do not include serial keys.
     validations:
       required: true
   - type: textarea

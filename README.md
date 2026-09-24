@@ -12,7 +12,7 @@ Current release: [v0.6.45.9012](https://github.com/Icehellionx/MechWarrior-4-Rem
 
 The installer does **not** contain the games: setup asks for your original ISOs, supported CUE/BIN pairs, or ZIP archives and builds the installed games from those files.
 
-Legacy download: [v0.6.44 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.44/MechWarrior-4-Remastered-Setup-0.6.44.exe). If the new version gives you trouble, please [log the problem in Issues](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml) and use the legacy version for now. If the issue is specific to your ISO/ZIP/BIN revision, please reach out to me directly so I can work with you to obtain your version for testing; do not post game media in an issue.
+Legacy download: [v0.6.44 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.44/MechWarrior-4-Remastered-Setup-0.6.44.exe). If you are reinstalling in a folder used by an earlier copy and have trouble, **first back up any saves or settings you want to keep, uninstall the old copy, delete the leftover installation folder, and retry**. If the new version still gives you trouble, please [log the problem in Issues](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml) and use the legacy version for now. If the issue is specific to your ISO/ZIP/BIN revision, please reach out to me directly so I can work with you to obtain your version for testing; do not post game media in an issue.
 
 1. Download and run the installer.
 2. Add the ISO, supported CUE/BIN, or ZIP files for the games and optional Mech Paks you own.
@@ -81,6 +81,8 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 - New render settings beyond the default, first-launch mouse placement on other display configurations, and gameplay on other GPUs still need field testing.
 
 ## Reporting a bug
+
+For a failed reinstall into a previously used location, try the old-folder cleanup described above first. Include whether that changed the result in your report.
 
 Use the [guided bug report form](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml). Include the game, media type, exact step, and retained installer log when relevant.
 
