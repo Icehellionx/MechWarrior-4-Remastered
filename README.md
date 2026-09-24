@@ -6,13 +6,13 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.45.9012/MechWarrior-4-Remastered-Setup-0.6.45.9012.exe)
+### [Download MechWarrior 4 Remastered v0.6.46 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.46/MechWarrior-4-Remastered-Setup-0.6.46.exe)
 
-Current release: [v0.6.45.9012](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.45.9012)
+Current release: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46)
 
 The installer does **not** contain the games: setup asks for your original ISOs, supported CUE/BIN pairs, or ZIP archives and builds the installed games from those files.
 
-Legacy download: [v0.6.44 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.44/MechWarrior-4-Remastered-Setup-0.6.44.exe). If you are reinstalling in a folder used by an earlier copy and have trouble, **first back up any saves or settings you want to keep, uninstall the old copy, delete the leftover installation folder, and retry**. If the new version still gives you trouble, please [log the problem in Issues](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml) and use the legacy version for now. If the issue is specific to your ISO/ZIP/BIN revision, please reach out to me directly so I can work with you to obtain your version for testing; do not post game media in an issue.
+Legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.45.9012/MechWarrior-4-Remastered-Setup-0.6.45.9012.exe). If you are reinstalling in a folder used by an earlier copy and have trouble, **first back up any saves or settings you want to keep, uninstall the old copy, delete the leftover installation folder, and retry**. If the new version still gives you trouble, please [log the problem in Issues](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml) and use the legacy version for now. If the issue is specific to your ISO/ZIP/BIN revision, please reach out to me directly so I can work with you to obtain your version for testing; do not post game media in an issue.
 
 1. Download and run the installer.
 2. Add the ISO, supported CUE/BIN, or ZIP files for the games and optional Mech Paks you own.
@@ -34,14 +34,14 @@ If the direct link does not work, open the [latest release page](https://github.
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for v0.6.45.9012:
+SHA-256 for v0.6.46:
 
 ```text
-99308010a9f824c6c2642be1188ef62fd2e72a60f18b483d459945488b8ebdcd
+469d3b7e0c451f81697f692484a075906141efbc602c45625ed33f93d77d2e02
 ```
 
 ```powershell
-Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.45.9012.exe -Algorithm SHA256
+Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.46.exe -Algorithm SHA256
 ```
 
 ## What you need
@@ -63,11 +63,12 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 - Applies the required official updates and reproducible no-disc/compatibility transforms from validated inputs.
 - Installs a single MW4-styled launcher for all detected games and manuals.
 - Presents every game in a centered, borderless, aspect-correct 4:3 viewport without changing the physical desktop resolution.
-- Renders the 3D world at the largest listed game-safe 4:3 resolution fitting the monitor containing the launcher; Settings can select 800×600, 1024×768, or 1600×1200.
+- Settings previews the centered 4:3 image for common 16:9 (900p, 1080p, 1440p, 4K), 16:10 (1200p, 1600p), and ultrawide (2560×1080, 3440×1440, 5120×2160) monitors. The installed game always uses your current Windows monitor mode; selecting a preview does not switch display resolution.
+- Automatically renders the 3D world at the largest game-safe 4:3 resolution fitting the monitor containing the launcher, then scales the centered picture to that monitor.
 - Defaults to the games' Ultra High-equivalent detail settings, 32-bit color, 4× MSAA, and 16× anisotropic filtering.
 - Keeps menus, gameplay, and all ordinary cinematics at their original aspect ratio. Only the live-action portion of Vengeance's opening receives a proportional widescreen cover treatment; it is never stretched.
 - Keeps the game picture visible during Alt-Tab, releases the cursor while inactive, and recaptures it on return.
-- Removes the dgVoodoo watermark and the gameplay-only top/left presentation seam.
+- Removes the dgVoodoo watermark and applies a small gameplay-only top/left seam correction.
 - Activates installed Inner Sphere and Clan content across chassis, weapons, and subsystems without bypassing the original model loader.
 - Includes the three cleaned game manuals and launcher cover art.
 - Creates a desktop shortcut by default and registers a standard Windows uninstaller.
@@ -78,7 +79,7 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 - The release is not Authenticode-signed, so Windows cannot show a verified publisher.
 - The current field qualification is strongest on the tested NVIDIA/Windows 11 configuration. Additional GPUs, display layouts, and unusual archival media variants are welcome test coverage.
 - Modified, regional, or otherwise unrecognized media fail closed instead of receiving a guessed transform.
-- New render settings beyond the default, first-launch mouse placement on other display configurations, and gameplay on other GPUs still need field testing.
+- First-launch mouse placement on other display configurations and gameplay on other GPUs still need field testing. The ultrawide client-area and mouse-capture corrections in v0.6.46 passed local component tests but still need reports from the affected ultrawide and Windows 10/RX 6750 XT systems; [issue #7](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/7) and [issue #8](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8) remain open for that confirmation.
 
 ## Reporting a bug
 

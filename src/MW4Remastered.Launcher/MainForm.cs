@@ -27,7 +27,6 @@ internal sealed class MainForm : Form
     private readonly ILegacyGameRegistration gameRegistration;
     private readonly IGameWindowLifecycleGuard gameWindowLifecycleGuard;
     private readonly GraphicsSettingsService graphicsSettings;
-    private readonly ConfiguredGameResolutionProvider resolutionSettings;
     private readonly InstallationDiagnosticsService diagnostics;
     private readonly TableLayoutPanel operationGrid = new();
     private readonly FlowLayoutPanel packRow = new();
@@ -61,7 +60,6 @@ internal sealed class MainForm : Form
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
         this.gameWindowLifecycleGuard = gameWindowLifecycleGuard ?? throw new ArgumentNullException(nameof(gameWindowLifecycleGuard));
         this.graphicsSettings = graphicsSettings ?? throw new ArgumentNullException(nameof(graphicsSettings));
-        resolutionSettings = new ConfiguredGameResolutionProvider(AppContext.BaseDirectory);
         this.diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
 
         Text = "MechWarrior 4 Remastered";
@@ -498,8 +496,7 @@ internal sealed class MainForm : Form
                 {
                     statuses = lastStatuses ?? await Task.Run(statusReader.Read);
                     var current = await Task.Run(() => graphicsSettings.ReadChoices(statuses));
-                    var savedResolution = resolutionSettings.ReadSaved();
-                    if (!dialog.IsDisposed) dialog.SetCurrent(current, savedResolution);
+                    if (!dialog.IsDisposed) dialog.SetCurrent(current);
                 }
                 catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException or InvalidDataException)
                 {
@@ -514,16 +511,9 @@ internal sealed class MainForm : Form
 
             SetBusy(true);
             statusLine.Text = "UPDATING VERIFIED DISPLAY PROFILES…";
-            var previousResolution = resolutionSettings.ReadSaved();
             if (gameWindowLifecycleGuard.HasActiveSessions)
                 throw new InvalidOperationException("Close all MechWarrior 4 games before changing display settings.");
-            resolutionSettings.Save(dialog.SelectedResolution);
-            try { await Task.Run(() => graphicsSettings.ApplyChoices(statuses, dialog.Selection)); }
-            catch
-            {
-                resolutionSettings.Save(previousResolution);
-                throw;
-            }
+            await Task.Run(() => graphicsSettings.ApplyChoices(statuses, dialog.Selection));
             await RefreshStatusesAsync();
         }
         catch (AggregateException error)

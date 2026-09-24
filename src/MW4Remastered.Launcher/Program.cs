@@ -17,7 +17,7 @@ internal static class Program
         Application.Run(new MainForm(
             new InstallStatusReader(root),
             new LaunchOrchestrator(processStarter, gameRegistration,
-                gameConfiguration: new LegacyGameConfiguration(new ConfiguredGameResolutionProvider(root)),
+                gameConfiguration: new LegacyGameConfiguration(new ActiveMonitorResolutionProvider()),
                 gameWindowLifecycleGuard: gameWindowLifecycleGuard),
             new DocumentOpener(processStarter),
             new OwnedInstallUninstaller(),

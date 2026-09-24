@@ -26,19 +26,6 @@ internal static class GraphicsSettingsSmoke
             var compatibility = Path.Combine(app, "Compatibility", "dgVoodoo2");
             Directory.CreateDirectory(compatibility);
             File.Copy(sourceProfile, Path.Combine(compatibility, "dgVoodoo.conf"));
-            var resolutionPreference = new ConfiguredGameResolutionProvider(app,
-                new FixedResolutionProvider(new GameResolution(1920, 1440)));
-            Check(resolutionPreference.GetResolution() == new GameResolution(1600, 1200),
-                "gameplay resolution defaults to a mode accepted by the original HUD", failures);
-            resolutionPreference.Save(new GameResolution(1024, 768));
-            Check(resolutionPreference.ReadSaved() == new GameResolution(1024, 768) &&
-                  resolutionPreference.GetResolution() == new GameResolution(1024, 768),
-                "selected gameplay resolution persists for launch", failures);
-            resolutionPreference.Save(new GameResolution(1600, 1200));
-            Check(new ConfiguredGameResolutionProvider(app,
-                    new FixedResolutionProvider(new GameResolution(1024, 768))).GetResolution() ==
-                  new GameResolution(1600, 1200),
-                "explicit 1200p render resolution remains selected above monitor size", failures);
             Check(GameResolutionPreset.BestFitting(new GameResolution(1200, 900)) == new GameResolution(1024, 768) &&
                   GameResolutionPreset.BestFitting(new GameResolution(1440, 1080)) == new GameResolution(1024, 768) &&
                   GameResolutionPreset.BestFitting(new GameResolution(1920, 1440)) == new GameResolution(1600, 1200) &&
@@ -81,21 +68,6 @@ internal static class GraphicsSettingsSmoke
                              bounds.RightPillarboxWidth == layout.Pillar;
                   }),
                 "standard 16:9 and 16:10 presets remain alongside ultrawide previews with centered 4:3 bounds", failures);
-            var unsupportedRejected = false;
-            try { resolutionPreference.Save(new GameResolution(1440, 1080)); }
-            catch (ArgumentOutOfRangeException) { unsupportedRejected = true; }
-            Check(unsupportedRejected, "field-crashing gameplay mode cannot be newly selected", failures);
-            File.WriteAllText(Path.Combine(compatibility, "gameplay-resolution.txt"), "1440x1080");
-            Check(resolutionPreference.ReadSaved() == new GameResolution(1440, 1080) &&
-                  resolutionPreference.GetResolution() == new GameResolution(1600, 1200),
-                "previously saved unsupported mode safely falls back without deleting the preference", failures);
-            var narrowMonitor = new ConfiguredGameResolutionProvider(app,
-                new FixedResolutionProvider(new GameResolution(1440, 1080)));
-            Check(narrowMonitor.GetResolution() == new GameResolution(1024, 768),
-                "1080p monitor cannot accidentally request the crashing 1440x1080 render mode", failures);
-            resolutionPreference.Save(null);
-            Check(resolutionPreference.GetResolution() == new GameResolution(1600, 1200),
-                "automatic gameplay resolution restores the largest fitting accepted mode", failures);
             var source = Path.Combine(root, "source");
             Write(source, "MW4.exe", "vengeance fixture");
             Write(source, "MW4X/MW4X.exe", "black knight fixture");
@@ -232,11 +204,6 @@ internal static class GraphicsSettingsSmoke
     private sealed class IdleProcessState : IGameProcessState
     {
         public bool IsRunning(string executablePath) => false;
-    }
-
-    private sealed class FixedResolutionProvider(GameResolution resolution) : IGameResolutionProvider
-    {
-        public GameResolution GetResolution() => resolution;
     }
 
     private sealed class BusyProcessState : IGameProcessState

@@ -142,63 +142,6 @@ public sealed class ActiveMonitorResolutionProvider : IGameResolutionProvider
     private static extern bool GetMonitorInfo(IntPtr monitor, ref MonitorInfo info);
 }
 
-public sealed class ConfiguredGameResolutionProvider : IGameResolutionProvider
-{
-    private readonly string preferencePath;
-    private readonly IGameResolutionProvider monitor;
-
-    public ConfiguredGameResolutionProvider(string applicationRoot, IGameResolutionProvider? monitor = null)
-    {
-        preferencePath = Path.Combine(Path.GetFullPath(applicationRoot), "Compatibility", "dgVoodoo2", "gameplay-resolution.txt");
-        this.monitor = monitor ?? new ActiveMonitorResolutionProvider();
-    }
-
-    public GameResolution GetResolution()
-    {
-        var saved = ReadSaved();
-        return saved is { } selected && GameResolutionPreset.IsSelectable(selected)
-            ? selected
-            : GameResolutionPreset.BestFitting(monitor.GetResolution());
-    }
-
-    public GameResolution? ReadSaved()
-    {
-        if (!File.Exists(preferencePath)) return null;
-        var parent = Path.GetDirectoryName(preferencePath)!;
-        StagedInstallTransaction.RejectContainedFilePath(parent, preferencePath);
-        var value = File.ReadAllText(preferencePath).Trim();
-        var parts = value.Split('x');
-        if (parts.Length != 2 || !int.TryParse(parts[0], out var width) ||
-            !int.TryParse(parts[1], out var height) || width < 800 || height < 600 ||
-            width * 3 != height * 4)
-            throw new InvalidDataException("The saved gameplay resolution is invalid.");
-        return new GameResolution(width, height);
-    }
-
-    public void Save(GameResolution? resolution)
-    {
-        var parent = Path.GetDirectoryName(preferencePath)!;
-        if (!Directory.Exists(parent) || (File.GetAttributes(parent) & FileAttributes.ReparsePoint) != 0)
-            throw new InvalidDataException("The compatibility settings directory is unavailable.");
-        if (resolution is { } selected &&
-            !GameResolutionPreset.IsSelectable(selected))
-            throw new ArgumentOutOfRangeException(nameof(resolution));
-        if (File.Exists(preferencePath)) StagedInstallTransaction.RejectContainedFilePath(parent, preferencePath);
-        if (resolution is null)
-        {
-            if (File.Exists(preferencePath)) File.Delete(preferencePath);
-            return;
-        }
-        var temporary = Path.Combine(parent, $".gameplay-resolution-{Guid.NewGuid():N}.tmp");
-        try
-        {
-            File.WriteAllText(temporary, resolution.Value.ToString() + Environment.NewLine);
-            File.Move(temporary, preferencePath, overwrite: true);
-        }
-        finally { if (File.Exists(temporary)) File.Delete(temporary); }
-    }
-}
-
 public sealed class LegacyGameConfiguration : ILegacyGameConfiguration
 {
     private readonly IGameResolutionProvider resolutionProvider;
