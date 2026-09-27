@@ -55,10 +55,10 @@ try {
     }
 
     $qualifiedCaptureFiles = [ordered]@{
-        'BlackKnightPr1Capture.dll' = '7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc'
+        'BlackKnightPr1Capture.dll' = '614c8e95eba2f32d8eeaf7a20877d1a36051e18bc7d8e76c1d447e8acbd015e9'
         'SafeDiscLoader2-LICENSE.txt' = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
         'SafeDiscLoader2-source-f27286a363aa675a0422141cb96fc8619cf8b9d8.zip' = '78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17'
-        'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch' = 'e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6'
+        'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch' = '68c948f0cdcb48690a71eb6fef949b0a1b20dd515cae3bc571ff102a7e93da58'
     }
     foreach ($entry in $qualifiedCaptureFiles.GetEnumerator()) {
         $path = Join-Path $captureBundle $entry.Key

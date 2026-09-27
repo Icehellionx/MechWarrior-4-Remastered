@@ -8,11 +8,13 @@
   "projectSha256": "0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13",
   "pr1Capture": {
     "purpose": "setup-only mapped-image capture for deterministic Black Knight PR1 static transformation; never installed beside the final game executable",
-    "localPatchSha256": "e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6",
-    "workflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35182493117",
-    "msbuildVersion": "17.14.51.32402",
-    "versionDllSha256": "7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc",
-    "versionDllSize": 91648,
+    "localPatchSha256": "68c948f0cdcb48690a71eb6fef949b0a1b20dd515cae3bc571ff102a7e93da58",
+    "previousWorkflowRun": "https://github.com/Icehellionx/MechWarrior-4-Remastered/actions/runs/35182493117",
+    "localMsbuildVersion": "17.12.6",
+    "runtimeLibrary": "MultiThreaded",
+    "importDlls": ["KERNEL32.dll", "USER32.dll"],
+    "versionDllSha256": "614c8e95eba2f32d8eeaf7a20877d1a36051e18bc7d8e76c1d447e8acbd015e9",
+    "versionDllSize": 207360,
     "correspondingSourceArchiveSha256": "78ae295db0382f498829546ff7272db5eb2e713c20eb72ab3552ceaf8477cd17",
     "normalLaunchBoundary": "capture DLL, configuration, and mapped image stay in setup scratch; no runtime DLL, injector, helper, driver, or elevation remains in the installed game tree"
   },

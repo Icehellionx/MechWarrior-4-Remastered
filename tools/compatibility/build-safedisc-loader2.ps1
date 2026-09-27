@@ -13,7 +13,7 @@ $ErrorActionPreference = 'Stop'
 $expectedCommit = 'f27286a363aa675a0422141cb96fc8619cf8b9d8'
 $expectedLicenseHash = '81cbae84a29ce7e770bf2bc7b178e50bda0ce8de6067aba661b0bc7b05b562f8'
 $expectedProjectHash = '0b773980fa286d42fe6454c093ec1feb1dfb33693d19c70ba7cd06cbeded4c13'
-$expectedPatchHash = 'e647a85f4d19b4e28032b42ab0ff993b79b69708e2d86dad3ade34115a0ca9f6'
+$expectedPatchHash = '68c948f0cdcb48690a71eb6fef949b0a1b20dd515cae3bc571ff102a7e93da58'
 $projectRoot = (Resolve-Path -LiteralPath (Join-Path $PSScriptRoot '../..')).Path
 $patchName = 'SafeDiscLoader2-MW4-BlackKnight-PR1-Capture.patch'
 $patch = Join-Path $projectRoot (Join-Path 'third_party/patches' $patchName)
@@ -128,7 +128,16 @@ Copy-Item -LiteralPath $builtDll -Destination $outputDll -Force
 Copy-Item -LiteralPath $license -Destination (Join-Path $output 'SafeDiscLoader2-LICENSE.txt') -Force
 Copy-Item -LiteralPath $patch -Destination (Join-Path $output $patchName) -Force
 $sourceArchive = Join-Path $output "SafeDiscLoader2-source-$expectedCommit.zip"
-& git -C $source archive --format=zip --output=$sourceArchive $expectedCommit
+$previousTimeZone = $env:TZ
+try {
+    # Git encodes commit dates as local ZIP timestamps; pin UTC so the
+    # source archive hash is reproducible on non-UTC build hosts.
+    $env:TZ = 'UTC'
+    & git -C $source archive --format=zip --output=$sourceArchive $expectedCommit
+}
+finally {
+    $env:TZ = $previousTimeZone
+}
 if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $sourceArchive -PathType Leaf)) {
     throw 'Could not create the corresponding GPL source archive.'
 }

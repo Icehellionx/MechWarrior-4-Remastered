@@ -1,3 +1,15 @@
+diff --git a/version-proxy.vcxproj b/version-proxy.vcxproj
+index 6b497c1..41cfb6a 100644
+--- a/version-proxy.vcxproj
++++ b/version-proxy.vcxproj
+@@ -112,6 +112,7 @@
+   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+     <ClCompile>
+       <WarningLevel>Level3</WarningLevel>
++      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+       <FunctionLevelLinking>true</FunctionLevelLinking>
+       <IntrinsicFunctions>true</IntrinsicFunctions>
+       <SDLCheck>true</SDLCheck>
 diff --git a/src/version.cpp b/src/version.cpp
 index f33c3d5..622ceb8 100644
 --- a/src/version.cpp

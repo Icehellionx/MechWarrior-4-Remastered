@@ -10,8 +10,8 @@ namespace MW4Remastered.Core.Install;
 
 public sealed class BlackKnightPr1ImageCapture
 {
-    public const long CaptureDllLength = 91_648;
-    public const string CaptureDllSha256 = "7fbf1fbd0b251986f0dcd2082f218650eddff40d661ede0deefd4b2ce6b5c6fc";
+    public const long CaptureDllLength = 207_360;
+    public const string CaptureDllSha256 = "614c8e95eba2f32d8eeaf7a20877d1a36051e18bc7d8e76c1d447e8acbd015e9";
     public const int MappedImageLength = BlackKnightPr1ExecutableTransform.MappedImageLength;
     internal const int MaxCaptureAttempts = 4;
 
