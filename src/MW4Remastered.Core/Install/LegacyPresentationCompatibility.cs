@@ -24,16 +24,20 @@ public static class LegacyPresentationCompatibility
             ["MW4.exe.manifest"] = "9312eaf3454beacc1dc1c9145a0b1184b5898ea982ecbb00bf4ecc155c200302",
             ["MW4Mercs.exe.manifest"] = "b7654d9771cb18a416de5fd03fbf6ad0fb1fa91d099b1e1973f9d1e84e972304",
         };
+    private static readonly IReadOnlyDictionary<string, string> MovieManifestByExecutable =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["MW4.exe"] = "MW4.exe.manifest",
+            ["MW4Mercs.exe"] = "MW4Mercs.exe.manifest",
+        };
 
     public static IReadOnlyList<InstallFile> CreateVengeanceFiles(string root, bool includeBlackKnight = false)
     {
         var sourceRoot = Validate(root);
-        var files = CreateFiles(sourceRoot, "").ToList();
-        files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", "Issue10DecoderBlock.dll"));
-        files.Add(new InstallFile(sourceRoot, "MW4.exe.manifest", "MW4.exe.manifest"));
+        var files = CreateGameFiles(sourceRoot, "MW4.exe", "").ToList();
         if (includeBlackKnight)
         {
-            files.AddRange(CreateFiles(sourceRoot, "MW4X"));
+            files.AddRange(CreateGameFiles(sourceRoot, "MW4x.exe", "MW4X"));
         }
         return files;
     }
@@ -41,9 +45,18 @@ public static class LegacyPresentationCompatibility
     public static IReadOnlyList<InstallFile> CreateMercenariesFiles(string root)
     {
         var sourceRoot = Validate(root);
-        var files = CreateFiles(sourceRoot, "").ToList();
-        files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", "Issue10DecoderBlock.dll"));
-        files.Add(new InstallFile(sourceRoot, "MW4Mercs.exe.manifest", "MW4Mercs.exe.manifest"));
+        return CreateGameFiles(sourceRoot, "MW4Mercs.exe", "");
+    }
+
+    private static IReadOnlyList<InstallFile> CreateGameFiles(string sourceRoot, string executableName, string destinationRoot)
+    {
+        var files = CreateFiles(sourceRoot, destinationRoot).ToList();
+        // Black Knight played its UI movie on the affected PC, so leave its decoder selection intact.
+        if (MovieManifestByExecutable.TryGetValue(executableName, out var manifestName))
+        {
+            files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", Combine(destinationRoot, "Issue10DecoderBlock.dll")));
+            files.Add(new InstallFile(sourceRoot, manifestName, Combine(destinationRoot, manifestName)));
+        }
         return files;
     }
 
