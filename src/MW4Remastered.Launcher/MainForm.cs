@@ -28,18 +28,22 @@ internal sealed class MainForm : Form
     private readonly IGameWindowLifecycleGuard gameWindowLifecycleGuard;
     private readonly GraphicsSettingsService graphicsSettings;
     private readonly InstallationDiagnosticsService diagnostics;
+    private readonly JoystickLaunchPreference joystickPreference;
+    private readonly IJoystickAdapterVerifier joystickAdapterVerifier;
     private readonly TableLayoutPanel operationGrid = new();
     private readonly FlowLayoutPanel packRow = new();
     private readonly Label statusLine = new();
     private readonly List<Button> actionButtons = new();
     private Button? creditsButton;
     private Button? settingsButton;
+    private Button? joystickButton;
     private Button? diagnosticsButton;
     private Button? uninstallButton;
     private bool settingsAvailable;
     private bool settingsOpening;
     private IReadOnlyList<ProductStatus>? lastStatuses;
     private bool closeWhenGameExits;
+    private bool joystickEnabled;
 
     public MainForm(
         InstallStatusReader statusReader,
@@ -50,7 +54,9 @@ internal sealed class MainForm : Form
         ILegacyGameRegistration gameRegistration,
         IGameWindowLifecycleGuard gameWindowLifecycleGuard,
         GraphicsSettingsService graphicsSettings,
-        InstallationDiagnosticsService diagnostics)
+        InstallationDiagnosticsService diagnostics,
+        JoystickLaunchPreference joystickPreference,
+        IJoystickAdapterVerifier joystickAdapterVerifier)
     {
         this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
@@ -61,6 +67,9 @@ internal sealed class MainForm : Form
         this.gameWindowLifecycleGuard = gameWindowLifecycleGuard ?? throw new ArgumentNullException(nameof(gameWindowLifecycleGuard));
         this.graphicsSettings = graphicsSettings ?? throw new ArgumentNullException(nameof(graphicsSettings));
         this.diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
+        this.joystickPreference = joystickPreference ?? throw new ArgumentNullException(nameof(joystickPreference));
+        this.joystickAdapterVerifier = joystickAdapterVerifier ?? throw new ArgumentNullException(nameof(joystickAdapterVerifier));
+        joystickEnabled = joystickPreference.Read();
 
         Text = "MechWarrior 4 Remastered";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
@@ -179,8 +188,9 @@ internal sealed class MainForm : Form
 
     private Control CreateFooter()
     {
-        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 5 };
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6 };
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+        footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -191,6 +201,36 @@ internal sealed class MainForm : Form
         statusLine.Font = new Font("Consolas", 9F, FontStyle.Bold);
         statusLine.ForeColor = Muted;
         footer.Controls.Add(statusLine, 0, 0);
+
+        joystickButton = new OperationButton
+        {
+            Size = new Size(122, 32),
+            Enabled = false,
+            Margin = new Padding(0, 0, 12, 0),
+            Anchor = AnchorStyles.Right,
+            BackColor = Panel,
+            ForeColor = TextColor,
+            FlatStyle = FlatStyle.Flat,
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+        };
+        joystickButton.FlatAppearance.BorderColor = Edge;
+        joystickButton.FlatAppearance.MouseOverBackColor = PanelHover;
+        joystickButton.Click += (_, _) => TryAction(() =>
+        {
+            if (!joystickEnabled)
+            {
+                foreach (var status in lastStatuses?.Where(status =>
+                             status.Product.Kind == ProductKind.Game && status.State == ProductInstallState.Ready)
+                         ?? [])
+                    joystickAdapterVerifier.EnsureAvailable(status.LaunchPath!);
+            }
+            joystickPreference.Write(!joystickEnabled);
+            joystickEnabled = !joystickEnabled;
+            UpdateJoystickButton();
+        });
+        UpdateJoystickButton();
+        actionButtons.Add(joystickButton);
+        footer.Controls.Add(joystickButton, 1, 0);
 
         settingsButton = new OperationButton
         {
@@ -210,7 +250,7 @@ internal sealed class MainForm : Form
         settingsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         settingsButton.Click += async (_, _) => await OpenGraphicsSettingsAsync();
         actionButtons.Add(settingsButton);
-        footer.Controls.Add(settingsButton, 1, 0);
+        footer.Controls.Add(settingsButton, 2, 0);
 
         diagnosticsButton = new OperationButton
         {
@@ -228,7 +268,7 @@ internal sealed class MainForm : Form
         diagnosticsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         diagnosticsButton.Click += async (_, _) => await OpenDiagnosticsAsync();
         actionButtons.Add(diagnosticsButton);
-        footer.Controls.Add(diagnosticsButton, 2, 0);
+        footer.Controls.Add(diagnosticsButton, 3, 0);
 
         var creditsPath = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md");
         creditsButton = new OperationButton
@@ -248,7 +288,7 @@ internal sealed class MainForm : Form
         creditsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         creditsButton.Click += (_, _) => TryAction(() => documentOpener.Open(creditsPath));
         actionButtons.Add(creditsButton);
-        footer.Controls.Add(creditsButton, 3, 0);
+        footer.Controls.Add(creditsButton, 4, 0);
 
         uninstallButton = new OperationButton
         {
@@ -265,8 +305,18 @@ internal sealed class MainForm : Form
         uninstallButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(54, 30, 26);
         uninstallButton.Click += async (_, _) => await UninstallAllAsync();
         actionButtons.Add(uninstallButton);
-        footer.Controls.Add(uninstallButton, 4, 0);
+        footer.Controls.Add(uninstallButton, 5, 0);
         return footer;
+    }
+
+    private void UpdateJoystickButton()
+    {
+        if (joystickButton is null) return;
+        joystickButton.Text = joystickEnabled ? "JOYSTICK ON" : "JOYSTICK OFF";
+        joystickButton.AccessibleName = joystickEnabled
+            ? "Joystick enabled for game launches; click to disable"
+            : "Joystick disabled for game launches; click to enable";
+        joystickButton.FlatAppearance.BorderColor = joystickEnabled ? Ready : Edge;
     }
 
     private void ShowLoadingState()
@@ -304,6 +354,7 @@ internal sealed class MainForm : Form
             statusLine.ForeColor = Warning;
             settingsAvailable = false;
             if (settingsButton is not null) settingsButton.Enabled = false;
+            if (joystickButton is not null) joystickButton.Enabled = false;
             MessageBox.Show(this, error.Message, "Status check failed safely", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             return;
         }
@@ -313,6 +364,19 @@ internal sealed class MainForm : Form
         settingsAvailable = statuses.Any(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.Ready) &&
             !statuses.Any(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.NeedsRepair);
         if (settingsButton is not null) settingsButton.Enabled = settingsAvailable;
+        var readyGames = statuses.Where(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.Ready).ToArray();
+        var adaptersAvailable = readyGames.Length > 0 && readyGames.All(item =>
+        {
+            try { joystickAdapterVerifier.EnsureAvailable(item.LaunchPath!); return true; }
+            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException) { return false; }
+        });
+        if (!adaptersAvailable) joystickEnabled = false;
+        if (joystickButton is not null)
+        {
+            joystickButton.Visible = adaptersAvailable;
+            joystickButton.Enabled = settingsAvailable && adaptersAvailable;
+            UpdateJoystickButton();
+        }
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
     }
@@ -370,7 +434,7 @@ internal sealed class MainForm : Form
         button.TextImageRelation = TextImageRelation.ImageBeforeText;
         button.AccessibleName = $"{status.Product.DisplayName}: {subtitle}";
         if (status.State == ProductInstallState.Ready)
-            button.Click += (_, _) => TryAction(() => launchOrchestrator.Launch(status));
+            button.Click += (_, _) => TryAction(() => launchOrchestrator.Launch(status, joystickEnabled));
         return button;
     }
 
@@ -566,6 +630,7 @@ internal sealed class MainForm : Form
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (settingsButton is not null) settingsButton.Enabled = settingsAvailable;
+        if (joystickButton is not null) joystickButton.Enabled = settingsAvailable;
         if (diagnosticsButton is not null) diagnosticsButton.Enabled = true;
     }
 

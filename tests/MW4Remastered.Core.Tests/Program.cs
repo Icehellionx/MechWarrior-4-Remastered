@@ -529,6 +529,12 @@ try
     var blackKnightArguments = new[] { "-noautoconfigx", "/gosNoJoystick" };
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Vengeance requests a HUD-supported 4:3 render size for aspect-preserving dgVoodoo presentation");
+    var joystickAdapterVerifier = new RecordingJoystickAdapterVerifier();
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration,
+        joystickAdapterVerifier: joystickAdapterVerifier)
+        .Launch(installedStatuses["vengeance"], enableJoystick: true);
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments.Where(argument => argument != "/gosNoJoystick")) == true,
+        "Vengeance joystick launch restores the original game enumeration path");
     var vengeanceOptions = File.ReadAllText(Path.Combine(destination, "options.ini"));
     Check(vengeanceOptions.Contains("[graphics options]", StringComparison.OrdinalIgnoreCase) &&
           vengeanceOptions.Contains("screenwidth=1600", StringComparison.OrdinalIgnoreCase) &&
@@ -577,6 +583,11 @@ try
         .Launch(mercenaryStatus);
     Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments) == true,
         "Mercenaries launch seeds configuration and bypasses legacy joystick enumeration");
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration,
+        joystickAdapterVerifier: joystickAdapterVerifier)
+        .Launch(mercenaryStatus, enableJoystick: true);
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(modernArguments.Where(argument => argument != "/gosNoJoystick")) == true,
+        "Mercenaries joystick launch restores the original game enumeration path");
     Check(File.ReadAllText(Path.Combine(mercenaryRoot, "options.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Mercenaries receives the required graphics page before launch");
 
@@ -593,6 +604,34 @@ try
     Check(processStarter.LastStart?.FileName == blackKnightLaunchExecutable &&
         processStarter.LastStart.ArgumentList.SequenceEqual(blackKnightArguments),
         "Black Knight starts directly through dgVoodoo fullscreen presentation with no process-injection helper");
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration,
+        joystickAdapterVerifier: joystickAdapterVerifier)
+        .Launch(blackKnightLaunchStatus, enableJoystick: true);
+    Check(processStarter.LastStart?.ArgumentList.SequenceEqual(["-noautoconfigx"]) == true,
+        "Black Knight joystick launch keeps its expansion-specific autoconfig bypass");
+    var joystickPreferencePath = Path.Combine(transactionRoot, "input-preference", "joystick-enabled.txt");
+    var joystickPreference = new JoystickLaunchPreference(joystickPreferencePath);
+    Check(!joystickPreference.Read(), "joystick launch defaults to the proven keyboard and mouse path");
+    joystickPreference.Write(true);
+    Check(new JoystickLaunchPreference(joystickPreferencePath).Read(),
+        "joystick launch choice persists across launcher instances");
+    joystickPreference.Write(false);
+    Check(!new JoystickLaunchPreference(joystickPreferencePath).Read(),
+        "joystick launch can return to keyboard and mouse mode");
+    Check(joystickAdapterVerifier.CheckedExecutables.SequenceEqual(
+        [installedStatuses["vengeance"].LaunchPath!, mercenaryExecutable, blackKnightLaunchExecutable]),
+        "joystick launch verifies the adapter at each title executable boundary");
+    var adapterVerifier = new PinnedJoystickAdapterVerifier();
+    var missingAdapterRejected = false;
+    try { adapterVerifier.EnsureAvailable(mercenaryExecutable); }
+    catch (InvalidOperationException) { missingAdapterRejected = true; }
+    File.WriteAllText(Path.Combine(mercenaryRoot, "dinput.dll"), "unrecognized adapter");
+    var foreignAdapterRejected = false;
+    try { adapterVerifier.EnsureAvailable(mercenaryExecutable); }
+    catch (InvalidOperationException) { foreignAdapterRejected = true; }
+    Check(missingAdapterRejected && foreignAdapterRejected,
+        "joystick mode cannot launch with a missing or unrecognized DirectInput adapter");
+    File.Delete(Path.Combine(mercenaryRoot, "dinput.dll"));
     Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Black Knight receives its title-specific required optionsx graphics page");
 
@@ -1161,4 +1200,11 @@ sealed class RecordingGameWindowLifecycleGuard : IGameWindowLifecycleGuard
     }
 
     public void Dispose() { }
+}
+
+sealed class RecordingJoystickAdapterVerifier : IJoystickAdapterVerifier
+{
+    public List<string> CheckedExecutables { get; } = [];
+
+    public void EnsureAvailable(string executablePath) => CheckedExecutables.Add(executablePath);
 }

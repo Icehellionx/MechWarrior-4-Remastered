@@ -1,0 +1,4 @@
+LIBRARY Issue10DecoderBlock
+EXPORTS
+    DllGetClassObject=_Issue10GetClassObject@12 PRIVATE
+    DllCanUnloadNow=_Issue10CanUnloadNow@0 PRIVATE

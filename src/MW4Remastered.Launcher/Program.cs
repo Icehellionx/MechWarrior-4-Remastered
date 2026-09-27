@@ -13,18 +13,22 @@ internal static class Program
         var root = AppContext.BaseDirectory;
         var processStarter = new SystemProcessStarter();
         var gameRegistration = new LegacyGameRegistration();
+        var joystickAdapterVerifier = new PinnedJoystickAdapterVerifier();
         using var gameWindowLifecycleGuard = new SystemGameWindowLifecycleGuard();
         Application.Run(new MainForm(
             new InstallStatusReader(root),
             new LaunchOrchestrator(processStarter, gameRegistration,
                 gameConfiguration: new LegacyGameConfiguration(new ActiveMonitorResolutionProvider()),
-                gameWindowLifecycleGuard: gameWindowLifecycleGuard),
+                gameWindowLifecycleGuard: gameWindowLifecycleGuard,
+                joystickAdapterVerifier: joystickAdapterVerifier),
             new DocumentOpener(processStarter),
             new OwnedInstallUninstaller(),
             new ApplicationUninstallOrchestrator(root, processStarter),
             gameRegistration,
             gameWindowLifecycleGuard,
             new GraphicsSettingsService(root),
-            new InstallationDiagnosticsService()));
+            new InstallationDiagnosticsService(),
+            new JoystickLaunchPreference(),
+            joystickAdapterVerifier));
     }
 }

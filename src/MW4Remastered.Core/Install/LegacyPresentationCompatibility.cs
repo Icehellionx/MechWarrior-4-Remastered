@@ -17,11 +17,20 @@ public static class LegacyPresentationCompatibility
         };
     private const string ConfigName = "dgVoodoo.conf";
     public const string ConfigSha256 = "7ea9e4576a421157927de2d41551e3fdef8b4c76cd3adcc2d02ef19706f249a4";
+    private static readonly IReadOnlyDictionary<string, string> MovieDecoderFiles =
+        new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["Issue10DecoderBlock.dll"] = "17ddfcafeea049c43a2cf37ffb20432e6f64fbad5a58040ca10f298fa455a1dc",
+            ["MW4.exe.manifest"] = "9312eaf3454beacc1dc1c9145a0b1184b5898ea982ecbb00bf4ecc155c200302",
+            ["MW4Mercs.exe.manifest"] = "b7654d9771cb18a416de5fd03fbf6ad0fb1fa91d099b1e1973f9d1e84e972304",
+        };
 
     public static IReadOnlyList<InstallFile> CreateVengeanceFiles(string root, bool includeBlackKnight = false)
     {
         var sourceRoot = Validate(root);
         var files = CreateFiles(sourceRoot, "").ToList();
+        files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", "Issue10DecoderBlock.dll"));
+        files.Add(new InstallFile(sourceRoot, "MW4.exe.manifest", "MW4.exe.manifest"));
         if (includeBlackKnight)
         {
             files.AddRange(CreateFiles(sourceRoot, "MW4X"));
@@ -32,7 +41,10 @@ public static class LegacyPresentationCompatibility
     public static IReadOnlyList<InstallFile> CreateMercenariesFiles(string root)
     {
         var sourceRoot = Validate(root);
-        return CreateFiles(sourceRoot, "");
+        var files = CreateFiles(sourceRoot, "").ToList();
+        files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", "Issue10DecoderBlock.dll"));
+        files.Add(new InstallFile(sourceRoot, "MW4Mercs.exe.manifest", "MW4Mercs.exe.manifest"));
+        return files;
     }
 
     private static IReadOnlyList<InstallFile> CreateFiles(string sourceRoot, string destinationRoot)
@@ -59,6 +71,14 @@ public static class LegacyPresentationCompatibility
             var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
             if (!actual.Equals(expected.Value, StringComparison.Ordinal))
                 throw new InvalidDataException($"Unsupported dgVoodoo2 file SHA-256 for {expected.Key}: {actual}");
+        }
+        foreach (var expected in MovieDecoderFiles)
+        {
+            var file = RequireRegularFile(fullRoot, expected.Key);
+            using var stream = File.OpenRead(file);
+            var actual = Convert.ToHexString(SHA256.HashData(stream)).ToLowerInvariant();
+            if (!actual.Equals(expected.Value, StringComparison.Ordinal))
+                throw new InvalidDataException($"Unsupported movie decoder compatibility file SHA-256 for {expected.Key}: {actual}");
         }
         var config = RequireRegularFile(fullRoot, ConfigName);
         using (var stream = File.OpenRead(config))

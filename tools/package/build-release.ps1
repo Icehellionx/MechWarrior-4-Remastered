@@ -148,6 +148,24 @@ try {
         if ($actual -ne $entry.Value) { throw "dgVoodoo add-on hash mismatch for $($entry.Key): $actual" }
         Copy-Item -LiteralPath $path -Destination (Join-Path $presentationDestination $entry.Key)
     }
+    $decoderBuild = Join-Path $scratch 'issue10-decoder-block'
+    & (Join-Path $projectRoot 'tools/compatibility/build-issue10-decoder-block.ps1') -OutputDirectory $decoderBuild
+    if ($LASTEXITCODE -ne 0) { throw "Issue #10 decoder compatibility build failed with exit code $LASTEXITCODE." }
+    $movieDecoderFiles = [ordered]@{
+        'Issue10DecoderBlock.dll' = '17ddfcafeea049c43a2cf37ffb20432e6f64fbad5a58040ca10f298fa455a1dc'
+        'MW4.exe.manifest' = '9312eaf3454beacc1dc1c9145a0b1184b5898ea982ecbb00bf4ecc155c200302'
+        'MW4Mercs.exe.manifest' = 'b7654d9771cb18a416de5fd03fbf6ad0fb1fa91d099b1e1973f9d1e84e972304'
+    }
+    foreach ($entry in $movieDecoderFiles.GetEnumerator()) {
+        $source = if ($entry.Key -eq 'Issue10DecoderBlock.dll') {
+            Join-Path $decoderBuild $entry.Key
+        } else {
+            Join-Path $projectRoot "assets/compatibility/$($entry.Key)"
+        }
+        $actual = (Get-FileHash -LiteralPath $source -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($actual -ne $entry.Value) { throw "Movie decoder compatibility hash mismatch for $($entry.Key): $actual" }
+        Copy-Item -LiteralPath $source -Destination (Join-Path $presentationDestination $entry.Key)
+    }
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/DiscUtils-LICENSE.txt') -Destination (Join-Path $payload 'DiscUtils-LICENSE.txt')
 
@@ -235,7 +253,8 @@ try {
         'Compatibility/dgVoodoo2/D3DImm.dll',
         'Compatibility/dgVoodoo2/D3D8.dll',
         'Compatibility/dgVoodoo2/D3D9.dll'
-        'Compatibility/dgVoodoo2/SampleAddon.dll'
+        'Compatibility/dgVoodoo2/SampleAddon.dll',
+        'Compatibility/dgVoodoo2/Issue10DecoderBlock.dll'
     )
 
     if ($StageOnly) {

@@ -62,6 +62,7 @@ public sealed class LaunchOrchestrator
     private readonly ILegacyGameConfiguration gameConfiguration;
     private readonly IGameConfigurationGuard gameConfigurationGuard;
     private readonly IGameWindowLifecycleGuard gameWindowLifecycleGuard;
+    private readonly IJoystickAdapterVerifier joystickAdapterVerifier;
 
     public LaunchOrchestrator(
         IProcessStarter processStarter,
@@ -69,7 +70,8 @@ public sealed class LaunchOrchestrator
         IGameProcessState? gameProcessState = null,
         ILegacyGameConfiguration? gameConfiguration = null,
         IGameConfigurationGuard? gameConfigurationGuard = null,
-        IGameWindowLifecycleGuard? gameWindowLifecycleGuard = null)
+        IGameWindowLifecycleGuard? gameWindowLifecycleGuard = null,
+        IJoystickAdapterVerifier? joystickAdapterVerifier = null)
     {
         this.processStarter = processStarter ?? throw new ArgumentNullException(nameof(processStarter));
         this.gameRegistration = gameRegistration ?? throw new ArgumentNullException(nameof(gameRegistration));
@@ -77,9 +79,10 @@ public sealed class LaunchOrchestrator
         this.gameConfiguration = gameConfiguration ?? new LegacyGameConfiguration();
         this.gameConfigurationGuard = gameConfigurationGuard ?? new LegacyGameConfigurationGuard(this.gameConfiguration);
         this.gameWindowLifecycleGuard = gameWindowLifecycleGuard ?? new NoOpGameWindowLifecycleGuard();
+        this.joystickAdapterVerifier = joystickAdapterVerifier ?? new PinnedJoystickAdapterVerifier();
     }
 
-    public void Launch(ProductStatus status)
+    public void Launch(ProductStatus status, bool enableJoystick = false)
     {
         ArgumentNullException.ThrowIfNull(status);
         if (status.State != ProductInstallState.Ready || string.IsNullOrWhiteSpace(status.LaunchPath))
@@ -93,6 +96,7 @@ public sealed class LaunchOrchestrator
         {
             throw new InvalidOperationException($"{status.Product.DisplayName} is already running.");
         }
+        if (enableJoystick) joystickAdapterVerifier.EnsureAvailable(executable);
         // Setup owns registry mutation. Normal launch only validates the record,
         // but configuration remains user-owned and MW4 can erase its graphics
         // page while booting when the obsolete autoconfigurator is bypassed.
@@ -112,7 +116,7 @@ public sealed class LaunchOrchestrator
         };
         if (status.Product.Id is "vengeance" or "black-knight" or "mercenaries")
         {
-            AddModernWindowsArguments(startInfo, status.Product.Id, resolution);
+            AddModernWindowsArguments(startInfo, status.Product.Id, resolution, enableJoystick);
         }
         var processId = processStarter.Start(startInfo);
         gameConfigurationGuard.Protect(status, processId, resolution);
@@ -122,7 +126,8 @@ public sealed class LaunchOrchestrator
     private static void AddModernWindowsArguments(
         ProcessStartInfo startInfo,
         string productId,
-        GameResolution resolution)
+        GameResolution resolution,
+        bool enableJoystick)
     {
         if (productId == "black-knight")
         {
@@ -130,7 +135,7 @@ public sealed class LaunchOrchestrator
             // owns modern fullscreen presentation beside MW4X.exe, so the launcher
             // must not force the old native windowed fallback.
             startInfo.ArgumentList.Add("-noautoconfigx");
-            startInfo.ArgumentList.Add("/gosNoJoystick");
+            if (!enableJoystick) startInfo.ArgumentList.Add("/gosNoJoystick");
             return;
         }
 
@@ -142,7 +147,7 @@ public sealed class LaunchOrchestrator
         startInfo.ArgumentList.Add("-gl");
         startInfo.ArgumentList.Add("-GameTime.MaxVariableFps");
         startInfo.ArgumentList.Add("30");
-        startInfo.ArgumentList.Add("/gosNoJoystick");
+        if (!enableJoystick) startInfo.ArgumentList.Add("/gosNoJoystick");
     }
 }
 
