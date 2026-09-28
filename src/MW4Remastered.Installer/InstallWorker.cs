@@ -112,6 +112,7 @@ internal sealed class InstallWorker
         }
         var compatibilityReplacement = new OwnedInstallFileReplacementTransaction();
         var compatibilityRoot = Path.Combine(args.DestinationPath, "Compatibility", "dgVoodoo2");
+        var inputCompatibilityRoot = Path.Combine(args.DestinationPath, "Compatibility", "dinputto8");
         var registeredThisRun = new List<ProductStatus>();
         try
         {
@@ -169,16 +170,20 @@ internal sealed class InstallWorker
             foreach (var productId in new[] { "vengeance", "mercenaries" })
             {
                 if (!statuses.TryGetValue(productId, out var status) || string.IsNullOrWhiteSpace(status.InstallPath)) continue;
+                var hasBlackKnight = statuses.ContainsKey("black-knight");
                 var files = productId == "vengeance"
                     ? LegacyPresentationCompatibility.CreateVengeanceFiles(
-                        compatibilityRoot,
-                        includeBlackKnight: statuses.ContainsKey("black-knight"))
-                    : LegacyPresentationCompatibility.CreateMercenariesFiles(compatibilityRoot);
+                        compatibilityRoot, includeBlackKnight: hasBlackKnight)
+                        .Concat(LegacyInputCompatibility.CreateFiles(inputCompatibilityRoot, hasBlackKnight))
+                        .ToArray()
+                    : LegacyPresentationCompatibility.CreateMercenariesFiles(compatibilityRoot)
+                        .Concat(LegacyInputCompatibility.CreateMercenariesFiles(inputCompatibilityRoot))
+                        .ToArray();
                 var retiredProfiles = productId == "vengeance"
                     ? new[] { "DDrawCompat-MW4.ini" }
                     : new[] { "DDrawCompat-MW4Mercs.ini" };
                 compatibilityReplacement.Migrate(productId, status.InstallPath, files, retiredProfiles);
-                TryAppendLog(args.LogPath, $"Verified current presentation compatibility for {status.Product.DisplayName}.");
+                TryAppendLog(args.LogPath, $"Verified current presentation and input compatibility for {status.Product.DisplayName}.");
             }
         }
         catch
@@ -253,7 +258,8 @@ internal sealed class InstallWorker
             product.EffectiveComponents.Contains("black-knight", StringComparer.OrdinalIgnoreCase)
                 ? media.GetRoot("black-knight-disc-1")
                 : null,
-            Path.Combine(applicationRoot, "Compatibility", "dgVoodoo2")),
+            Path.Combine(applicationRoot, "Compatibility", "dgVoodoo2"),
+            Path.Combine(applicationRoot, "Compatibility", "dinputto8")),
         "mercenaries" => new MercenariesInstallRequest(
             media.GetRoot("mercenaries-disc-1"),
             media.GetRoot("mercenaries-disc-2"),
@@ -262,7 +268,8 @@ internal sealed class InstallWorker
             new[] { "inner-sphere-mech-pak", "clan-mech-pak" }
                 .Where(media.Layouts.ContainsKey)
                 .Select(id => id == "inner-sphere-mech-pak" ? "inner-sphere" : "clan")
-                .ToArray()),
+                .ToArray(),
+            Path.Combine(applicationRoot, "Compatibility", "dinputto8")),
         _ => throw new InvalidOperationException($"Unsupported product: {product.ProductId}"),
     };
 

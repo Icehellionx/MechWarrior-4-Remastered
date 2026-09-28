@@ -632,6 +632,13 @@ try
     Check(missingAdapterRejected && foreignAdapterRejected,
         "joystick mode cannot launch with a missing or unrecognized DirectInput adapter");
     File.Delete(Path.Combine(mercenaryRoot, "dinput.dll"));
+    var inputSource = Directory.CreateDirectory(Path.Combine(transactionRoot, "input-adapter-source")).FullName;
+    File.WriteAllText(Path.Combine(inputSource, "dinput.dll"), "unrecognized adapter");
+    var unsupportedInputRejected = false;
+    try { LegacyInputCompatibility.CreateFiles(inputSource, includeBlackKnight: true); }
+    catch (InvalidDataException) { unsupportedInputRejected = true; }
+    Check(unsupportedInputRejected,
+        "installation rejects a wrong-size or unrecognized DirectInput adapter before committing game files");
     Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Black Knight receives its title-specific required optionsx graphics page");
 

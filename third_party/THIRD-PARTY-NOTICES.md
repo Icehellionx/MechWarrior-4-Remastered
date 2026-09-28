@@ -25,6 +25,14 @@ MechWarrior 4: Vengeance, Black Knight, and Mercenaries use the stock x86 Direct
 - Exact provenance and component hashes are recorded in `third_party/dgVoodoo2.lock.json`.
 - Add-on source base: upstream commit `de5f360b43c1fa61cc2c47ccfc48bbdd995badf7`; the exact local patch is packaged beside the binary and retained in `tools/compatibility/patches/`.
 
+## dinputto8
+
+An optional joystick launch uses the game-local x86 `dinput.dll` from elishacloud's dinputto8 at commit `f18224808c58c84e46c003e100804bd3184d8168`. The exact upstream Win32 CI artifact is hash-gated during package assembly and again at game launch. The adapter translates legacy DirectInput calls to DirectInput 8; it installs no driver and does not include vJoy. Keyboard and mouse remain the default launch mode.
+
+- Upstream: <https://github.com/elishacloud/dinputto8>
+- License: zlib; packaged as `Compatibility/dinputto8/dinputto8-LICENSE.txt`
+- Exact revision, CI artifact, submodule revision, and hashes: `third_party/dinputto8.lock.json`
+
 ## Inno Setup
 
 The all-in-one Windows setup is compiled with Inno Setup 7.1.0 by Jordan Russell and Martijn Laan. The project uses the unmodified compiler/runtime to package the project-owned launcher and media-processing workflow.

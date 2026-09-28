@@ -1,0 +1,17 @@
+{
+  "upstream": "https://github.com/elishacloud/dinputto8",
+  "license": "Zlib",
+  "commit": "f18224808c58c84e46c003e100804bd3184d8168",
+  "submodule": {
+    "path": "External/Logging",
+    "commit": "d352bb946ae25d2af1cc91227192f581baefbe92"
+  },
+  "workflowRun": "https://github.com/elishacloud/dinputto8/actions/runs/32078829509",
+  "artifactId": 9304389492,
+  "binary": "Workflow Win32 binaries/dinput.dll",
+  "binarySize": 272384,
+  "binarySha256": "d190a049cbad89a87191abfc4dfd58d057ec1b89f0bb53c2b018485c3b9048d4",
+  "licenseSha256": "38abf198466d53a297a138feaf9e5314b5824caa40d164c15626896afbd69b85",
+  "installedPaths": ["dinput.dll", "MW4X/dinput.dll"],
+  "scope": "Optional game-local DirectInput 1-7 to 8 adapter; no driver or virtual device is installed. Joystick launch remains opt-in."
+}

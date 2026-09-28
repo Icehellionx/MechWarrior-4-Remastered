@@ -7,7 +7,8 @@ public sealed record VengeanceInstallRequest(
     string DiscTwoRoot,
     IReadOnlyList<string>? MechPakRoots = null,
     string? BlackKnightDiscRoot = null,
-    string? PresentationCompatibilityRoot = null)
+    string? PresentationCompatibilityRoot = null,
+    string? InputCompatibilityRoot = null)
     : GameInstallRequest("vengeance");
 
 public sealed record MercenariesInstallRequest(
@@ -15,7 +16,8 @@ public sealed record MercenariesInstallRequest(
     string DiscTwoRoot,
     string? PointReleaseRoot = null,
     string? PresentationCompatibilityRoot = null,
-    IReadOnlyCollection<string>? EnabledMechPaks = null)
+    IReadOnlyCollection<string>? EnabledMechPaks = null,
+    string? InputCompatibilityRoot = null)
     : GameInstallRequest("mercenaries");
 
 public enum GameInstallationStage
@@ -109,6 +111,8 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
         {
             files.AddRange(LegacyPresentationCompatibility.CreateMercenariesFiles(input.PresentationCompatibilityRoot));
         }
+        if (!string.IsNullOrWhiteSpace(input.InputCompatibilityRoot))
+            files.AddRange(LegacyInputCompatibility.CreateMercenariesFiles(input.InputCompatibilityRoot));
         return new InstallPlan(basePlan.ProductId, files, basePlan.Components);
     }
 
@@ -182,6 +186,9 @@ public sealed class GameInstallPlanFactory : IGameInstallPlanFactory
                 input.PresentationCompatibilityRoot,
                 includeBlackKnight: components.Contains("black-knight", StringComparer.OrdinalIgnoreCase)));
         }
+        if (!string.IsNullOrWhiteSpace(input.InputCompatibilityRoot))
+            files.AddRange(LegacyInputCompatibility.CreateFiles(input.InputCompatibilityRoot,
+                components.Contains("black-knight", StringComparer.OrdinalIgnoreCase)));
 
         return new InstallPlan("vengeance", files, components);
     }

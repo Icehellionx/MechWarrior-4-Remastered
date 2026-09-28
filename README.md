@@ -6,19 +6,21 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered v0.6.46 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.46/MechWarrior-4-Remastered-Setup-0.6.46.exe)
+### [Download MechWarrior 4 Remastered v0.6.47.3 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.3/MechWarrior-4-Remastered-Setup-0.6.47.3.exe)
 
-Current release: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46)
+Current test release: [v0.6.47.3](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.3). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
+
+This test release adds a game-local movie-decoder workaround for Vengeance and Mercenaries and an optional joystick mode for all three games. The affected video-crash PC and physical joysticks have not yet confirmed it. In the launcher, click **JOYSTICK OFF** to enable joystick input before starting a game; leave it off to keep the previous launch behavior.
 
 The installer does **not** contain the games: setup asks for your original ISOs, supported CUE/BIN pairs, or ZIP archives and builds the installed games from those files.
 
-Legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.45.9012/MechWarrior-4-Remastered-Setup-0.6.45.9012.exe). If you are reinstalling in a folder used by an earlier copy and have trouble, **first back up any saves or settings you want to keep, uninstall the old copy, delete the leftover installation folder, and retry**. If the new version still gives you trouble, please [log the problem in Issues](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml) and use the legacy version for now. If the issue is specific to your ISO/ZIP/BIN revision, please reach out to me directly so I can work with you to obtain your version for testing; do not post game media in an issue.
+Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.45.9012/MechWarrior-4-Remastered-Setup-0.6.45.9012.exe). If you are reinstalling in a folder used by an earlier copy and have trouble, **first back up any saves or settings you want to keep, uninstall the old copy, delete the leftover installation folder, and retry**. If the new version still gives you trouble, please [log the problem in Issues](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml) and use the stable fallback for now. If the issue is specific to your ISO/ZIP/BIN revision, please reach out to me directly so I can work with you to obtain your version for testing; do not post game media in an issue.
 
 1. Download and run the installer.
 2. Add the ISO, supported CUE/BIN, or ZIP files for the games and optional Mech Paks you own.
 3. Open the new desktop launcher and choose a game or manual.
 
-If the direct link does not work, open the [latest release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/latest) and download the setup EXE under **Assets**.
+If the direct link does not work, open the [v0.6.47.3 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.3) and download the setup EXE under **Assets**.
 
 ## Screenshots
 
@@ -34,14 +36,14 @@ If the direct link does not work, open the [latest release page](https://github.
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for v0.6.46:
+SHA-256 for v0.6.47.3:
 
 ```text
-469d3b7e0c451f81697f692484a075906141efbc602c45625ed33f93d77d2e02
+98169cc3bccb4d1fe12cec266b1a5df5524af8153db88208f75d80d973490006
 ```
 
 ```powershell
-Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.46.exe -Algorithm SHA256
+Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.47.3.exe -Algorithm SHA256
 ```
 
 ## What you need
@@ -67,12 +69,14 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 - Automatically renders the 3D world at the largest game-safe 4:3 resolution fitting the monitor containing the launcher, then scales the centered picture to that monitor.
 - Defaults to the games' Ultra High-equivalent detail settings, 32-bit color, 4× MSAA, and 16× anisotropic filtering.
 - Keeps menus, gameplay, and all ordinary cinematics at their original aspect ratio. Only the live-action portion of Vengeance's opening receives a proportional widescreen cover treatment; it is never stretched.
+- Includes a game-local movie-decoder compatibility workaround for Vengeance and Mercenaries; original videos remain enabled.
+- Includes a hash-verified game-local DirectInput adapter and an opt-in joystick button in the launcher for all three games. It installs no virtual joystick driver.
 - Keeps the game picture visible during Alt-Tab, releases the cursor while inactive, and recaptures it on return.
 - Removes the dgVoodoo watermark and applies a small gameplay-only top/left seam correction.
 - Activates installed Inner Sphere and Clan content across chassis, weapons, and subsystems without bypassing the original model loader.
 - Includes the three cleaned game manuals and launcher cover art.
 - Creates a desktop shortcut by default and registers a standard Windows uninstaller.
-- Removes project-owned files during uninstall while preserving unowned saves and configuration.
+- The launcher's per-game removal deletes owned game files while preserving unowned saves and configuration. The Windows uninstaller removes the launcher shell and leaves any game trees for that separate removal action.
 
 ## Known limitations
 
@@ -80,6 +84,8 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 - The current field qualification is strongest on the tested NVIDIA/Windows 11 configuration. Additional GPUs, display layouts, and unusual archival media variants are welcome test coverage.
 - Modified, regional, or otherwise unrecognized media fail closed instead of receiving a guessed transform.
 - First-launch mouse placement on other display configurations and gameplay on other GPUs still need field testing. The ultrawide client-area and mouse-capture corrections in v0.6.46 passed local component tests but still need reports from the affected ultrawide and Windows 10/RX 6750 XT systems; [issue #7](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/7) and [issue #8](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8) remain open for that confirmation.
+- The movie workaround has passed local decoder-activation and normal-decoder playback checks, but the PC from [issue #10](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/10) has not tested this build. On a PC without another usable decoder, affected movie audio may be absent.
+- A Windows VM with vJoy selected the adapter in all three games and consumed joystick X-axis in Vengeance and Black Knight first missions; an earlier build with the same adapter consumed it in Mercenaries. Physical sticks, 31/32-button layouts, and consecutive missions still need field testing.
 
 ## Reporting a bug
 

@@ -10,13 +10,13 @@ public interface IJoystickAdapterVerifier
 /// <summary>Requires the reviewed x86 DirectInput adapter beside the selected game.</summary>
 public sealed class PinnedJoystickAdapterVerifier : IJoystickAdapterVerifier
 {
-    public const string AdapterSha256 = "f96bb1101e23a6477043a3859cbf875a990eaa62ee6849f87e967b3dd963f781";
+    public const string AdapterSha256 = MW4Remastered.Core.Install.LegacyInputCompatibility.AdapterSha256;
 
     public void EnsureAvailable(string executablePath)
     {
         var adapterPath = Path.Combine(Path.GetDirectoryName(Path.GetFullPath(executablePath))!, "dinput.dll");
         if (!File.Exists(adapterPath))
-            throw new InvalidOperationException("Joystick mode needs the verified DirectInput adapter beside the game. This install does not have it yet.");
+            throw new InvalidOperationException("Joystick mode needs the verified DirectInput adapter beside this game's executable. Run Repair to restore it.");
         using var stream = File.OpenRead(adapterPath);
         var actualHash = Convert.ToHexString(SHA256.HashData(stream));
         if (!actualHash.Equals(AdapterSha256, StringComparison.OrdinalIgnoreCase))

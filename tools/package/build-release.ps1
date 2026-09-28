@@ -8,6 +8,7 @@ param(
     [string]$BlackKnightCaptureBundle,
     [string]$DgVoodooArchive,
     [string]$DgVoodooSourceRoot,
+    [string]$DinputTo8AdapterPath,
     [string]$MercenariesPr1Archive,
     [switch]$StageOnly,
     [switch]$UseExistingRestore
@@ -166,6 +167,23 @@ try {
         if ($actual -ne $entry.Value) { throw "Movie decoder compatibility hash mismatch for $($entry.Key): $actual" }
         Copy-Item -LiteralPath $source -Destination (Join-Path $presentationDestination $entry.Key)
     }
+    if ([string]::IsNullOrWhiteSpace($DinputTo8AdapterPath)) {
+        throw 'Provide DinputTo8AdapterPath for the exact reviewed upstream Win32 dinput.dll.'
+    }
+    $inputLock = Get-Content -LiteralPath (Join-Path $projectRoot 'third_party/dinputto8.lock.json') -Raw | ConvertFrom-Json
+    $adapterSource = [IO.Path]::GetFullPath($DinputTo8AdapterPath)
+    if (-not (Test-Path -LiteralPath $adapterSource -PathType Leaf)) { throw 'The DirectInput adapter does not exist.' }
+    $adapterInfo = Get-Item -LiteralPath $adapterSource
+    $adapterHash = (Get-FileHash -LiteralPath $adapterSource -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($adapterInfo.Length -ne $inputLock.binarySize -or $adapterHash -ne $inputLock.binarySha256) {
+        throw "Unsupported DirectInput adapter length/hash: $($adapterInfo.Length)/$adapterHash"
+    }
+    $inputDestination = New-Item -ItemType Directory -Path (Join-Path $payload 'Compatibility/dinputto8') -Force
+    Copy-Item -LiteralPath $adapterSource -Destination (Join-Path $inputDestination 'dinput.dll')
+    $inputLicense = Join-Path $projectRoot 'third_party/dinputto8-LICENSE.txt'
+    $licenseHash = (Get-FileHash -LiteralPath $inputLicense -Algorithm SHA256).Hash.ToLowerInvariant()
+    if ($licenseHash -ne $inputLock.licenseSha256) { throw "DirectInput license hash mismatch: $licenseHash" }
+    Copy-Item -LiteralPath $inputLicense -Destination (Join-Path $inputDestination 'dinputto8-LICENSE.txt')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/DiscUtils-LICENSE.txt') -Destination (Join-Path $payload 'DiscUtils-LICENSE.txt')
 
@@ -254,7 +272,8 @@ try {
         'Compatibility/dgVoodoo2/D3D8.dll',
         'Compatibility/dgVoodoo2/D3D9.dll'
         'Compatibility/dgVoodoo2/SampleAddon.dll',
-        'Compatibility/dgVoodoo2/Issue10DecoderBlock.dll'
+        'Compatibility/dgVoodoo2/Issue10DecoderBlock.dll',
+        'Compatibility/dinputto8/dinput.dll'
     )
 
     if ($StageOnly) {
