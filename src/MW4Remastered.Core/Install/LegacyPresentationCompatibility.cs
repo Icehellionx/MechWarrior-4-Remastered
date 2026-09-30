@@ -17,12 +17,14 @@ public static class LegacyPresentationCompatibility
         };
     private const string ConfigName = "dgVoodoo.conf";
     public const string ConfigSha256 = "7ea9e4576a421157927de2d41551e3fdef8b4c76cd3adcc2d02ef19706f249a4";
-    private static readonly IReadOnlyDictionary<string, string> MovieDecoderFiles =
+    public const string BlackKnightManifestSha256 = "338530ce787423df44044d2e70ddbd5a2aaee038ed5b6992bbb02ff29a6d1515";
+    private static readonly IReadOnlyDictionary<string, string> PresentationFiles =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["Issue10DecoderBlock.dll"] = "17ddfcafeea049c43a2cf37ffb20432e6f64fbad5a58040ca10f298fa455a1dc",
-            ["MW4.exe.manifest"] = "9312eaf3454beacc1dc1c9145a0b1184b5898ea982ecbb00bf4ecc155c200302",
-            ["MW4Mercs.exe.manifest"] = "b7654d9771cb18a416de5fd03fbf6ad0fb1fa91d099b1e1973f9d1e84e972304",
+            ["MW4.exe.manifest"] = "65289fe618b25be488f8366dda8e5fc73e655b1cc482e4a826f57969314074d8",
+            ["MW4x.exe.manifest"] = BlackKnightManifestSha256,
+            ["MW4Mercs.exe.manifest"] = "40223487f0760de541a5819bc4a86fd1099c5853e98c63a6778a5f67ff670362",
         };
     private static readonly IReadOnlyDictionary<string, string> MovieManifestByExecutable =
         new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -51,11 +53,11 @@ public static class LegacyPresentationCompatibility
     private static IReadOnlyList<InstallFile> CreateGameFiles(string sourceRoot, string executableName, string destinationRoot)
     {
         var files = CreateFiles(sourceRoot, destinationRoot).ToList();
-        // Black Knight played its UI movie on the affected PC, so leave its decoder selection intact.
+        // Black Knight uses an embedded DPI manifest so its decoder selection stays unchanged.
         if (MovieManifestByExecutable.TryGetValue(executableName, out var manifestName))
         {
-            files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", Combine(destinationRoot, "Issue10DecoderBlock.dll")));
             files.Add(new InstallFile(sourceRoot, manifestName, Combine(destinationRoot, manifestName)));
+            files.Add(new InstallFile(sourceRoot, "Issue10DecoderBlock.dll", Combine(destinationRoot, "Issue10DecoderBlock.dll")));
         }
         return files;
     }
@@ -85,7 +87,7 @@ public static class LegacyPresentationCompatibility
             if (!actual.Equals(expected.Value, StringComparison.Ordinal))
                 throw new InvalidDataException($"Unsupported dgVoodoo2 file SHA-256 for {expected.Key}: {actual}");
         }
-        foreach (var expected in MovieDecoderFiles)
+        foreach (var expected in PresentationFiles)
         {
             var file = RequireRegularFile(fullRoot, expected.Key);
             using var stream = File.OpenRead(file);

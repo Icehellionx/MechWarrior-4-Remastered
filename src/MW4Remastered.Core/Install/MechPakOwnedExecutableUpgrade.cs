@@ -79,7 +79,9 @@ public sealed class MechPakOwnedExecutableUpgrade
             StagedInstallTransaction.RejectContainedFilePath(root, source);
             var sourceBytes = File.ReadAllBytes(source);
             var sourceHash = Hash(sourceBytes);
-            if (sourceHash.Equals(upgrade.CurrentSha256, StringComparison.OrdinalIgnoreCase)) continue;
+            if (sourceHash.Equals(upgrade.CurrentSha256, StringComparison.OrdinalIgnoreCase) ||
+                (Normalize(upgrade.RelativePath).Equals(BlackKnightDpiManifestTransform.RelativeExecutablePath, StringComparison.OrdinalIgnoreCase) &&
+                 BlackKnightDpiManifestTransform.IsEmbeddedForPackMask(packMask, sourceHash))) continue;
             if (!sourceHash.Equals(upgrade.PreviousSha256, StringComparison.OrdinalIgnoreCase))
             {
                 throw new InvalidDataException(

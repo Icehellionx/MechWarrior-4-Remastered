@@ -1,13 +1,10 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <assembly xmlns="urn:schemas-microsoft-com:asm.v1" manifestVersion="1.0" xmlns:asmv3="urn:schemas-microsoft-com:asm.v3">
-  <assemblyIdentity type="win32" name="MW4.Issue10.Vengeance" version="1.0.0.0" processorArchitecture="x86"/>
+  <assemblyIdentity type="win32" name="MW4.Presentation.BlackKnight" version="1.0.0.0" processorArchitecture="x86"/>
   <asmv3:application>
     <asmv3:windowsSettings>
       <dpiAware xmlns="http://schemas.microsoft.com/SMI/2005/WindowsSettings">true</dpiAware>
       <dpiAwareness xmlns="http://schemas.microsoft.com/SMI/2016/WindowsSettings">system</dpiAwareness>
     </asmv3:windowsSettings>
   </asmv3:application>
-  <file name="Issue10DecoderBlock.dll">
-    <comClass clsid="{5261169D-9B6C-435F-B1D5-F79BAF700C71}" threadingModel="Both"/>
-  </file>
 </assembly>

@@ -208,6 +208,7 @@ public sealed class GameInstallationCoordinator
     private readonly IBlackKnightEulaTransform blackKnightEulaTransform;
     private readonly IBlackKnightPr1Transform blackKnightPr1Transform;
     private readonly MechPakActivationTransform mechPakActivationTransform;
+    private readonly BlackKnightDpiManifestTransform blackKnightDpiManifestTransform;
     private readonly string patchHostPath;
     private readonly string blackKnightCaptureDllPath;
 
@@ -232,7 +233,8 @@ public sealed class GameInstallationCoordinator
         IBlackKnightEulaTransform? blackKnightEulaTransform = null,
         IBlackKnightPr1Transform? blackKnightPr1Transform = null,
         string? blackKnightCaptureDllPath = null,
-        MechPakActivationTransform? mechPakActivationTransform = null)
+        MechPakActivationTransform? mechPakActivationTransform = null,
+        BlackKnightDpiManifestTransform? blackKnightDpiManifestTransform = null)
     {
         this.plans = plans ?? throw new ArgumentNullException(nameof(plans));
         this.cabinetExtractor = cabinetExtractor ?? throw new ArgumentNullException(nameof(cabinetExtractor));
@@ -246,6 +248,7 @@ public sealed class GameInstallationCoordinator
         this.blackKnightEulaTransform = blackKnightEulaTransform ?? new BlackKnightEulaTransform();
         this.blackKnightPr1Transform = blackKnightPr1Transform ?? new OfficialBlackKnightPr1Transform();
         this.mechPakActivationTransform = mechPakActivationTransform ?? new MechPakActivationTransform();
+        this.blackKnightDpiManifestTransform = blackKnightDpiManifestTransform ?? new BlackKnightDpiManifestTransform();
         this.patchHostPath = Path.GetFullPath(patchHostPath ?? Path.Combine(AppContext.BaseDirectory, "MW4RemasteredRtpPatchHost.exe"));
         this.blackKnightCaptureDllPath = Path.GetFullPath(blackKnightCaptureDllPath ?? Path.Combine(AppContext.BaseDirectory, "BlackKnightPr1Capture.dll"));
     }
@@ -276,6 +279,7 @@ public sealed class GameInstallationCoordinator
         string? blackKnightEula = null;
         string? blackKnightPr1Scratch = null;
         string? mechPakActivationScratch = null;
+        string? blackKnightDpiScratch = null;
         IReadOnlyList<InstallFile>? blackKnightCompatibilityFiles = null;
         try
         {
@@ -437,6 +441,17 @@ public sealed class GameInstallationCoordinator
                     plan, enabledMechPaks, mechPakActivationScratch, cancellationToken);
             }
 
+            if (request is VengeanceInstallRequest withBlackKnight &&
+                plan.Components.Contains("black-knight", StringComparer.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(withBlackKnight.PresentationCompatibilityRoot))
+            {
+                var parent = Directory.GetParent(destination)?.FullName
+                    ?? throw new InvalidDataException("Install destination must have a parent directory.");
+                blackKnightDpiScratch = Path.Combine(parent, $".black-knight-dpi-{Guid.NewGuid():N}");
+                plan = blackKnightDpiManifestTransform.TransformPlan(
+                    plan, withBlackKnight.PresentationCompatibilityRoot, blackKnightDpiScratch);
+            }
+
             Report(GameInstallationStage.Committing, "Staging and atomically committing owned files.");
             var preservingExistingFiles = Directory.Exists(destination);
             var manifest = transaction.Execute(plan, destination, cancellationToken);
@@ -462,6 +477,7 @@ public sealed class GameInstallationCoordinator
             if (blackKnightTransformScratch is not null) RemoveScratchTree(blackKnightTransformScratch);
             if (blackKnightPr1Scratch is not null) RemoveScratchTree(blackKnightPr1Scratch);
             if (mechPakActivationScratch is not null) RemoveScratchTree(mechPakActivationScratch);
+            if (blackKnightDpiScratch is not null) RemoveScratchTree(blackKnightDpiScratch);
         }
 
         void Report(GameInstallationStage stage, string message) =>

@@ -167,6 +167,29 @@ internal sealed class InstallWorker
                     if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
                 }
             }
+            if (statuses.TryGetValue("black-knight", out var blackKnightStatus) &&
+                !string.IsNullOrWhiteSpace(blackKnightStatus.InstallPath))
+            {
+                var verified = new InstallManifestVerifier().Verify(
+                    blackKnightStatus.InstallPath, InstallVerificationScope.OwnedFiles);
+                if (!verified.IsValid || verified.Manifest is null)
+                    throw new InvalidDataException("Black Knight DPI migration requires a verified owned manifest.");
+                var scratch = Path.Combine(Path.GetTempPath(), $"mw4-black-knight-dpi-upgrade-{Guid.NewGuid():N}");
+                try
+                {
+                    var replacements = new BlackKnightDpiManifestTransform().CreateUpgradeReplacement(
+                        blackKnightStatus.InstallPath, verified.Manifest, compatibilityRoot, scratch);
+                    if (replacements.Count > 0)
+                    {
+                        compatibilityReplacement.Execute("vengeance", blackKnightStatus.InstallPath, replacements);
+                        TryAppendLog(args.LogPath, "Embedded the system-DPI-aware manifest in the owned Black Knight executable.");
+                    }
+                }
+                finally
+                {
+                    if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
+                }
+            }
             foreach (var productId in new[] { "vengeance", "mercenaries" })
             {
                 if (!statuses.TryGetValue(productId, out var status) || string.IsNullOrWhiteSpace(status.InstallPath)) continue;

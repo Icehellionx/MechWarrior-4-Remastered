@@ -6,11 +6,11 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered v0.6.47.3 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.3/MechWarrior-4-Remastered-Setup-0.6.47.3.exe)
+### [Download MechWarrior 4 Remastered v0.6.47.4 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.4/MechWarrior-4-Remastered-Setup-0.6.47.4.exe)
 
-Current test release: [v0.6.47.3](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.3). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
+Current test release: [v0.6.47.4](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.4). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
 
-This test release adds a game-local movie-decoder workaround for Vengeance and Mercenaries and an optional joystick mode for all three games. The affected video-crash PC and physical joysticks have not yet confirmed it. In the launcher, click **JOYSTICK OFF** to enable joystick input before starting a game; leave it off to keep the previous launch behavior.
+This test release makes Vengeance, Black Knight, and Mercenaries system DPI aware to address the [display-scaling mouse issue](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8). Black Knight launched with the change at 125% scaling in a Windows 11 VM; affected users have not yet confirmed mouse behavior in a mission. The game-local movie-decoder workaround and optional joystick mode from v0.6.47.3 remain included. The affected video-crash PC and physical joysticks have not yet confirmed those changes. In the launcher, click **JOYSTICK OFF** to enable joystick input before starting a game; leave it off to keep the previous launch behavior.
 
 The installer does **not** contain the games: setup asks for your original ISOs, supported CUE/BIN pairs, or ZIP archives and builds the installed games from those files.
 
@@ -20,7 +20,7 @@ Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/M
 2. Add the ISO, supported CUE/BIN, or ZIP files for the games and optional Mech Paks you own.
 3. Open the new desktop launcher and choose a game or manual.
 
-If the direct link does not work, open the [v0.6.47.3 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.3) and download the setup EXE under **Assets**.
+If the direct link does not work, open the [v0.6.47.4 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.4) and download the setup EXE under **Assets**.
 
 ## Screenshots
 
@@ -36,14 +36,14 @@ If the direct link does not work, open the [v0.6.47.3 release page](https://gith
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for v0.6.47.3:
+SHA-256 for v0.6.47.4:
 
 ```text
-98169cc3bccb4d1fe12cec266b1a5df5524af8153db88208f75d80d973490006
+6dd3f531f1f0e23b9502602b0580dfbe6baa6f376ad6bf696d95a6eb8faa33a2
 ```
 
 ```powershell
-Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.47.3.exe -Algorithm SHA256
+Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.47.4.exe -Algorithm SHA256
 ```
 
 ## What you need

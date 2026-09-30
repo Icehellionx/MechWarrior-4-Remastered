@@ -263,6 +263,36 @@ Check(blackKnightCaptureExhausted,
 Check(BlackKnightPr1ExecutableTransform.TransformId.EndsWith("static-clean-v4", StringComparison.Ordinal) &&
     BlackKnightPr1ExecutableTransform.OutputSha256 == "b31bd0518311eb88e0f94a38e7b5a7ee6e98f4431f8cf585276b3df1166b8a1e",
     "Black Knight static transform exposes the reviewed v4 output identity");
+Check(BlackKnightDpiManifestTransform.IsEmbeddedForPackMask(3,
+        "ff97adcbbff26a3e9bd8a6d5aa18a3f31cbb590e92ed46710754fa8d05a94e59") &&
+    !BlackKnightDpiManifestTransform.IsEmbeddedForPackMask(1,
+        "ff97adcbbff26a3e9bd8a6d5aa18a3f31cbb590e92ed46710754fa8d05a94e59"),
+    "Black Knight DPI migration accepts only the embedded executable for the owned pack selection");
+var blackKnightDpiRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-black-knight-dpi-rejection-" + Guid.NewGuid().ToString("N"));
+try
+{
+    Directory.CreateDirectory(blackKnightDpiRejectionRoot);
+    File.WriteAllText(Path.Combine(blackKnightDpiRejectionRoot, "MW4x.exe"), "unqualified executable");
+    var plan = new InstallPlan("vengeance",
+        [new InstallFile(blackKnightDpiRejectionRoot, "MW4x.exe", BlackKnightDpiManifestTransform.RelativeExecutablePath)],
+        ["vengeance", "black-knight", "clan", "inner-sphere"]);
+    var scratch = Path.Combine(blackKnightDpiRejectionRoot, "scratch");
+    var rejected = false;
+    try
+    {
+        _ = new BlackKnightDpiManifestTransform().TransformPlan(plan, blackKnightDpiRejectionRoot, scratch);
+    }
+    catch (InvalidDataException exception)
+    {
+        rejected = exception.Message.Contains("does not match the selected Mech Paks", StringComparison.Ordinal);
+    }
+    Check(rejected && !Directory.Exists(scratch),
+        "Black Knight DPI transform rejects unqualified executables before writing scratch output");
+}
+finally
+{
+    if (Directory.Exists(blackKnightDpiRejectionRoot)) Directory.Delete(blackKnightDpiRejectionRoot, true);
+}
 var blackKnightStaticTransformRejectionRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-black-knight-static-rejection-" + Guid.NewGuid().ToString("N"));
 try
 {

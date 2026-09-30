@@ -2,6 +2,8 @@ $ErrorActionPreference = 'Stop'
 $root = Split-Path -Parent $PSScriptRoot
 $profile = Get-Content -LiteralPath (Join-Path $root 'assets/compatibility/dgVoodoo-MW4.conf') -Raw
 $plan = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/LegacyPresentationCompatibility.cs') -Raw
+$dpiTransform = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/BlackKnightDpiManifestTransform.cs') -Raw
+$coordinator = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Install/GameInstallationCoordinator.cs') -Raw
 $worker = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Installer/InstallWorker.cs') -Raw
 $launcher = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/LaunchOrchestrator.cs') -Raw
 $lifecycle = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Core/Launch/GameWindowLifecycleGuard.cs') -Raw
@@ -10,6 +12,11 @@ $configuration = Get-Content -LiteralPath (Join-Path $root 'src/MW4Remastered.Co
 $lock = Get-Content -LiteralPath (Join-Path $root 'third_party/dgVoodoo2.lock.json') -Raw | ConvertFrom-Json
 $addonPatch = Get-Content -LiteralPath (Join-Path $root 'tools/compatibility/patches/dgVoodoo2-MW4-Presentation.patch') -Raw
 $releaseBuilder = Get-Content -LiteralPath (Join-Path $root 'tools/package/build-release.ps1') -Raw
+$dpiManifests = [ordered]@{
+    'MW4.exe.manifest' = @{ Hash = '65289fe618b25be488f8366dda8e5fc73e655b1cc482e4a826f57969314074d8'; Decoder = $true }
+    'MW4x.exe.manifest' = @{ Hash = '338530ce787423df44044d2e70ddbd5a2aaee038ed5b6992bbb02ff29a6d1515'; Decoder = $false }
+    'MW4Mercs.exe.manifest' = @{ Hash = '40223487f0760de541a5819bc4a86fd1099c5853e98c63a6778a5f67ff670362'; Decoder = $true }
+}
 
 function Assert-True {
     param([Parameter(Mandatory)][bool]$Condition, [Parameter(Mandatory)][string]$Message)
@@ -19,6 +26,24 @@ function Assert-True {
 Assert-True ($lock.version -eq '2.87.5' -and $lock.archiveSha256 -eq '5ffde6927f7355ca3fdd5d785b581256a8e6539fa13e395a891ade6ba1040850') 'dgVoodoo2 provenance must stay pinned to the evaluated complete archive.'
 Assert-True ($lock.profileSha256 -eq '7ea9e4576a421157927de2d41551e3fdef8b4c76cd3adcc2d02ef19706f249a4' -and $plan -match $lock.profileSha256) 'The reviewed MW4 dgVoodoo profile hash must remain recorded and enforced by the install boundary.'
 Assert-True ($releaseBuilder -match $lock.profileSha256) 'Release assembly must accept only the same reviewed dgVoodoo profile hash enforced by the install boundary.'
+foreach ($entry in $dpiManifests.GetEnumerator()) {
+    $path = Join-Path $root "assets/compatibility/$($entry.Key)"
+    $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
+    [xml]$manifest = Get-Content -LiteralPath $path -Raw
+    $namespaces = [System.Xml.XmlNamespaceManager]::new($manifest.NameTable)
+    $namespaces.AddNamespace('asmv1', 'urn:schemas-microsoft-com:asm.v1')
+    $namespaces.AddNamespace('asmv3', 'urn:schemas-microsoft-com:asm.v3')
+    $namespaces.AddNamespace('dpi2005', 'http://schemas.microsoft.com/SMI/2005/WindowsSettings')
+    $namespaces.AddNamespace('dpi2016', 'http://schemas.microsoft.com/SMI/2016/WindowsSettings')
+    Assert-True ($hash -eq $entry.Value.Hash -and $plan.Contains($hash) -and $releaseBuilder.Contains($hash)) "$($entry.Key) must be pinned by both install and package boundaries."
+    Assert-True ($manifest.SelectSingleNode('/asmv1:assembly/asmv3:application/asmv3:windowsSettings/dpi2005:dpiAware', $namespaces).InnerText -eq 'true' -and $manifest.SelectSingleNode('/asmv1:assembly/asmv3:application/asmv3:windowsSettings/dpi2016:dpiAwareness', $namespaces).InnerText -eq 'system') "$($entry.Key) must request system DPI awareness."
+    $decoderClasses = $manifest.SelectNodes('/asmv1:assembly/asmv1:file/asmv1:comClass', $namespaces)
+    Assert-True ($decoderClasses.Count -eq [int]$entry.Value.Decoder) "$($entry.Key) must preserve its original decoder selection policy."
+    if ($entry.Value.Decoder) {
+        Assert-True ($decoderClasses[0].GetAttribute('clsid') -eq '{5261169D-9B6C-435F-B1D5-F79BAF700C71}') "$($entry.Key) must retain the narrow AC3 decoder redirect."
+    }
+}
+Assert-True ($plan -notmatch '\["MW4x\.exe"\]\s*=' -and $dpiTransform -match 'UpdateResource\(' -and $coordinator -match 'blackKnightDpiManifestTransform\.TransformPlan' -and $worker -match 'CreateUpgradeReplacement\(') 'Black Knight must embed its manifest in exact installed executables on clean install and owned upgrade; its ignored sidecar must not be installed.'
 Assert-True ($lock.files.'MS/x86/DDraw.dll' -eq '612a24408a090a3c6f3886557fa18034ee742e94ad0a40ebdf854d2816176c2e' -and $lock.productBindings.Count -eq 3) 'The exact stock x86 wrapper and all three product bindings must remain recorded.'
 Assert-True ($profile -match 'Version\s*=\s*0x287' -and $profile -match 'OutputAPI\s*=\s*d3d12_fl12_0' -and $profile -match 'ScalingMode\s*=\s*stretched_ar' -and $profile -match 'FullScreenMode\s*=\s*false' -and $profile -match 'CenterAppWindow\s*=\s*true' -and $profile -match 'WindowedAttributes\s*=\s*borderless,\s*fullscreensize' -and $profile -match 'AppControlledScreenMode\s*=\s*false') 'The profile must preserve each supplied surface aspect in a D3D12-backed centered borderless desktop-sized window, avoiding a physical display-mode switch.'
 Assert-True ($profile -match 'SystemHookFlags\s*=\s*cursor' -and $profile -match 'FPSLimit\s*=\s*30' -and $profile -match 'dgVoodooWatermark\s*=\s*false' -and $profile -match '3DfxWatermark\s*=\s*false') 'The MW4-specific cursor and physics-safe 30 FPS limit must remain explicit, and every dgVoodoo watermark path must remain disabled.'
