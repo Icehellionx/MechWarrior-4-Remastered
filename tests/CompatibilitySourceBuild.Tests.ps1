@@ -49,4 +49,23 @@ Assert-True ($currentPresentationLock.presentationAddon.upstreamCommit -eq 'de5f
 Assert-True ($currentPresentationBuild -match [regex]::Escape($currentPresentationLock.presentationAddon.upstreamCommit) -and $currentPresentationBuild -match 'git -C \$scratchSource apply -p0' -and $currentPresentationBuild -match 'ps_5_1') 'The add-on build must exact-pin upstream, apply the local patch, and rebuild its pixel shader.'
 Assert-True ($currentPresentationLock.presentationAddon.reproducibility -match 'byte-identical' -and $currentPresentationLock.presentationAddon.sampleAddonDllSha256 -match '^[0-9a-f]{64}$') 'The reproducible add-on DLL hash must remain recorded.'
 
+$inputLock = Get-Content (Join-Path $root 'third_party/dinputto8-mw4-trial.lock.json') -Raw | ConvertFrom-Json
+$inputBuild = Get-Content (Join-Path $root 'tools/compatibility/build-dinputto8-mw4-trial.ps1') -Raw
+Assert-True ($inputLock.commit -match '^[0-9a-f]{40}$' -and $inputLock.loggingCommit -match '^[0-9a-f]{40}$' -and $inputLock.license -eq 'Zlib') 'Input trial must pin upstream, Logging and license.'
+foreach ($pair in @(@($inputLock.localPatch,$inputLock.localPatchSha256), @($inputLock.policy,$inputLock.policySha256))) {
+    Assert-True ((Get-FileHash (Join-Path $root $pair[0])).Hash.ToLowerInvariant() -eq $pair[1]) 'Input trial source hashes must match the reviewed lock.'
+}
+Assert-True ($inputBuild.Contains('git -C $source archive') -and $inputBuild.Contains('git -C $logging archive') -and $inputBuild.Contains('Trial patch did not modify the build inputs.')) 'Input trial must export pinned sources and prove the patch was applied.'
+Assert-True ($inputBuild.Contains('candidateBinarySha256') -and $inputBuild.Contains('candidateBinaryBytes') -and $inputBuild.Contains('-not $Requalify')) 'Input trial must reject an unexpected binary unless explicitly requalifying a research build.'
+Assert-True ($inputBuild.Contains('MW4ButtonPolicy.Tests.exe') -and $inputBuild.Contains('& $wrapperExe') -and $inputBuild.Contains('/W4 /WX')) 'Input build must compile and run policy and actual-wrapper regressions.'
+$policyAttributes = & git -C $root check-attr eol -- $inputLock.policy
+if ($LASTEXITCODE) { throw 'Cannot inspect hash-pinned policy checkout attributes.' }
+Assert-True ($policyAttributes -match ': eol: lf$') 'Hash-pinned native policy must retain LF bytes on Windows checkouts.'
+$productionInput = Get-Content (Join-Path $root 'third_party/dinputto8.lock.json') -Raw | ConvertFrom-Json
+$inputVerifier = Get-Content (Join-Path $root 'src/MW4Remastered.Core/Install/LegacyInputCompatibility.cs') -Raw
+Assert-True ($productionInput.binarySha256 -eq $inputLock.candidateBinarySha256 -and $productionInput.binarySize -eq $inputLock.candidateBinaryBytes) 'Production and source-build pins must identify the same tested adapter.'
+Assert-True ($inputVerifier.Contains($productionInput.binarySha256) -and $inputVerifier.Contains('273_408')) 'Runtime verification must match the packaged adapter.'
+Assert-True ($productionInput.commit -eq $inputLock.commit -and $productionInput.submodule.commit -eq $inputLock.loggingCommit -and $productionInput.localBuild.patchSha256 -eq $inputLock.localPatchSha256 -and $productionInput.localBuild.policySha256 -eq $inputLock.policySha256) 'Production must preserve exact modified-source provenance.'
+$nativeWorkflow = Get-Content (Join-Path $root '.github/workflows/application-ci.yml') -Raw
+Assert-True ($nativeWorkflow.Contains('native-input-regressions:') -and $nativeWorkflow.Contains($inputLock.commit) -and $nativeWorkflow.Contains('build-dinputto8-mw4-trial.ps1') -and $nativeWorkflow.Contains('submodule update --init --recursive')) 'CI must build the actual patched wrapper from pinned upstream and Logging sources.'
 Write-Host 'Compatibility source-build contract tests passed.'

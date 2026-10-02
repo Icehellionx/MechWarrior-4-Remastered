@@ -1,0 +1,255 @@
+diff --git a/IDirectInputDeviceX.cpp b/IDirectInputDeviceX.cpp
+index 68bb456..a47d552 100644
+--- a/IDirectInputDeviceX.cpp
++++ b/IDirectInputDeviceX.cpp
+@@ -321,10 +321,11 @@ ULONG m_IDirectInputDeviceX::Release()
+ //
+ // DIJOYSTATE2 first appears in the DirectX 7 SDK, so a caller asking for 0x0700 or
+ // later may legitimately be using c_dfDIJoystick2 and can address all 128 buttons.
+-// Only versions below that are clamped, which leaves DX7/DX8 callers untouched.
++// Local MW4 modification: the game-local build also caps DX7 joysticks at 31.
++// Other callers retain the upstream policy; keyboards and mice are unchanged.
+ bool m_IDirectInputDeviceX::ClampLegacyButtons() const
+ {
+-	if (IsMouse || diVersion == 0 || diVersion >= 0x0700)
++	if (IsMouse || diVersion == 0 || diVersion > 0x0700)
+ 	{
+ 		return false;
+ 	}
+@@ -358,13 +359,13 @@ HRESULT m_IDirectInputDeviceX::GetCapabilities(LPDIDEVCAPS lpDIDevCaps)
+ 		// Report only what a DIJOYSTATE-era caller can actually address. Reporting
+ 		// 128 on a device the caller believes has at most 32 is what drives fixed
+ 		// 32-entry lookup tables out of bounds.
+-		if (ClampLegacyButtons() && lpDIDevCaps->dwButtons > LegacyMaxButtons)
++		if (ClampLegacyButtons() && lpDIDevCaps->dwButtons > ButtonLimit())
+ 		{
+ 			LOG_LIMIT(3, __FUNCTION__ << " Note: clamping reported buttons from "
+-				<< lpDIDevCaps->dwButtons << " to " << LegacyMaxButtons
++				<< lpDIDevCaps->dwButtons << " to " << ButtonLimit()
+ 				<< " for DirectInput version " << Logging::hex(diVersion));
+ 
+-			lpDIDevCaps->dwButtons = LegacyMaxButtons;
++			lpDIDevCaps->dwButtons = ButtonLimit();
+ 		}
+ 	}
+ 
+@@ -478,7 +479,7 @@ HRESULT m_IDirectInputDeviceX::EnumObjectsX(T* ProxyInterfaceT, V lpCallback, LP
+ 	CallbackContext.dwDefaultOffset = OffsetForMissingObjects;
+ 	CallbackContext.dwStructSize = diVersion >= 0x500 ? sizeof(D) : sizeof(D_Old);
+ 	CallbackContext.bClampLegacyButtons = ClampLegacyButtons();
+-	CallbackContext.dwMaxButtons = LegacyMaxButtons;
++	CallbackContext.dwMaxButtons = ButtonLimit();
+ 
+ 	HRESULT hr = ProxyInterfaceT->EnumObjects(ObjectEnumerator::StoreObjectsCallback, &CallbackContext, dwFlags);
+ 	if (FAILED(hr))
+@@ -565,6 +566,14 @@ HRESULT m_IDirectInputDeviceX::GetDeviceState(DWORD cbData, LPVOID lpvData)
+ 		return hr;
+ 	}
+ 
++	if (diVersion == 0x0700 && DevType7 == DIDEVTYPE_JOYSTICK)
++	{
++		EnterCriticalSection(&dics);
++		HRESULT hr = ProxyInterface->GetDeviceState(cbData, lpvData);
++		if (SUCCEEDED(hr)) mw4input::ClearHiddenState(lpvData, cbData, Mw4HiddenOffsets);
++		LeaveCriticalSection(&dics);
++		return hr;
++	}
+ 	return ProxyInterface->GetDeviceState(cbData, lpvData);
+ }
+ 
+@@ -572,8 +581,9 @@ HRESULT m_IDirectInputDeviceX::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJEC
+ {
+ 	Logging::LogDebug() << __FUNCTION__ << " (" << this << ")";
+ 
+-	//  If just peeking or clearing data
+-	if (dwFlags == DIGDD_PEEK || !rgdod || (pdwInOut && *pdwInOut == INFINITE))
++	// Local fix: PEEK with a caller buffer still needs the DX3 record conversion.
++	// Forwarding it directly lets the DI8 proxy write 20 bytes into a 16-byte slot.
++	if (!rgdod || (pdwInOut && *pdwInOut == INFINITE))
+ 	{
+ 		return ProxyInterface->GetDeviceData(sizeof(DIDEVICEOBJECTDATA), rgdod, pdwInOut, dwFlags);
+ 	}
+@@ -612,6 +622,33 @@ HRESULT m_IDirectInputDeviceX::GetDeviceData(DWORD cbObjectData, LPDIDEVICEOBJEC
+ 	return hr;
+ }
+ 
++// Local MW4 modification: prevent excess buttons entering immediate or buffered input.
++static BOOL CALLBACK CollectMw4Buttons(const DIDEVICEOBJECTINSTANCEW* object, void* context)
++{
++    auto& buttons = *static_cast<std::vector<mw4input::ButtonObject>*>(context);
++    if (!mw4input::IsHiddenButton(object->dwType))
++        buttons.push_back({ object->guidType, object->dwType });
++    return DIENUM_CONTINUE;
++}
++
++HRESULT m_IDirectInputDeviceX::SetProxyDataFormat(LPCDIDATAFORMAT format)
++{
++    if (diVersion != 0x0700 || DevType7 != DIDEVTYPE_JOYSTICK)
++        return ProxyInterface->SetDataFormat(format);
++    std::vector<mw4input::ButtonObject> buttons;
++    HRESULT inventory = ProxyInterface->EnumObjects(CollectMw4Buttons, &buttons, DIDFT_BUTTON);
++    if (FAILED(inventory)) return inventory;
++    auto filtered = mw4input::Filter(*format, buttons);
++    DIDATAFORMAT safe = *format;
++    safe.dwNumObjs = static_cast<DWORD>(filtered.objects.size());
++    safe.rgodf = filtered.objects.empty() ? nullptr : filtered.objects.data();
++    EnterCriticalSection(&dics);
++    HRESULT hr = ProxyInterface->SetDataFormat(&safe);
++    if (SUCCEEDED(hr)) Mw4HiddenOffsets = std::move(filtered.hiddenOffsets);
++    LeaveCriticalSection(&dics);
++    return hr;
++}
++
+ HRESULT m_IDirectInputDeviceX::SetDataFormat(LPCDIDATAFORMAT lpdf)
+ {
+ 	Logging::LogDebug() << __FUNCTION__ << " (" << this << ")";
+@@ -643,7 +680,7 @@ HRESULT m_IDirectInputDeviceX::SetDataFormat(LPCDIDATAFORMAT lpdf)
+ 	{
+ 		if (HasValidFormat)
+ 		{
+-			return ProxyInterface->SetDataFormat(&LastValidFormat);
++			return SetProxyDataFormat(&LastValidFormat);
+ 		}
+ 
+ 		LPCDIDATAFORMAT Format = nullptr;
+@@ -686,7 +723,7 @@ HRESULT m_IDirectInputDeviceX::SetDataFormat(LPCDIDATAFORMAT lpdf)
+ 
+ 		Offset = 0;
+ 
+-		HRESULT hr = ProxyInterface->SetDataFormat(Format);
++		HRESULT hr = SetProxyDataFormat(Format);
+ 		if (SUCCEEDED(hr))
+ 		{
+ 			StoreLastValidFormat(Format);
+@@ -700,7 +737,7 @@ HRESULT m_IDirectInputDeviceX::SetDataFormat(LPCDIDATAFORMAT lpdf)
+ 	{
+ 		Offset = lpdf->rgodf[0].dwOfs - 1;
+ 
+-		HRESULT hr = ProxyInterface->SetDataFormat(&c_dfDIKeyboard);
++		HRESULT hr = SetProxyDataFormat(&c_dfDIKeyboard);
+ 		if (SUCCEEDED(hr))
+ 		{
+ 			StoreLastValidFormat(&c_dfDIKeyboard);
+@@ -743,7 +780,7 @@ HRESULT m_IDirectInputDeviceX::SetDataFormat(LPCDIDATAFORMAT lpdf)
+ 
+ 	Offset = 0;
+ 
+-	HRESULT hr = ProxyInterface->SetDataFormat(&df);
++	HRESULT hr = SetProxyDataFormat(&df);
+ 	if (SUCCEEDED(hr))
+ 	{
+ 		StoreLastValidFormat(&df);
+@@ -785,6 +822,8 @@ HRESULT m_IDirectInputDeviceX::GetObjectInfoX(T* ProxyInterfaceT, V pdidoi, DWOR
+ 
+ 	if (SUCCEEDED(hr) && pdidoi && pdidoi->dwSize)
+ 	{
++		if (diVersion == 0x0700 && DevType7 == DIDEVTYPE_JOYSTICK && mw4input::IsHiddenButton(pdidoi->dwType))
++			return DIERR_OBJECTNOTFOUND;
+ 		if (!EnumObjectDataLUT.empty())
+ 		{
+ 			const bool bOldDInputEnumerationBehaviour = diVersion < 0x700 && diVersion != 0x5B2;
+diff --git a/IDirectInputDeviceX.h b/IDirectInputDeviceX.h
+index 3986866..5efb1fa 100644
+--- a/IDirectInputDeviceX.h
++++ b/IDirectInputDeviceX.h
+@@ -2,6 +2,7 @@
+ 
+ #include <map>
+ #include <vector>
++#include "MW4ButtonPolicy.h"
+ 
+ class m_IDirectInputDeviceX final : public IDirectInputDevice7W, public IDirectInputDevice7A,
+ 		AddressLookupTableDinputObject<m_IDirectInputDeviceX>, ModuleObjectCount::CountedObject
+@@ -64,6 +65,9 @@ private:
+ 	// Whether to apply that clamp. Set for joysticks on pre-DX8 interfaces; never
+ 	// for mice or keyboards, whose object counts are unrelated.
+ 	bool ClampLegacyButtons() const;
++	DWORD ButtonLimit() const { return diVersion == 0x0700 ? mw4input::MaxButtons : LegacyMaxButtons; }
++	HRESULT SetProxyDataFormat(LPCDIDATAFORMAT format);
++	std::vector<DWORD> Mw4HiddenOffsets;
+ 
+ 	// Critical section for shared memory
+ 	CRITICAL_SECTION dics = {};
+diff --git a/IDirectInputTypes.cpp b/IDirectInputTypes.cpp
+index 7760c32..9b50daa 100644
+--- a/IDirectInputTypes.cpp
++++ b/IDirectInputTypes.cpp
+@@ -176,6 +176,27 @@ DWORD ConvertDevSubTypeTo7(DWORD dwDevType, DWORD dwDevType7, DWORD dwDevSubType
+ 	}
+ }
+ 
++// Local build-only refactor: named helpers avoid MSVC path-hashed lambda ordering.
++// Preserve the upstream effect transformations and copy-on-first-write contract.
++static void MakeEffectWritable(bool& modified, LPCDIEFFECT& lpeff, DIEFFECT& eff)
++{
++	if (!modified)
++	{
++		if (&eff != lpeff)
++		{
++			eff = *lpeff;
++			lpeff = &eff;
++		}
++		modified = true;
++	}
++}
++
++static bool IsConditionEffect(REFGUID guid)
++{
++	return guid == GUID_Spring || guid == GUID_Damper ||
++		guid == GUID_Friction || guid == GUID_Inertia;
++}
++
+ bool FixLegacyEffect(REFGUID guid, LPCDIEFFECT& lpeff, DIEFFECT& eff)
+ {
+ 	bool modified = false;
+@@ -185,26 +206,13 @@ bool FixLegacyEffect(REFGUID guid, LPCDIEFFECT& lpeff, DIEFFECT& eff)
+ 		return false;
+ 	}
+ 
+-	auto MakeWritable = [&]()
+-	{
+-		if (!modified)
+-		{
+-			if (&eff != lpeff)
+-			{
+-				eff = *lpeff;
+-				lpeff = &eff;
+-			}
+-			modified = true;
+-		}
+-	};
+-
+ 	if (lpeff->cAxes == 1 &&
+ 		lpeff->rgdwAxes && *lpeff->rgdwAxes == DIJOFS_Y &&
+ 		lpeff->rglDirection && *lpeff->rglDirection == 0)
+ 	{
+ 		const DWORD* OldAxesPtr = lpeff->rgdwAxes;
+ 
+-		MakeWritable();
++		MakeEffectWritable(modified, lpeff, eff);
+ 
+ 		static DWORD DefaultAxis = DIJOFS_X;
+ 		eff.rgdwAxes = &DefaultAxis;
+@@ -215,21 +223,13 @@ bool FixLegacyEffect(REFGUID guid, LPCDIEFFECT& lpeff, DIEFFECT& eff)
+ 			<< ", Axis=" << *OldAxesPtr << "->" << *eff.rgdwAxes);
+ 	}
+ 
+-	auto IsConditionEffect = [](REFGUID guid)
+-	{
+-		return guid == GUID_Spring ||
+-			guid == GUID_Damper ||
+-			guid == GUID_Friction ||
+-			guid == GUID_Inertia;
+-	};
+-
+ 	if (lpeff->cAxes == 2)
+ 	{
+ 		const DWORD OldFlags = lpeff->dwFlags;
+ 		const DWORD OldAxes = lpeff->cAxes;
+ 		const DWORD OldTypeSpecificParams = lpeff->cbTypeSpecificParams;
+ 
+-		MakeWritable();
++		MakeEffectWritable(modified, lpeff, eff);
+ 
+ 		eff.cAxes = 1;
+ 		eff.dwFlags &= ~(DIEFF_CARTESIAN | DIEFF_POLAR | DIEFF_SPHERICAL);

@@ -35,6 +35,7 @@ Assert-True ($inno -match [regex]::Escape('{localappdata}\MechWarrior 4 Remaster
 Assert-True (($inno | Select-String -Pattern 'Source:' -AllMatches).Matches.Count -eq ($inno | Select-String -Pattern 'notimestamp' -AllMatches).Matches.Count) 'Every packaged source must omit source timestamps for reproducibility.'
 Assert-True ($build -match '--self-contained true' -and $build -match 'PublishSingleFile=true') 'Installer and launcher publishes must remain self-contained single files.'
 Assert-True ($build -match 'assert-release-tree\.ps1') 'Staged package payload must pass the release-tree allowlist gate.'
+Assert-True ($build.Contains('-SourceRoot $DinputTo8SourceRoot -OutputDirectory $inputBuild') -and $build.Contains('build-dinputto8-mw4-trial.ps1') -and $build -notmatch '-Requalify') 'Every package must freshly build the pinned input source and run native regressions without bypassing the binary gate.'
 Assert-True ($build -match '\.sha256') 'Package build must emit a SHA-256 sidecar.'
 Assert-True ($build -notmatch 'assemble-black-knight-bundle\.ps1' -and $inno -notmatch 'Source:.*Compatibility\\BlackKnight\\') 'Package staging must exclude the superseded retail Black Knight loader experiment.'
 Assert-True ($inno -match 'InstallDelete' -and $inno -match 'Compatibility\\BlackKnight\\version\.dll' -and $inno -notmatch 'Type:\s*filesandordirs;\s*Name:\s*"\{app\}\\Compatibility') 'Package upgrade must remove only the exact old Black Knight proxy artifacts, never a broad compatibility tree.'

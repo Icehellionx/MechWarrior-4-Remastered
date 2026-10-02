@@ -27,11 +27,12 @@ MechWarrior 4: Vengeance, Black Knight, and Mercenaries use the stock x86 Direct
 
 ## dinputto8
 
-An optional joystick launch uses the game-local x86 `dinput.dll` from elishacloud's dinputto8 at commit `f18224808c58c84e46c003e100804bd3184d8168`. The exact upstream Win32 CI artifact is hash-gated during package assembly and again at game launch. The adapter translates legacy DirectInput calls to DirectInput 8; it installs no driver and does not include vJoy. Keyboard and mouse remain the default launch mode.
+Joystick launch uses a locally modified game-local x86 `dinput.dll` built from elishacloud's dinputto8 at commit `f18224808c58c84e46c003e100804bd3184d8168`. It translates legacy DirectInput calls to DirectInput 8. The local patch limits DX7 joystick exposure to 31 buttons, filters excess format/state objects, converts legacy buffered records safely, and makes effect helpers reproducible. Joystick input defaults ON unless the user saved OFF. It installs no driver and does not include vJoy or Joystick Gremlin.
 
 - Upstream: <https://github.com/elishacloud/dinputto8>
 - License: zlib; packaged as `Compatibility/dinputto8/dinputto8-LICENSE.txt`
-- Exact revision, CI artifact, submodule revision, and hashes: `third_party/dinputto8.lock.json`
+- Exact upstream/submodule revisions, local build hashes, and separate original CI baseline: `third_party/dinputto8.lock.json`
+- Local modifications: `Compatibility/dinputto8/dinputto8-MW4-31-buttons.patch` and `MW4ButtonPolicy.h`; the license and source provenance are packaged beside the DLL. The modified binary is not represented as an upstream CI artifact.
 
 ## Inno Setup
 

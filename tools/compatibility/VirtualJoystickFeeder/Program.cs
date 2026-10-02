@@ -20,6 +20,8 @@ try
     if (command == "status")
     {
         Console.WriteLine($"Device {device} status: {Native.GetVJDStatus(device)} (0=owned, 1=free, 2=busy, 3=missing, 4=unknown)");
+        for (uint usage = 0x30; usage <= 0x38; ++usage)
+            Console.WriteLine($"Axis 0x{usage:X} presence: {Native.GetVJDAxisExist(device, usage)} (1=present)");
         return;
     }
 
@@ -60,8 +62,7 @@ try
 
     try
     {
-        if (!Native.ResetVJD(device))
-            throw new InvalidOperationException("Could not reset the vJoy device.");
+        Neutralize(device);
 
         switch (command)
         {
@@ -77,34 +78,56 @@ try
                     throw new InvalidOperationException("Could not set the axis maximum.");
                 Console.WriteLine($"Device {device} axis {args[1]} = {max} for {durationMs} ms.");
                 Thread.Sleep(durationMs);
-                Native.SetAxis(center, device, axis);
+                if (!Native.SetAxis(center, device, axis))
+                    throw new InvalidOperationException("Could not center the pulsed axis.");
                 break;
             case "button":
                 if (!Native.SetBtn(true, device, button))
                     throw new InvalidOperationException($"Could not press button {button}.");
                 Console.WriteLine($"Device {device} button {button} pressed for {durationMs} ms.");
                 Thread.Sleep(durationMs);
-                Native.SetBtn(false, device, button);
+                if (!Native.SetBtn(false, device, button))
+                    throw new InvalidOperationException("Could not release the pulsed button.");
                 break;
             case "pov":
                 if (!Native.SetContPov(pov, device, 1))
                     throw new InvalidOperationException("Could not set continuous POV 1.");
                 Console.WriteLine($"Device {device} POV 1 = {pov} for {durationMs} ms.");
                 Thread.Sleep(durationMs);
-                Native.SetContPov(uint.MaxValue, device, 1);
+                if (!Native.SetContPov(uint.MaxValue, device, 1))
+                    throw new InvalidOperationException("Could not neutralize the pulsed POV.");
                 break;
         }
     }
     finally
     {
-        Native.ResetVJD(device);
-        Native.RelinquishVJD(device);
+        try { Neutralize(device); }
+        finally { Native.RelinquishVJD(device); }
     }
 }
 catch (Exception exception) when (exception is ArgumentException or InvalidOperationException or DllNotFoundException or BadImageFormatException or EntryPointNotFoundException)
 {
     Console.Error.WriteLine(exception.Message);
     Environment.ExitCode = 1;
+}
+
+// ResetVJD uses driver-configured defaults, which need not be centered. Keep
+// unpulsed axes neutral so a button test cannot also apply full-axis input.
+static void Neutralize(uint device)
+{
+    if (!Native.ResetVJD(device))
+        throw new InvalidOperationException("Could not reset the vJoy device.");
+    for (uint usage = 0x30; usage <= 0x38; ++usage)
+    {
+        // The upstream C# wrapper accepts exactly 1, not every nonzero result.
+        if (Native.GetVJDAxisExist(device, usage) != 1) continue;
+        if (!Native.GetVJDAxisMin(device, usage, out var min) ||
+            !Native.GetVJDAxisMax(device, usage, out var max) ||
+            !Native.SetAxis(min + (max - min) / 2, device, usage))
+            throw new InvalidOperationException($"Could not center axis 0x{usage:X}.");
+    }
+    if (!Native.ResetPovs(device))
+        throw new InvalidOperationException("Could not neutralize POV hats.");
 }
 
 internal static class Native
@@ -135,6 +158,13 @@ internal static class Native
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.Bool)]
     internal static extern bool ResetVJD(uint device);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    internal static extern bool ResetPovs(uint device);
+
+    [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
+    internal static extern uint GetVJDAxisExist(uint device, uint axis);
 
     [DllImport(Library, CallingConvention = CallingConvention.Cdecl)]
     [return: MarshalAs(UnmanagedType.Bool)]

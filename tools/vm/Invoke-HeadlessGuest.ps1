@@ -7,6 +7,7 @@ param(
     [Parameter(Mandatory)][string]$PasswordFile,
     [string[]]$GuestArguments = @(),
     [string]$GuestUser = 'MW4Lab',
+    [ValidateSet('x64', 'x86')][string]$GuestArchitecture = 'x64',
     [string]$GuestWorkDirectory = 'C:\MW4Lab',
     [string[]]$ResultFiles = @(),
     [string]$ResultDirectory,
@@ -45,10 +46,17 @@ $literalArguments = ($GuestArguments | ForEach-Object { "'" + $_.Replace("'", "'
 $command = "`$ErrorActionPreference='Stop'; `$ProgressPreference='SilentlyContinue'; try { & '$quotedGuestScript' $literalArguments; if (-not `$?) { exit 1 } } catch { [Console]::Error.WriteLine(`$_.Exception.Message); exit 1 }"
 $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($command))
 $timeoutMs = $TimeoutSeconds * 1000
+$guestPowerShell = if ($GuestArchitecture -eq 'x86') {
+    'C:\Windows\SysWOW64\WindowsPowerShell\v1.0\powershell.exe'
+} else {
+    'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
+}
+# VirtualBox 7.2 supplies argv[0] from --exe. Positional arguments start at
+# argv[1]; repeating powershell.exe here starts an unintended nested shell.
 & $vbox guestcontrol $VmName run --username=$GuestUser --passwordfile=$password `
-    --exe='C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' `
+    --exe=$guestPowerShell `
     --wait-stdout --wait-stderr "--timeout=$timeoutMs" -- `
-    powershell.exe -NoProfile -ExecutionPolicy Bypass -EncodedCommand $encoded
+    -NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand $encoded
 $guestExit = $LASTEXITCODE
 if ($guestExit -ne 0) { throw "Guest script failed with VBoxManage exit code $guestExit." }
 if ($ResultFiles.Count -gt 0) {
@@ -92,9 +100,9 @@ try {
 "@
         $screenEncoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($screenCommand))
         & $vbox guestcontrol $VmName run --username=$GuestUser --passwordfile=$password `
-            --exe='C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe' `
+            --exe=$guestPowerShell `
             --wait-stdout --wait-stderr '--timeout=30000' -- `
-            powershell.exe -NoProfile -EncodedCommand $screenEncoded
+            -NoProfile -EncodedCommand $screenEncoded
         if ($LASTEXITCODE -ne 0) { throw "VM screenshot failed on host and guest: $hostCapture" }
         & $vbox guestcontrol $VmName copyfrom --username=$GuestUser --passwordfile=$password $guestCapture $capture
         if ($LASTEXITCODE -ne 0) { throw 'VM guest-side screenshot could not be retrieved.' }

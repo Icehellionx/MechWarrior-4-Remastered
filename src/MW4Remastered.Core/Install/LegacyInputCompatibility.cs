@@ -5,8 +5,8 @@ namespace MW4Remastered.Core.Install;
 /// <summary>Installs the exact reviewed DirectInput adapter beside each game executable.</summary>
 public static class LegacyInputCompatibility
 {
-    public const string AdapterSha256 = "d190a049cbad89a87191abfc4dfd58d057ec1b89f0bb53c2b018485c3b9048d4";
-    public const long AdapterLength = 272_384;
+    public const string AdapterSha256 = "c14f391bba5422af9366cfae8b76ac53a872a1e5e85b86549f79c6b8b7db9316";
+    public const long AdapterLength = 273_408;
 
     public static IReadOnlyList<InstallFile> CreateFiles(string root, bool includeBlackKnight)
     {

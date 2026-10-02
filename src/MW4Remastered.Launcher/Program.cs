@@ -28,7 +28,6 @@ internal static class Program
             gameWindowLifecycleGuard,
             new GraphicsSettingsService(root),
             new InstallationDiagnosticsService(),
-            new JoystickLaunchPreference(),
-            joystickAdapterVerifier));
+            new JoystickLaunchPreference()));
     }
 }

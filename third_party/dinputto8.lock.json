@@ -6,12 +6,26 @@
     "path": "External/Logging",
     "commit": "d352bb946ae25d2af1cc91227192f581baefbe92"
   },
-  "workflowRun": "https://github.com/elishacloud/dinputto8/actions/runs/32078829509",
-  "artifactId": 9304389492,
-  "binary": "Workflow Win32 binaries/dinput.dll",
-  "binarySize": 272384,
-  "binarySha256": "d190a049cbad89a87191abfc4dfd58d057ec1b89f0bb53c2b018485c3b9048d4",
+  "binary": "Locally modified, pinned-source Win32 Workflow build",
+  "binarySize": 273408,
+  "binarySha256": "c14f391bba5422af9366cfae8b76ac53a872a1e5e85b86549f79c6b8b7db9316",
   "licenseSha256": "38abf198466d53a297a138feaf9e5314b5824caa40d164c15626896afbd69b85",
-  "installedPaths": ["dinput.dll", "MW4X/dinput.dll"],
-  "scope": "Optional game-local DirectInput 1-7 to 8 adapter; no driver or virtual device is installed. Joystick launch remains opt-in."
+  "installedPaths": [
+    "dinput.dll",
+    "MW4X/dinput.dll"
+  ],
+  "scope": "Game-local DirectInput 1-7 to 8 adapter, joystick ON by default unless saved OFF. Local DX7 policy exposes at most 31 buttons and omits excess buttons without remapping; legacy buffered records are size-converted. No driver or virtual device is installed. Physical controller and force-feedback coverage remains limited.",
+  "baseline": {
+    "workflowRun": "https://github.com/elishacloud/dinputto8/actions/runs/32078829509",
+    "artifactId": 9304389492,
+    "binarySha256": "d190a049cbad89a87191abfc4dfd58d057ec1b89f0bb53c2b018485c3b9048d4",
+    "binarySize": 272384
+  },
+  "localBuild": {
+    "lock": "third_party/dinputto8-mw4-trial.lock.json",
+    "builder": "tools/compatibility/build-dinputto8-mw4-trial.ps1",
+    "toolset": "MSVC v143 14.42.34433; Win32 Workflow; static runtime; /Brepro; /OPT:NOICF",
+    "patchSha256": "b74b536f661e16f8fa566710b937c7cc0a1921624dd614fc26bca2b65b64f61e",
+    "policySha256": "7ec456f70954f91556b38f51944f89b017559b73e41ca58b784fb14777a582a8"
+  }
 }

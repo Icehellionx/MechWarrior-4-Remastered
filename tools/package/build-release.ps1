@@ -9,6 +9,7 @@ param(
     [string]$DgVoodooArchive,
     [string]$DgVoodooSourceRoot,
     [string]$DinputTo8AdapterPath,
+    [string]$DinputTo8SourceRoot,
     [string]$MercenariesPr1Archive,
     [switch]$StageOnly,
     [switch]$UseExistingRestore
@@ -168,11 +169,20 @@ try {
         if ($actual -ne $entry.Value) { throw "Presentation compatibility hash mismatch for $($entry.Key): $actual" }
         Copy-Item -LiteralPath $source -Destination (Join-Path $presentationDestination $entry.Key)
     }
-    if ([string]::IsNullOrWhiteSpace($DinputTo8AdapterPath)) {
-        throw 'Provide DinputTo8AdapterPath for the exact reviewed upstream Win32 dinput.dll.'
+    if ([string]::IsNullOrWhiteSpace($DinputTo8SourceRoot)) {
+        throw 'Provide DinputTo8SourceRoot for the pinned upstream and Logging source checkout.'
     }
     $inputLock = Get-Content -LiteralPath (Join-Path $projectRoot 'third_party/dinputto8.lock.json') -Raw | ConvertFrom-Json
-    $adapterSource = [IO.Path]::GetFullPath($DinputTo8AdapterPath)
+    # Retain fresh source-build evidence locally. The builder requires workspace containment.
+    $inputBuild = Join-Path $projectRoot ('.local/input-release-build-' + [Guid]::NewGuid().ToString('N'))
+    & (Join-Path $projectRoot 'tools/compatibility/build-dinputto8-mw4-trial.ps1') `
+        -SourceRoot $DinputTo8SourceRoot -OutputDirectory $inputBuild
+    if ($LASTEXITCODE -ne 0) { throw 'DirectInput source build or native regressions failed.' }
+    $adapterSource = Join-Path $inputBuild 'dinput.dll'
+    if (-not [string]::IsNullOrWhiteSpace($DinputTo8AdapterPath) -and
+        (Get-FileHash -LiteralPath $DinputTo8AdapterPath -Algorithm SHA256).Hash.ToLowerInvariant() -ne $inputLock.binarySha256) {
+        throw 'The supplied reference adapter differs from the qualified source build.'
+    }
     if (-not (Test-Path -LiteralPath $adapterSource -PathType Leaf)) { throw 'The DirectInput adapter does not exist.' }
     $adapterInfo = Get-Item -LiteralPath $adapterSource
     $adapterHash = (Get-FileHash -LiteralPath $adapterSource -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -185,6 +195,9 @@ try {
     $licenseHash = (Get-FileHash -LiteralPath $inputLicense -Algorithm SHA256).Hash.ToLowerInvariant()
     if ($licenseHash -ne $inputLock.licenseSha256) { throw "DirectInput license hash mismatch: $licenseHash" }
     Copy-Item -LiteralPath $inputLicense -Destination (Join-Path $inputDestination 'dinputto8-LICENSE.txt')
+    foreach ($sourceNotice in @('third_party/dinputto8.lock.json', 'third_party/patches/dinputto8-MW4-31-buttons.patch', 'tools/compatibility/MW4ButtonPolicy.h')) {
+        Copy-Item -LiteralPath (Join-Path $projectRoot $sourceNotice) -Destination $inputDestination
+    }
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/THIRD-PARTY-NOTICES.md') -Destination (Join-Path $payload 'THIRD-PARTY-NOTICES.md')
     Copy-Item -LiteralPath (Join-Path $projectRoot 'third_party/DiscUtils-LICENSE.txt') -Destination (Join-Path $payload 'DiscUtils-LICENSE.txt')
 

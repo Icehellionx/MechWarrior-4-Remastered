@@ -1,0 +1,15 @@
+{
+  "status": "qualified source-build pin promoted into production packaging; all-three VM and exact setup gates passed; physical/default-renderer field coverage remains",
+  "upstream": "https://github.com/elishacloud/dinputto8",
+  "commit": "f18224808c58c84e46c003e100804bd3184d8168",
+  "license": "Zlib",
+  "licenseSha256": "38abf198466d53a297a138feaf9e5314b5824caa40d164c15626896afbd69b85",
+  "loggingCommit": "d352bb946ae25d2af1cc91227192f581baefbe92",
+  "localPatch": "third_party/patches/dinputto8-MW4-31-buttons.patch",
+  "localPatchSha256": "b74b536f661e16f8fa566710b937c7cc0a1921624dd614fc26bca2b65b64f61e",
+  "policy": "tools/compatibility/MW4ButtonPolicy.h",
+  "policySha256": "7ec456f70954f91556b38f51944f89b017559b73e41ca58b784fb14777a582a8",
+  "candidateBinarySha256": "c14f391bba5422af9366cfae8b76ac53a872a1e5e85b86549f79c6b8b7db9316",
+  "candidateBinaryBytes": 273408,
+  "scope": "Local modification for the MW4 game-local adapter: DirectInput 7 joystick counts and objects capped at 31; excess format objects removed and state bytes neutralized; legacy buffered PEEK records converted without overwriting caller storage. Named effect helpers preserve upstream behavior while removing MSVC build-path-dependent lambda ordering. No keyboard remapping, virtual driver, or executable patch. Production pin must match this source-build candidate."
+}

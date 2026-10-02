@@ -12,7 +12,7 @@ public sealed class JoystickLaunchPreference
             "MechWarrior 4 Remastered", "joystick-enabled.txt");
     }
 
-    public bool Read() => File.Exists(preferencePath) &&
+    public bool Read() => !File.Exists(preferencePath) ||
         string.Equals(File.ReadAllText(preferencePath).Trim(), "1", StringComparison.Ordinal);
 
     public void Write(bool enabled)

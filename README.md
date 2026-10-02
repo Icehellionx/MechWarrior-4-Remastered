@@ -80,6 +80,10 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 
 ## Known limitations
 
+Unreleased launcher changes: joystick input defaults ON when no preference has been saved; an explicit OFF choice is preserved. Adapter errors are reported for the selected game without silently disabling joystick input globally. **HELP & QUIRKS** explains the controls and workarounds inside the launcher. The published v0.6.47.4 download still has the previous opt-in behavior.
+
+MW4 can crash when a device exposes 32 or more buttons. The unreleased source-built adapter now exposes at most 31 buttons to these games and safely omits excess buttons; it does not automatically remap them or expand the original binding screen's supported range. Use controller software or a user-configured tool such as Joystick Gremlin to map extra or ignored buttons to keyboard keys. The exact candidate passed native 31/32/128-button tests and two mission loads with saved in-mission bindings in all three games in an isolated Windows VM. Physical HOTAS, multi-device combinations and force feedback remain field gaps. See the [input research and qualification record](active/INPUT_DISPLAY_RESEARCH.md). The published v0.6.47.4 adapter predates this correction.
+
 - The release is not Authenticode-signed, so Windows cannot show a verified publisher.
 - The current field qualification is strongest on the tested NVIDIA/Windows 11 configuration. Additional GPUs, display layouts, and unusual archival media variants are welcome test coverage.
 - Modified, regional, or otherwise unrecognized media fail closed instead of receiving a guessed transform.

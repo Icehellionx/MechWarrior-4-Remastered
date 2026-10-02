@@ -641,13 +641,16 @@ try
         "Black Knight joystick launch keeps its expansion-specific autoconfig bypass");
     var joystickPreferencePath = Path.Combine(transactionRoot, "input-preference", "joystick-enabled.txt");
     var joystickPreference = new JoystickLaunchPreference(joystickPreferencePath);
-    Check(!joystickPreference.Read(), "joystick launch defaults to the proven keyboard and mouse path");
+    Check(joystickPreference.Read(), "joystick launch defaults on when no user preference exists");
     joystickPreference.Write(true);
     Check(new JoystickLaunchPreference(joystickPreferencePath).Read(),
         "joystick launch choice persists across launcher instances");
     joystickPreference.Write(false);
     Check(!new JoystickLaunchPreference(joystickPreferencePath).Read(),
         "joystick launch can return to keyboard and mouse mode");
+    File.Delete(joystickPreferencePath);
+    Check(new JoystickLaunchPreference(joystickPreferencePath).Read(),
+        "removing the saved preference restores the joystick-on default");
     Check(joystickAdapterVerifier.CheckedExecutables.SequenceEqual(
         [installedStatuses["vengeance"].LaunchPath!, mercenaryExecutable, blackKnightLaunchExecutable]),
         "joystick launch verifies the adapter at each title executable boundary");
@@ -662,6 +665,24 @@ try
     Check(missingAdapterRejected && foreignAdapterRejected,
         "joystick mode cannot launch with a missing or unrecognized DirectInput adapter");
     File.Delete(Path.Combine(mercenaryRoot, "dinput.dll"));
+    var previousStart = processStarter.LastStart;
+    var missingAdapterLaunchBlocked = false;
+    try
+    {
+        new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
+            .Launch(mercenaryStatus, enableJoystick: true);
+    }
+    catch (InvalidOperationException error)
+    {
+        missingAdapterLaunchBlocked = error.Message.Contains("Repair", StringComparison.Ordinal);
+    }
+    Check(missingAdapterLaunchBlocked && ReferenceEquals(previousStart, processStarter.LastStart),
+        "missing selected-game adapter reports repair without starting or silently falling back");
+    new LaunchOrchestrator(processStarter, gameRegistration, gameConfiguration: configuration)
+        .Launch(mercenaryStatus, enableJoystick: false);
+    Check(!ReferenceEquals(previousStart, processStarter.LastStart) &&
+          processStarter.LastStart!.ArgumentList.Contains("/gosNoJoystick"),
+        "explicit joystick-off choice remains usable when the selected game's adapter is missing");
     var inputSource = Directory.CreateDirectory(Path.Combine(transactionRoot, "input-adapter-source")).FullName;
     File.WriteAllText(Path.Combine(inputSource, "dinput.dll"), "unrecognized adapter");
     var unsupportedInputRejected = false;
@@ -669,6 +690,31 @@ try
     catch (InvalidDataException) { unsupportedInputRejected = true; }
     Check(unsupportedInputRejected,
         "installation rejects a wrong-size or unrecognized DirectInput adapter before committing game files");
+    if (args.Length > 0)
+    {
+        if (args.Length != 2 || args[0] != "--input-adapter-root")
+            throw new ArgumentException("Expected --input-adapter-root <qualified source-build directory>.");
+        var qualifiedInput = Path.GetFullPath(args[1]);
+        var vengeanceInputFiles = LegacyInputCompatibility.CreateFiles(qualifiedInput, includeBlackKnight: true);
+        var mercenariesInputFiles = LegacyInputCompatibility.CreateMercenariesFiles(qualifiedInput);
+        Check(vengeanceInputFiles.Select(file => file.DestinationRelativePath).SequenceEqual(["dinput.dll", "MW4X/dinput.dll"]) &&
+              mercenariesInputFiles.Single().DestinationRelativePath == "dinput.dll",
+            "qualified source-built adapter creates the exact three title installation paths");
+        foreach (var executable in new[] { installedStatuses["vengeance"].LaunchPath!, blackKnightLaunchExecutable, mercenaryExecutable })
+        {
+            var installedAdapter = Path.Combine(Path.GetDirectoryName(executable)!, "dinput.dll");
+            File.Copy(Path.Combine(qualifiedInput, "dinput.dll"), installedAdapter, overwrite: true);
+            adapterVerifier.EnsureAvailable(executable);
+            var bytes = File.ReadAllBytes(installedAdapter);
+            bytes[^1] ^= 1;
+            File.WriteAllBytes(installedAdapter, bytes);
+            var rejected = false;
+            try { adapterVerifier.EnsureAvailable(executable); }
+            catch (InvalidOperationException) { rejected = true; }
+            Check(rejected, "each title rejects same-size modified input DLL after accepting the qualified DLL");
+            File.Delete(installedAdapter);
+        }
+    }
     Check(File.ReadAllText(Path.Combine(blackKnightRoot, "optionsx.ini")).Contains("[graphics options]", StringComparison.OrdinalIgnoreCase),
         "Black Knight receives its title-specific required optionsx graphics page");
 

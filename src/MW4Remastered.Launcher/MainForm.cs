@@ -29,7 +29,6 @@ internal sealed class MainForm : Form
     private readonly GraphicsSettingsService graphicsSettings;
     private readonly InstallationDiagnosticsService diagnostics;
     private readonly JoystickLaunchPreference joystickPreference;
-    private readonly IJoystickAdapterVerifier joystickAdapterVerifier;
     private readonly TableLayoutPanel operationGrid = new();
     private readonly FlowLayoutPanel packRow = new();
     private readonly Label statusLine = new();
@@ -55,8 +54,7 @@ internal sealed class MainForm : Form
         IGameWindowLifecycleGuard gameWindowLifecycleGuard,
         GraphicsSettingsService graphicsSettings,
         InstallationDiagnosticsService diagnostics,
-        JoystickLaunchPreference joystickPreference,
-        IJoystickAdapterVerifier joystickAdapterVerifier)
+        JoystickLaunchPreference joystickPreference)
     {
         this.statusReader = statusReader ?? throw new ArgumentNullException(nameof(statusReader));
         this.launchOrchestrator = launchOrchestrator ?? throw new ArgumentNullException(nameof(launchOrchestrator));
@@ -68,7 +66,6 @@ internal sealed class MainForm : Form
         this.graphicsSettings = graphicsSettings ?? throw new ArgumentNullException(nameof(graphicsSettings));
         this.diagnostics = diagnostics ?? throw new ArgumentNullException(nameof(diagnostics));
         this.joystickPreference = joystickPreference ?? throw new ArgumentNullException(nameof(joystickPreference));
-        this.joystickAdapterVerifier = joystickAdapterVerifier ?? throw new ArgumentNullException(nameof(joystickAdapterVerifier));
         joystickEnabled = joystickPreference.Read();
 
         Text = "MechWarrior 4 Remastered";
@@ -175,14 +172,25 @@ internal sealed class MainForm : Form
             ForeColor = Amber,
             Text = "R E M A S T E R E D",
         });
-        panel.Controls.Add(new Label
+        var helpButton = new OperationButton
         {
-            AutoSize = true,
-            Location = new Point(755, 37),
-            Font = new Font("Consolas", 9F, FontStyle.Bold),
-            ForeColor = Muted,
-            Text = "SELECT OPERATION",
-        });
+            Location = new Point(720, 20),
+            Size = new Size(152, 32),
+            Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
+            BackColor = Panel,
+            ForeColor = TextColor,
+            FlatStyle = FlatStyle.Flat,
+            Text = "HELP && QUIRKS",
+            AccessibleName = "Help with controls and known game and launcher quirks",
+        };
+        helpButton.FlatAppearance.BorderColor = Edge;
+        helpButton.FlatAppearance.MouseOverBackColor = PanelHover;
+        helpButton.Click += (_, _) =>
+        {
+            using var dialog = new LauncherHelpForm();
+            dialog.ShowDialog(panel.FindForm());
+        };
+        panel.Controls.Add(helpButton);
         return panel;
     }
 
@@ -217,13 +225,6 @@ internal sealed class MainForm : Form
         joystickButton.FlatAppearance.MouseOverBackColor = PanelHover;
         joystickButton.Click += (_, _) => TryAction(() =>
         {
-            if (!joystickEnabled)
-            {
-                foreach (var status in lastStatuses?.Where(status =>
-                             status.Product.Kind == ProductKind.Game && status.State == ProductInstallState.Ready)
-                         ?? [])
-                    joystickAdapterVerifier.EnsureAvailable(status.LaunchPath!);
-            }
             joystickPreference.Write(!joystickEnabled);
             joystickEnabled = !joystickEnabled;
             UpdateJoystickButton();
@@ -364,17 +365,11 @@ internal sealed class MainForm : Form
         settingsAvailable = statuses.Any(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.Ready) &&
             !statuses.Any(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.NeedsRepair);
         if (settingsButton is not null) settingsButton.Enabled = settingsAvailable;
-        var readyGames = statuses.Where(item => item.Product.Kind == ProductKind.Game && item.State == ProductInstallState.Ready).ToArray();
-        var adaptersAvailable = readyGames.Length > 0 && readyGames.All(item =>
-        {
-            try { joystickAdapterVerifier.EnsureAvailable(item.LaunchPath!); return true; }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException or InvalidOperationException) { return false; }
-        });
-        if (!adaptersAvailable) joystickEnabled = false;
         if (joystickButton is not null)
         {
-            joystickButton.Visible = adaptersAvailable;
-            joystickButton.Enabled = settingsAvailable && adaptersAvailable;
+            // The preference remains available even when a game's adapter needs
+            // repair. LaunchOrchestrator reports that selected game's failure.
+            joystickButton.Enabled = true;
             UpdateJoystickButton();
         }
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
@@ -630,7 +625,7 @@ internal sealed class MainForm : Form
         if (uninstallButton is not null) uninstallButton.Enabled = applicationUninstaller.IsAvailable;
         if (creditsButton is not null) creditsButton.Enabled = File.Exists(Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md"));
         if (settingsButton is not null) settingsButton.Enabled = settingsAvailable;
-        if (joystickButton is not null) joystickButton.Enabled = settingsAvailable;
+        if (joystickButton is not null) joystickButton.Enabled = true;
         if (diagnosticsButton is not null) diagnosticsButton.Enabled = true;
     }
 

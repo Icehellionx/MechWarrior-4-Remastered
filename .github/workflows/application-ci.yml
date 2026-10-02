@@ -12,6 +12,10 @@ on:
       - 'src/MW4Remastered.RtpPatchHost/**'
       - 'tests/**'
       - 'third_party/*.lock.json'
+      - 'third_party/patches/dinputto8-MW4-31-buttons.patch'
+      - 'tools/compatibility/build-dinputto8-mw4-trial.ps1'
+      - 'tools/compatibility/MW4ButtonPolicy.h'
+      - 'tools/compatibility/DirectInputAdapterProbe.cpp'
       - 'tools/assert-release-tree.ps1'
       - 'tools/package/**'
   pull_request:
@@ -25,6 +29,10 @@ on:
       - 'src/MW4Remastered.RtpPatchHost/**'
       - 'tests/**'
       - 'third_party/*.lock.json'
+      - 'third_party/patches/dinputto8-MW4-31-buttons.patch'
+      - 'tools/compatibility/build-dinputto8-mw4-trial.ps1'
+      - 'tools/compatibility/MW4ButtonPolicy.h'
+      - 'tools/compatibility/DirectInputAdapterProbe.cpp'
       - 'tools/assert-release-tree.ps1'
       - 'tools/package/**'
   workflow_dispatch:
@@ -70,3 +78,31 @@ jobs:
 
       # No binaries are uploaded here. Release packaging consumes separately
       # qualified compatibility evidence and requires a local Defender gate.
+
+  native-input-regressions:
+    runs-on: windows-2022
+    steps:
+      - name: Check out project
+        uses: actions/checkout@v6
+
+      - name: Fetch pinned input source
+        shell: pwsh
+        run: |
+          git -c core.autocrlf=false clone --no-checkout https://github.com/elishacloud/dinputto8.git vendor/dinputto8
+          if ($LASTEXITCODE) { throw 'Input source clone failed.' }
+          git -C vendor/dinputto8 -c core.autocrlf=false checkout --detach f18224808c58c84e46c003e100804bd3184d8168
+          if ($LASTEXITCODE) { throw 'Pinned input checkout failed.' }
+          git -C vendor/dinputto8 -c core.autocrlf=false submodule update --init --recursive
+          if ($LASTEXITCODE) { throw 'Pinned Logging checkout failed.' }
+
+      - name: Build policy and actual-wrapper regressions
+        shell: pwsh
+        run: |
+          $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio/Installer/vswhere.exe'
+          $vs = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
+          if (-not $vs) { throw 'C++ build tools are missing.' }
+          # Hosted MSVC changes over time. This is a research test build only:
+          # no binary is uploaded, promoted, or consumed by release packaging.
+          ./tools/compatibility/build-dinputto8-mw4-trial.ps1 -SourceRoot vendor/dinputto8 -OutputDirectory .local/native-input-ci `
+            -MSBuildPath (Join-Path $vs 'MSBuild/Current/Bin/MSBuild.exe') `
+            -VsDevCmd (Join-Path $vs 'Common7/Tools/VsDevCmd.bat') -Requalify
