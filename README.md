@@ -6,11 +6,13 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered v0.6.47.4 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.4/MechWarrior-4-Remastered-Setup-0.6.47.4.exe)
+### [Download MechWarrior 4 Remastered v0.6.47.5 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.5/MechWarrior-4-Remastered-Setup-0.6.47.5.exe)
 
-Current test release: [v0.6.47.4](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.4). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
+Current test release: [v0.6.47.5](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
 
-This test release makes Vengeance, Black Knight, and Mercenaries system DPI aware to address the [display-scaling mouse issue](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8). Black Knight launched with the change at 125% scaling in a Windows 11 VM; affected users have not yet confirmed mouse behavior in a mission. The game-local movie-decoder workaround and optional joystick mode from v0.6.47.3 remain included. The affected video-crash PC and physical joysticks have not yet confirmed those changes. In the launcher, click **JOYSTICK OFF** to enable joystick input before starting a game; leave it off to keep the previous launch behavior.
+This test release enables joystick input by default for new preferences and includes a source-built adapter that safely exposes at most 31 buttons to all three games. An existing saved OFF choice stays OFF; use the joystick button to enable it. **HELP & QUIRKS** explains mapping and limitations. Native 31/32/128-button regressions and two missions with saved joystick bindings per game passed in an isolated Windows VM. Extra buttons are omitted, not automatically remapped.
+
+The display-scaling and game-local movie workarounds from earlier test releases remain included, with original movies enabled. Affected PCs and physical joysticks still need field confirmation. VM gameplay used temporary software D3D11 WARP profiles; the shipped D3D12 profile fails in that VM with both the previous and new adapter. Representative GPU/default-renderer, physical HOTAS, multiple-device and force-feedback testing remain open.
 
 The installer does **not** contain the games: setup asks for your original ISOs, supported CUE/BIN pairs, or ZIP archives and builds the installed games from those files.
 
@@ -20,7 +22,7 @@ Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/M
 2. Add the ISO, supported CUE/BIN, or ZIP files for the games and optional Mech Paks you own.
 3. Open the new desktop launcher and choose a game or manual.
 
-If the direct link does not work, open the [v0.6.47.4 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.4) and download the setup EXE under **Assets**.
+If the direct link does not work, open the [v0.6.47.5 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5) and download the setup EXE under **Assets**.
 
 ## Screenshots
 
@@ -36,14 +38,14 @@ If the direct link does not work, open the [v0.6.47.4 release page](https://gith
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for v0.6.47.4:
+SHA-256 for v0.6.47.5:
 
 ```text
-6dd3f531f1f0e23b9502602b0580dfbe6baa6f376ad6bf696d95a6eb8faa33a2
+2b37d94880ed3d7361df9b2f06312b92168ada5aa4173b8b76e3f7d34cce39ec
 ```
 
 ```powershell
-Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.47.4.exe -Algorithm SHA256
+Get-FileHash .\MechWarrior-4-Remastered-Setup-0.6.47.5.exe -Algorithm SHA256
 ```
 
 ## What you need
@@ -70,7 +72,7 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 - Defaults to the games' Ultra High-equivalent detail settings, 32-bit color, 4× MSAA, and 16× anisotropic filtering.
 - Keeps menus, gameplay, and all ordinary cinematics at their original aspect ratio. Only the live-action portion of Vengeance's opening receives a proportional widescreen cover treatment; it is never stretched.
 - Includes a game-local movie-decoder compatibility workaround for Vengeance and Mercenaries; original videos remain enabled.
-- Includes a hash-verified game-local DirectInput adapter and an opt-in joystick button in the launcher for all three games. It installs no virtual joystick driver.
+- Includes a hash-verified game-local DirectInput adapter and a joystick ON/OFF button in the launcher for all three games. It installs no virtual joystick driver.
 - Keeps the game picture visible during Alt-Tab, releases the cursor while inactive, and recaptures it on return.
 - Removes the dgVoodoo watermark and applies a small gameplay-only top/left seam correction.
 - Activates installed Inner Sphere and Clan content across chassis, weapons, and subsystems without bypassing the original model loader.
@@ -80,16 +82,17 @@ No ISO, serial key, or extracted proprietary game tree is committed to this repo
 
 ## Known limitations
 
-Unreleased launcher changes: joystick input defaults ON when no preference has been saved; an explicit OFF choice is preserved. Adapter errors are reported for the selected game without silently disabling joystick input globally. **HELP & QUIRKS** explains the controls and workarounds inside the launcher. The published v0.6.47.4 download still has the previous opt-in behavior.
+Joystick input defaults ON when no preference has been saved; an explicit OFF choice is preserved. Adapter errors are reported for the selected game without silently disabling joystick input globally. **HELP & QUIRKS** explains controls and workarounds inside the launcher.
 
-MW4 can crash when a device exposes 32 or more buttons. The unreleased source-built adapter now exposes at most 31 buttons to these games and safely omits excess buttons; it does not automatically remap them or expand the original binding screen's supported range. Use controller software or a user-configured tool such as Joystick Gremlin to map extra or ignored buttons to keyboard keys. The exact candidate passed native 31/32/128-button tests and two mission loads with saved in-mission bindings in all three games in an isolated Windows VM. Physical HOTAS, multi-device combinations and force feedback remain field gaps. See the [input research and qualification record](active/INPUT_DISPLAY_RESEARCH.md). The published v0.6.47.4 adapter predates this correction.
+MW4 can crash when a device exposes 32 or more buttons. The source-built adapter now exposes at most 31 buttons to these games and safely omits excess buttons; it does not automatically remap them or expand the original binding screen's supported range. Use controller software or a user-configured tool such as Joystick Gremlin to map extra or ignored buttons to keyboard keys. The exact release adapter passed native 31/32/128-button tests and two mission loads with saved in-mission bindings in all three games in an isolated Windows VM. Physical HOTAS, multi-device combinations and force feedback remain field gaps. See the [input research and qualification record](active/INPUT_DISPLAY_RESEARCH.md).
 
 - The release is not Authenticode-signed, so Windows cannot show a verified publisher.
 - The current field qualification is strongest on the tested NVIDIA/Windows 11 configuration. Additional GPUs, display layouts, and unusual archival media variants are welcome test coverage.
 - Modified, regional, or otherwise unrecognized media fail closed instead of receiving a guessed transform.
 - First-launch mouse placement on other display configurations and gameplay on other GPUs still need field testing. The ultrawide client-area and mouse-capture corrections in v0.6.46 passed local component tests but still need reports from the affected ultrawide and Windows 10/RX 6750 XT systems; [issue #7](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/7) and [issue #8](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8) remain open for that confirmation.
 - The movie workaround has passed local decoder-activation and normal-decoder playback checks, but the PC from [issue #10](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/10) has not tested this build. On a PC without another usable decoder, affected movie audio may be absent.
-- A Windows VM with vJoy selected the adapter in all three games and consumed joystick X-axis in Vengeance and Black Knight first missions; an earlier build with the same adapter consumed it in Mercenaries. Physical sticks, 31/32-button layouts, and consecutive missions still need field testing.
+- Complete campaigns, physical sticks, multiple-device layouts and force feedback remain field gaps. All three titles passed two mission loads with saved bindings and harmless excess-button input using the exact adapter in a VM software-renderer fixture.
+- The tested reduced Clan archival ISO lacks official Patch 3. Use complete pack media containing the required official updates, or include qualified Inner Sphere media. Black Knight likewise requires qualified pack media for its official PR1 update; incomplete selections fail with an explanation.
 
 ## Reporting a bug
 
