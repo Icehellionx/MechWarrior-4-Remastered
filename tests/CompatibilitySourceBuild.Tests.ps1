@@ -68,4 +68,8 @@ Assert-True ($inputVerifier.Contains($productionInput.binarySha256) -and $inputV
 Assert-True ($productionInput.commit -eq $inputLock.commit -and $productionInput.submodule.commit -eq $inputLock.loggingCommit -and $productionInput.localBuild.patchSha256 -eq $inputLock.localPatchSha256 -and $productionInput.localBuild.policySha256 -eq $inputLock.policySha256) 'Production must preserve exact modified-source provenance.'
 $nativeWorkflow = Get-Content (Join-Path $root '.github/workflows/application-ci.yml') -Raw
 Assert-True ($nativeWorkflow.Contains('native-input-regressions:') -and $nativeWorkflow.Contains($inputLock.commit) -and $nativeWorkflow.Contains('build-dinputto8-mw4-trial.ps1') -and $nativeWorkflow.Contains('submodule update --init --recursive')) 'CI must build the actual patched wrapper from pinned upstream and Logging sources.'
+$profileAttributes = & git -C $root check-attr text -- assets/compatibility/dgVoodoo-MW4.conf
+if ($LASTEXITCODE) { throw 'Cannot inspect qualified renderer checkout attributes.' }
+Assert-True ($profileAttributes -match ': text: unset$') 'Git must not rewrite the byte-qualified renderer profile on checkout.'
+Assert-True ($nativeWorkflow.Contains('core.autocrlf=true checkout')) 'Input source checkout must preserve the qualified CRLF license notice.'
 Write-Host 'Compatibility source-build contract tests passed.'

@@ -10,3 +10,5 @@
 *.ps1 text eol=lf
 *.patch text eol=lf -whitespace
 *.yml text eol=lf
+# Byte-qualified runtime configuration: preserve its exact mixed line endings.
+assets/compatibility/dgVoodoo-MW4.conf -text whitespace=cr-at-eol

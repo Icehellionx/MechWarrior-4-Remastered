@@ -88,11 +88,13 @@ jobs:
       - name: Fetch pinned input source
         shell: pwsh
         run: |
-          git -c core.autocrlf=false clone --no-checkout https://github.com/elishacloud/dinputto8.git vendor/dinputto8
+          # The qualified packaged license notice uses Windows CRLF bytes.
+          # Compilation archives Git blobs; source checkout whitespace is not compiled.
+          git -c core.autocrlf=true clone --no-checkout https://github.com/elishacloud/dinputto8.git vendor/dinputto8
           if ($LASTEXITCODE) { throw 'Input source clone failed.' }
-          git -C vendor/dinputto8 -c core.autocrlf=false checkout --detach f18224808c58c84e46c003e100804bd3184d8168
+          git -C vendor/dinputto8 -c core.autocrlf=true checkout --detach f18224808c58c84e46c003e100804bd3184d8168
           if ($LASTEXITCODE) { throw 'Pinned input checkout failed.' }
-          git -C vendor/dinputto8 -c core.autocrlf=false submodule update --init --recursive
+          git -C vendor/dinputto8 -c core.autocrlf=true submodule update --init --recursive
           if ($LASTEXITCODE) { throw 'Pinned Logging checkout failed.' }
 
       - name: Build policy and actual-wrapper regressions
