@@ -6,11 +6,13 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered v0.6.47.5 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.5/MechWarrior-4-Remastered-Setup-0.6.47.5.exe)
+### [Download MechWarrior 4 Remastered 1.0 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.47.5/MechWarrior-4-Remastered-Setup-0.6.47.5.exe)
 
-Current test release: [v0.6.47.5](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
+Current release: [1.0](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5). Stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
 
-This test release enables joystick input by default for new preferences and includes a source-built adapter that safely exposes at most 31 buttons to all three games. An existing saved OFF choice stays OFF; use the joystick button to enable it. **HELP & QUIRKS** explains mapping and limitations. Native 31/32/128-button regressions and two missions with saved joystick bindings per game passed in an isolated Windows VM. Extra buttons are omitted, not automatically remapped.
+1.0 promotes the existing qualified installer. Its internal build number, immutable release tag, and asset filename remain 0.6.47.5; the download bytes and checksum are unchanged.
+
+Release 1.0 enables joystick input by default for new preferences and includes a source-built adapter that safely exposes at most 31 buttons to all three games. An existing saved OFF choice stays OFF; use the joystick button to enable it. **HELP & QUIRKS** explains mapping and limitations. Native 31/32/128-button regressions and two missions with saved joystick bindings per game passed in an isolated Windows VM. Extra buttons are omitted, not automatically remapped.
 
 The display-scaling and game-local movie workarounds from earlier test releases remain included, with original movies enabled. Affected PCs and physical joysticks still need field confirmation. VM gameplay used temporary software D3D11 WARP profiles; the shipped D3D12 profile fails in that VM with both the previous and new adapter. Representative GPU/default-renderer, physical HOTAS, multiple-device and force-feedback testing remain open.
 
@@ -22,7 +24,7 @@ Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/M
 2. Add the ISO, supported CUE/BIN, or ZIP files for the games and optional Mech Paks you own.
 3. Open the new desktop launcher and choose a game or manual.
 
-If the direct link does not work, open the [v0.6.47.5 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5) and download the setup EXE under **Assets**.
+If the direct link does not work, open the [1.0 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5) and download the setup EXE under **Assets**.
 
 ## Screenshots
 
@@ -38,7 +40,7 @@ If the direct link does not work, open the [v0.6.47.5 release page](https://gith
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for v0.6.47.5:
+SHA-256 for the 1.0 download (installer build 0.6.47.5):
 
 ```text
 2b37d94880ed3d7361df9b2f06312b92168ada5aa4173b8b76e3f7d34cce39ec
