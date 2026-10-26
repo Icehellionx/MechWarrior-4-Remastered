@@ -36,7 +36,7 @@ ArchitecturesAllowed=x64compatible
 VersionInfoVersion={#AppVersion}
 
 [Messages]
-UninstallConfirm=Remove the %1 launcher, manuals, and shortcuts?%n%nGame files, saves, and settings may remain. To remove owned game files too, use UNINSTALL in the launcher before continuing.
+ConfirmUninstall=Remove the %1 launcher, manuals, and shortcuts?%n%nGame files, saves, and settings may remain. To remove owned game files too, use UNINSTALL in the launcher before continuing.
 UninstalledAll=The %1 launcher, manuals, and shortcuts have been removed.%n%nGame files, saves, and settings may remain in the installation folder.
 
 [Files]
