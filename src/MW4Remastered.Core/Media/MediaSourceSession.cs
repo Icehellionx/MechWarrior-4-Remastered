@@ -17,7 +17,7 @@ public sealed class MediaSourceSessionFactory
     private readonly MechPakIsoProjection mechPakProjection;
 
     public MediaSourceSessionFactory()
-        : this(new OwnedIsoMediaSessionFactory(new PowerShellDiskImageBackend()), new IsoArchiveExtractor(), new MercenariesPr1ArchiveExtractor(), new MechPakIsoProjection())
+        : this(new OwnedIsoMediaSessionFactory(static () => new PowerShellDiskImageBackend()), new IsoArchiveExtractor(), new MercenariesPr1ArchiveExtractor(), new MechPakIsoProjection())
     {
     }
 

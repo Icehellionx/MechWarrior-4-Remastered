@@ -4,6 +4,17 @@ internal static class IsoMediaSessionSmoke
 {
     public static void Run(List<string> failures)
     {
+        var wineRejected = false;
+        try { _ = new PowerShellDiskImageBackend(runningUnderWine: true); }
+        catch (InvalidOperationException error)
+        {
+            wineRejected = error.Message.Contains("unavailable under Wine", StringComparison.Ordinal) &&
+                error.Message.Contains("Add folder", StringComparison.Ordinal) &&
+                error.Message.Contains("each", StringComparison.Ordinal) &&
+                error.Message.Contains("not unmount or change", StringComparison.Ordinal);
+        }
+        Check(wineRejected, "Wine image access fails before PowerShell with borrowed-folder guidance", failures);
+
         Check(PowerShellDiskImageBackend.ParseAttachmentState(" attached \r\n") &&
               !PowerShellDiskImageBackend.ParseAttachmentState("detached\r\n"),
             "disk-image query parses only explicit attachment states", failures);

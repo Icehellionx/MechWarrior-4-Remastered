@@ -142,6 +142,28 @@ internal sealed class InstallWorker
                     TryAppendLog(args.LogPath, "Restored Vengeance long filenames from the original setup table.");
                 }
             }
+            if (statuses.TryGetValue("vengeance", out var movieStatus) &&
+                !string.IsNullOrWhiteSpace(movieStatus.InstallPath))
+            {
+                var verified = new InstallManifestVerifier().Verify(movieStatus.InstallPath, InstallVerificationScope.OwnedFiles);
+                if (!verified.IsValid || verified.Manifest is null)
+                    throw new InvalidDataException("Vengeance movie correction requires a verified owned manifest.");
+                var scratch = Path.Combine(Path.GetTempPath(), $"mw4-vengeance-movie-upgrade-{Guid.NewGuid():N}");
+                try
+                {
+                    var replacements = new VengeanceMovieSurfaceTransform().CreateUpgradeReplacement(
+                        movieStatus.InstallPath, verified.Manifest, scratch);
+                    if (replacements.Count > 0)
+                    {
+                        compatibilityReplacement.Execute("vengeance", movieStatus.InstallPath, replacements);
+                        TryAppendLog(args.LogPath, "Corrected retail Vengeance movie surface lifetime using the official Patch 3 behavior.");
+                    }
+                }
+                finally
+                {
+                    if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
+                }
+            }
             var mechPakUpgrade = new MechPakOwnedExecutableUpgrade();
             var mechPakArchiveUpgrade = new MechPakOwnedArchiveUpgrade();
             foreach (var productId in new[] { "vengeance", "mercenaries" })

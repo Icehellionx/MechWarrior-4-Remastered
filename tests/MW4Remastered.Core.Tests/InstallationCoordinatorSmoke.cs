@@ -1,4 +1,3 @@
-using System.IO.Compression;
 using System.Security.Cryptography;
 using MW4Remastered.Core.Install;
 using MW4Remastered.Core.Media;
@@ -138,12 +137,9 @@ internal static class InstallationCoordinatorSmoke
         CreateLayout("mercenaries-disc-2", mercenariesDiscTwo);
 
         var cabinet = Path.Combine(mercenariesDiscOne, "MSGAME.CAB");
-        File.Delete(cabinet);
-        var cabinetSource = Path.Combine(root, "cabinet-source");
-        Write(cabinetSource, "GAME/RESOURCE/CORE.MW4", "core");
-        Write(cabinetSource, "GAME/RESOURCE/PROPS.MW4", "props");
-        Write(cabinetSource, "GAME/RESOURCE/TEXTURES.MW4", "textures");
-        ZipFile.CreateFromDirectory(cabinetSource, cabinet, CompressionLevel.NoCompression, includeBaseDirectory: false);
+        CabinetPayloadExtractorSmoke.WriteCabinet(cabinet,
+            ("GAME/RESOURCE/CORE.MW4", "core"), ("GAME/RESOURCE/PROPS.MW4", "props"),
+            ("GAME/RESOURCE/TEXTURES.MW4", "textures"));
 
         var vengeanceExecutable = Write(root, "replacements/vengeance/MW4.exe", "vengeance executable");
         var mercenariesExecutable = Write(root, "replacements/mercenaries/MW4Mercs.exe", "mercenaries executable");

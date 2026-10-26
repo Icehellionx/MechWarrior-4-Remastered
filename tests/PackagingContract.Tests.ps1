@@ -25,6 +25,8 @@ Assert-True ($inno -match 'Installing and verifying selected MechWarrior 4 games
 Assert-True ($inno -notmatch '(?im)^Filename:.*MW4RemasteredInstallWorker\.exe') 'The internal worker must never be exposed as a second Run-section installer.'
 Assert-True ($inno -match 'GetOpenFileNameMulti' -and $inno -match 'CreateCustomPage\(wpWelcome') 'Setup must collect any supported media through a neutral multi-file page before installation.'
 Assert-True ($inno -match '\*\.iso;\*\.zip;\*\.cue' -and $inno -match 'matching BIN') 'Setup must expose qualified CUE/BIN intake and explain the required companion BIN.'
+Assert-True ($inno -match 'BrowseForFolder' -and $inno -match 'MediaFiles\.Add\(Folder\)' -and $inno -match 'Add folder' -and $inno -match 'one folder per disc') 'Setup must expose the existing validated disc-folder route without adding filesystem policy to the UI.'
+Assert-True ($inno.Contains("MediaPath[Length(MediaPath)] = '\'") -and $inno.Contains("MediaPath := MediaPath + '.'") -and $inno.Contains("' --media " + '"' + "' + MediaPath")) 'Mounted disc roots must retain root semantics and cannot escape the closing worker argument quote.'
 Assert-True ($inno -match 'CreateInputOptionPage\(MediaPage\.ID' -and $inno -match 'I accept the original Microsoft license terms') 'Setup must obtain original-game license acceptance before recording first-run completion.'
 Assert-True ($inno -match '\{param:MEDIAFILES\|\}' -and $inno -match 'AddCommandLineMedia') 'The same media-first flow must support a bounded unattended package smoke without adding a second UI.'
 Assert-True ($inno -match '\{param:ACCEPTLICENSE\|0\}' -and $inno -match '/ACCEPTLICENSE=1') 'Unattended setup must require explicit original-game license acceptance.'

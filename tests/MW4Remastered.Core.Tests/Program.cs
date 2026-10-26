@@ -1031,56 +1031,7 @@ finally
     if (Directory.Exists(blackKnightPlanRoot)) Directory.Delete(blackKnightPlanRoot, true);
 }
 
-var cabinetRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-cabinet-test-" + Guid.NewGuid().ToString("N"));
-try
-{
-    Directory.CreateDirectory(cabinetRoot);
-    var source = Path.Combine(cabinetRoot, "source");
-    WriteFixture(source, "GAME/RESOURCE/core.mw4", "core");
-    WriteFixture(source, "GAME/RESOURCE/MAPS/test.mw4", "map");
-    var archive = Path.Combine(cabinetRoot, "fixture.cab");
-    ZipFile.CreateFromDirectory(source, archive, CompressionLevel.NoCompression, includeBaseDirectory: false);
-    var destination = Path.Combine(cabinetRoot, "extracted");
-    var extracted = new CabinetPayloadExtractor().ExtractGamePayload(archive, destination);
-    Check(extracted.Count == 2 && File.Exists(Path.Combine(destination, "RESOURCE", "core.mw4")), "cabinet extractor commits only the validated GAME payload");
-
-    var unsafeSource = Path.Combine(cabinetRoot, "unsafe-source");
-    WriteFixture(unsafeSource, "SETUP.EXE", "outside game payload");
-    var unsafeArchive = Path.Combine(cabinetRoot, "unsafe.cab");
-    ZipFile.CreateFromDirectory(unsafeSource, unsafeArchive, CompressionLevel.NoCompression, includeBaseDirectory: false);
-    var unsafeRejected = false;
-    try
-    {
-        new CabinetPayloadExtractor().ExtractGamePayload(unsafeArchive, Path.Combine(cabinetRoot, "unsafe-output"));
-    }
-    catch (InvalidDataException)
-    {
-        unsafeRejected = true;
-    }
-    Check(unsafeRejected && !Directory.Exists(Path.Combine(cabinetRoot, "unsafe-output")), "cabinet extractor rejects entries outside GAME before extraction");
-
-    var traversalArchive = Path.Combine(cabinetRoot, "traversal.cab");
-    using (var archiveStream = File.Create(traversalArchive))
-    using (var zip = new ZipArchive(archiveStream, ZipArchiveMode.Create))
-    {
-        using var writer = new StreamWriter(zip.CreateEntry("GAME/../escape.bin").Open());
-        writer.Write("escape");
-    }
-    var traversalRejected = false;
-    try
-    {
-        new CabinetPayloadExtractor().ExtractGamePayload(traversalArchive, Path.Combine(cabinetRoot, "traversal-output"));
-    }
-    catch (InvalidDataException)
-    {
-        traversalRejected = true;
-    }
-    Check(traversalRejected && !Directory.Exists(Path.Combine(cabinetRoot, "traversal-output")), "cabinet extractor rejects traversal before extraction");
-}
-finally
-{
-    if (Directory.Exists(cabinetRoot)) Directory.Delete(cabinetRoot, true);
-}
+CabinetPayloadExtractorSmoke.Run(failures);
 
 var mercenariesPlanRoot = Path.Combine(Path.GetTempPath(), "mw4-remastered-mercs-plan-test-" + Guid.NewGuid().ToString("N"));
 try
@@ -1187,6 +1138,7 @@ MechPakIsoProjectionSmoke.Run(failures);
 MechPakResourceOverlayPlanSmoke.Run(failures);
 MechPakActivationTransformSmoke.Run(failures);
 MechPakOwnedExecutableUpgradeSmoke.Run(failures);
+VengeanceMovieSurfaceSmoke.Run(failures);
 OwnedInstallOverlayTransactionSmoke.Run(failures);
 OwnedInstallFileReplacementTransactionSmoke.Run(failures);
 GraphicsSettingsSmoke.Run(failures);

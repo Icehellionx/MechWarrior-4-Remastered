@@ -4,6 +4,9 @@ internal sealed class LauncherHelpForm : Form
 {
     public LauncherHelpForm()
     {
+        SuspendLayout();
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "Help & quirks";
         ClientSize = new Size(680, 520);
         MinimumSize = new Size(540, 380);
@@ -57,6 +60,7 @@ The centered 4:3 picture and side bars preserve the original presentation. SETTI
         Controls.Add(body);
         Controls.Add(footer);
         CancelButton = close;
+        ResumeLayout(performLayout: true);
         Shown += (_, _) =>
         {
             content.Select(0, 0);

@@ -35,6 +35,10 @@ RestartApplications=no
 ArchitecturesAllowed=x64compatible
 VersionInfoVersion={#AppVersion}
 
+[Messages]
+UninstallConfirm=Remove the %1 launcher, manuals, and shortcuts?%n%nGame files, saves, and settings may remain. To remove owned game files too, use UNINSTALL in the launcher before continuing.
+UninstalledAll=The %1 launcher, manuals, and shortcuts have been removed.%n%nGame files, saves, and settings may remain in the installation folder.
+
 [Files]
 Source: "{#PayloadRoot}\MW4RemasteredInstallWorker.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
 Source: "{#PayloadRoot}\MW4RemasteredLauncher.exe"; DestDir: "{app}"; Flags: ignoreversion notimestamp
@@ -100,7 +104,9 @@ var
   LicensePage: TInputOptionWizardPage;
   FirewallPage: TInputOptionWizardPage;
   MediaList: TNewListBox;
+  MediaInstructions: TNewStaticText;
   AddMediaButton: TNewButton;
+  AddFolderButton: TNewButton;
   RemoveMediaButton: TNewButton;
   MediaFiles: TStringList;
   FirewallWarning: String;
@@ -143,6 +149,19 @@ begin
   RefreshMediaList;
 end;
 
+procedure AddFolderButtonClick(Sender: TObject);
+var
+  Folder: String;
+begin
+  Folder := '';
+  if BrowseForFolder('Choose an original disc folder (one folder per disc)', Folder, False) then
+  begin
+    if MediaFiles.IndexOf(Folder) < 0 then
+      MediaFiles.Add(Folder);
+    RefreshMediaList;
+  end;
+end;
+
 procedure MediaListClick(Sender: TObject);
 begin
   RemoveMediaButton.Enabled := MediaList.ItemIndex >= 0;
@@ -177,18 +196,18 @@ begin
   MediaFiles.CaseSensitive := False;
   AddCommandLineMedia(ExpandConstant('{param:MEDIAFILES|}'));
   MediaPage := CreateCustomPage(wpWelcome, 'Choose original game media',
-    'Add every MechWarrior 4 ISO, single-track MODE1/2352 CUE with its matching BIN, or ISO-containing ZIP. For Mercenaries, also add the supported fix ZIP containing the official mercpr1.exe update.');
+    'Add the original discs for the games and optional Mech Paks you want.');
   LicensePage := CreateInputOptionPage(MediaPage.ID, 'Original game license',
     'Accept the license terms included with your selected original media',
     'Setup records this acceptance now so no game interrupts first launch with a legacy license dialog.',
-    True, False);
-  LicensePage.Add('I accept the original Microsoft license terms included with the media I selected.');
+    False, False);
+  LicensePage.Add('I accept the original Microsoft license terms.');
   LicensePage.Values[0] := ExpandConstant('{param:ACCEPTLICENSE|0}') = '1';
   FirewallPage := CreateInputOptionPage(LicensePage.ID, 'Multiplayer network access',
     'Choose private-network multiplayer access during setup',
     'Setup makes the firewall decision before first launch. Selected: allow the installed games on private networks and block them on public networks. Unselected: block inbound access on both. Uninstall removes these rules.',
-    True, False);
-  FirewallPage.Add('Allow multiplayer connections to installed MechWarrior 4 games on private networks.');
+    False, False);
+  FirewallPage.Add('Allow multiplayer connections on private networks.');
   if ExpandConstant('{param:ALLOWPRIVATEFIREWALL|}') = '1' then
     FirewallPage.Values[0] := True
   else if ExpandConstant('{param:ALLOWPRIVATEFIREWALL|}') = '0' then
@@ -196,20 +215,36 @@ begin
   else
     FirewallPage.Values[0] := not WizardSilent;
 
+  MediaInstructions := TNewStaticText.Create(MediaPage);
+  MediaInstructions.Parent := MediaPage.Surface;
+  MediaInstructions.SetBounds(0, 0, MediaPage.SurfaceWidth, 0);
+  MediaInstructions.AutoSize := True;
+  MediaInstructions.WordWrap := True;
+  MediaInstructions.Caption :=
+    'Choose ISO files, ISO-containing ZIPs, or single-track MODE1/2352 CUE files with their matching BINs.' + #13#10 +
+    'You can also add mounted or extracted original disc folders, one folder per disc. Mercenaries Point Release 1 is included.';
+
   MediaList := TNewListBox.Create(MediaPage);
   MediaList.Parent := MediaPage.Surface;
-  MediaList.SetBounds(0, 0, MediaPage.SurfaceWidth, ScaleY(190));
+  MediaList.SetBounds(0, MediaInstructions.Top + MediaInstructions.Height + ScaleY(12),
+    MediaPage.SurfaceWidth, MediaPage.SurfaceHeight - MediaInstructions.Height - ScaleY(54));
   MediaList.OnClick := @MediaListClick;
 
   AddMediaButton := TNewButton.Create(MediaPage);
   AddMediaButton.Parent := MediaPage.Surface;
-  AddMediaButton.SetBounds(0, ScaleY(202), ScaleX(150), ScaleY(30));
+  AddMediaButton.SetBounds(0, MediaPage.SurfaceHeight - ScaleY(30), ScaleX(150), ScaleY(30));
   AddMediaButton.Caption := 'Add ISO / CUE / ZIP...';
   AddMediaButton.OnClick := @AddMediaButtonClick;
 
+  AddFolderButton := TNewButton.Create(MediaPage);
+  AddFolderButton.Parent := MediaPage.Surface;
+  AddFolderButton.SetBounds(ScaleX(160), AddMediaButton.Top, ScaleX(120), ScaleY(30));
+  AddFolderButton.Caption := 'Add folder...';
+  AddFolderButton.OnClick := @AddFolderButtonClick;
+
   RemoveMediaButton := TNewButton.Create(MediaPage);
   RemoveMediaButton.Parent := MediaPage.Surface;
-  RemoveMediaButton.SetBounds(ScaleX(160), ScaleY(202), ScaleX(110), ScaleY(30));
+  RemoveMediaButton.SetBounds(ScaleX(290), AddMediaButton.Top, ScaleX(110), ScaleY(30));
   RemoveMediaButton.Caption := 'Remove selected';
   RemoveMediaButton.Enabled := False;
   RemoveMediaButton.OnClick := @RemoveMediaButtonClick;
@@ -247,7 +282,7 @@ begin
   Result := True;
   if (CurPageID = MediaPage.ID) and (MediaFiles.Count = 0) then
   begin
-    MsgBox('Add at least one original MechWarrior 4 ISO, CUE with its matching BIN, ISO-containing ZIP, or supported official-update ZIP before continuing.', mbError, MB_OK);
+    MsgBox('Add at least one original MechWarrior 4 ISO, CUE with its matching BIN, ISO-containing ZIP, or original disc folder before continuing.', mbError, MB_OK);
     Result := False;
   end;
   if (CurPageID = LicensePage.ID) and (not LicensePage.Values[0]) then
@@ -260,11 +295,18 @@ end;
 function GetMediaParameters(Param: String): String;
 var
   Index: Integer;
+  MediaPath: String;
 begin
   Result := '--install-worker --destination "' + ExpandConstant('{app}') +
     '" --log "' + ExpandConstant('{app}\Logs\InstallWorker.log') + '"';
   for Index := 0 to MediaFiles.Count - 1 do
-    Result := Result + ' --media "' + MediaFiles[Index] + '"';
+  begin
+    MediaPath := MediaFiles[Index];
+    { A disc root such as D:\ must not escape the closing command-line quote. }
+    if (Length(MediaPath) > 0) and (MediaPath[Length(MediaPath)] = '\') then
+      MediaPath := MediaPath + '.';
+    Result := Result + ' --media "' + MediaPath + '"';
+  end;
 end;
 
 procedure RemoveFirewallRules(RuleName: String);

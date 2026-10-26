@@ -4,6 +4,9 @@ internal sealed class DiagnosticsForm : Form
 {
     public DiagnosticsForm(string report)
     {
+        SuspendLayout();
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "Installation diagnostics";
         ClientSize = new Size(680, 480);
         MinimumSize = new Size(560, 360);
@@ -43,5 +46,6 @@ internal sealed class DiagnosticsForm : Form
         Controls.Add(output);
         Controls.Add(footer);
         CancelButton = close;
+        ResumeLayout(performLayout: true);
     }
 }

@@ -9,11 +9,18 @@ public interface IDiskImageBackend
 
 public sealed class OwnedIsoMediaSessionFactory
 {
-    private readonly IDiskImageBackend backend;
+    private readonly Lazy<IDiskImageBackend> backend;
 
     public OwnedIsoMediaSessionFactory(IDiskImageBackend backend)
     {
-        this.backend = backend ?? throw new ArgumentNullException(nameof(backend));
+        ArgumentNullException.ThrowIfNull(backend);
+        this.backend = new Lazy<IDiskImageBackend>(() => backend);
+    }
+
+    internal OwnedIsoMediaSessionFactory(Func<IDiskImageBackend> createBackend)
+    {
+        ArgumentNullException.ThrowIfNull(createBackend);
+        backend = new Lazy<IDiskImageBackend>(createBackend);
     }
 
     public OwnedIsoMediaSession Open(string imagePath, CancellationToken cancellationToken = default)
@@ -30,27 +37,28 @@ public sealed class OwnedIsoMediaSessionFactory
         {
             throw new InvalidDataException("Disc image cannot be a reparse point.");
         }
-        if (backend.IsAttached(image))
+        var mountBackend = backend.Value;
+        if (mountBackend.IsAttached(image))
         {
             throw new InvalidOperationException("This ISO is already mounted outside Setup. Eject that virtual disc in Windows, then retry installation; Setup will mount and release its own images.");
         }
 
         try
         {
-            var root = Path.GetFullPath(backend.Mount(image));
+            var root = Path.GetFullPath(mountBackend.Mount(image));
             cancellationToken.ThrowIfCancellationRequested();
             if (!Directory.Exists(root)) throw new DirectoryNotFoundException($"Mounted disc root does not exist: {root}");
             if ((File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
             {
                 throw new InvalidDataException("Mounted disc root cannot be a reparse point.");
             }
-            return new OwnedIsoMediaSession(image, root, backend);
+            return new OwnedIsoMediaSession(image, root, mountBackend);
         }
         catch (Exception mountError)
         {
             try
             {
-                backend.Dismount(image);
+                mountBackend.Dismount(image);
             }
             catch (Exception cleanupError)
             {

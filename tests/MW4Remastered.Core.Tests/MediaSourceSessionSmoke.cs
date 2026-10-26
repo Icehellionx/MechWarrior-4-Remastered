@@ -21,6 +21,38 @@ internal static class MediaSourceSessionSmoke
             }
             Check(backend.MountCount == 0, "directory media session owns no image", failures);
 
+            var backendRequests = 0;
+            var folderOnlyFactory = new MediaSourceSessionFactory(
+                new OwnedIsoMediaSessionFactory(() =>
+                {
+                    backendRequests++;
+                    throw new InvalidOperationException("Windows mounting is unavailable in this fixture.");
+                }), new IsoArchiveExtractor());
+            var borrowedFile = Write(mountedRoot, "Original file.dat", "original disc bytes");
+            var borrowedAttributes = File.GetAttributes(borrowedFile);
+            File.SetAttributes(borrowedFile, borrowedAttributes | FileAttributes.ReadOnly);
+            try
+            {
+                using (var folder = folderOnlyFactory.Open(mountedRoot))
+                {
+                    Check(folder.Items.Single().RootPath == Path.GetFullPath(mountedRoot) && backendRequests == 0,
+                        "borrowed folders work when Windows mount support is unavailable", failures);
+                }
+                Check(Directory.Exists(mountedRoot) && File.ReadAllText(borrowedFile) == "original disc bytes" &&
+                      (File.GetAttributes(borrowedFile) & FileAttributes.ReadOnly) != 0 && backendRequests == 0,
+                    "folder disposal preserves borrowed read-only media without initializing or cleaning a mount", failures);
+            }
+            finally
+            {
+                File.SetAttributes(borrowedFile, borrowedAttributes);
+            }
+
+            using (var defaultFolder = new MediaSourceSessionFactory().Open(mountedRoot))
+            {
+                Check(defaultFolder.Kind == MediaSourceKind.Directory,
+                    "default media session opens a folder independently of Windows PowerShell availability", failures);
+            }
+
             var image = Write(root, "disc.iso", "fixture");
             using (var iso = factory.Open(image))
             {
@@ -65,6 +97,21 @@ internal static class MediaSourceSessionSmoke
             }
             Check(rejected && failingBackend.DismountCount == 2, "partial ZIP mount failure cleans the attempted mount and earlier owned images", failures);
             Check(SessionScratch().SetEquals(failureScratchBefore), "partial ZIP mount failure removes extraction scratch", failures);
+
+            var unavailableScratchBefore = SessionScratch();
+            var unavailableRejected = false;
+            try
+            {
+                using var unused = folderOnlyFactory.Open(archive);
+            }
+            catch (InvalidOperationException error)
+            {
+                unavailableRejected = error.Message.Contains("mounting is unavailable", StringComparison.Ordinal);
+            }
+            Check(unavailableRejected && backendRequests == 1 && File.Exists(archive),
+                "image archives request mount support only when needed and preserve source on failure", failures);
+            Check(SessionScratch().SetEquals(unavailableScratchBefore),
+                "unavailable mount support removes only owned ZIP extraction scratch", failures);
         }
         finally
         {

@@ -1,19 +1,9 @@
-using System.Diagnostics;
 using MW4Remastered.Core.Media;
 
 namespace MW4Remastered.Core.Install;
 
 public sealed class CabinetPayloadExtractor
 {
-    private static readonly TimeSpan ArchiveToolTimeout = TimeSpan.FromMinutes(2);
-    private readonly string archiveToolPath;
-
-    public CabinetPayloadExtractor(string archiveToolPath = "tar.exe")
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(archiveToolPath);
-        this.archiveToolPath = archiveToolPath;
-    }
-
     public IReadOnlyList<string> ExtractGamePayload(string cabinetPath, string destinationRoot, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
@@ -23,6 +13,8 @@ public sealed class CabinetPayloadExtractor
         {
             throw new InvalidDataException("Mercenaries cabinet cannot be a reparse point.");
         }
+        // Keep the validated source immutable through both native passes.
+        using var cabinetLease = new FileStream(cabinet, FileMode.Open, FileAccess.Read, FileShare.Read);
 
         var destination = Path.GetFullPath(destinationRoot);
         if (Directory.Exists(destination) || File.Exists(destination))
@@ -32,14 +24,16 @@ public sealed class CabinetPayloadExtractor
         var parent = Directory.GetParent(destination)?.FullName ?? throw new InvalidDataException("Cabinet extraction destination must have a parent directory.");
         Directory.CreateDirectory(parent);
 
-        var archiveEntries = ListEntries(cabinet, cancellationToken);
-        var expected = ValidateGameEntries(archiveEntries);
-        var staging = Path.Combine(parent, $".{Path.GetFileName(destination)}.cab-staging-{Guid.NewGuid():N}");
+        // Windows tar/libarchive 3.8.9 cannot decompress this valid LZX cabinet
+        // (libarchive #3542/#3544). Use the OS cabinet reader, not a PATH tool.
+        var archiveEntries = WindowsCabinetReader.ReadInventory(cabinet, cancellationToken);
+        var expected = ValidateGameEntries(archiveEntries.Keys);
+        var staging = Path.Combine(parent, $".cab-staging-{Guid.NewGuid():N}");
         Directory.CreateDirectory(staging);
 
         try
         {
-            RunArchiveTool(new[] { "-xf", cabinet, "-C", staging }, cancellationToken);
+            WindowsCabinetReader.Extract(cabinet, staging, archiveEntries, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             var extractedGameRoot = Path.Combine(staging, "GAME");
             if (!Directory.Exists(extractedGameRoot)) throw new InvalidDataException("Cabinet did not produce the expected GAME payload root.");
@@ -59,12 +53,6 @@ public sealed class CabinetPayloadExtractor
         {
             if (Directory.Exists(staging)) Directory.Delete(staging, true);
         }
-    }
-
-    private IReadOnlyList<string> ListEntries(string cabinet, CancellationToken cancellationToken)
-    {
-        var result = RunArchiveTool(new[] { "-tf", cabinet }, cancellationToken);
-        return result.Split(new[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
     private static HashSet<string> ValidateGameEntries(IEnumerable<string> entries)
@@ -90,46 +78,4 @@ public sealed class CabinetPayloadExtractor
         return accepted;
     }
 
-    private string RunArchiveTool(IEnumerable<string> arguments, CancellationToken cancellationToken)
-    {
-        var startInfo = new ProcessStartInfo
-        {
-            FileName = archiveToolPath,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true,
-        };
-        foreach (var argument in arguments) startInfo.ArgumentList.Add(argument);
-
-        using var process = Process.Start(startInfo) ?? throw new IOException($"Failed to start archive tool: {archiveToolPath}");
-        var outputTask = process.StandardOutput.ReadToEndAsync();
-        var errorTask = process.StandardError.ReadToEndAsync();
-        var deadline = DateTime.UtcNow + ArchiveToolTimeout;
-        try
-        {
-            while (!process.WaitForExit(250))
-            {
-                cancellationToken.ThrowIfCancellationRequested();
-                if (DateTime.UtcNow >= deadline)
-                    throw new IOException($"Archive tool exceeded the {ArchiveToolTimeout.TotalSeconds:0}-second timeout.");
-            }
-        }
-        catch
-        {
-            if (!process.HasExited)
-            {
-                process.Kill(entireProcessTree: true);
-                process.WaitForExit();
-            }
-            throw;
-        }
-        var output = outputTask.GetAwaiter().GetResult();
-        var error = errorTask.GetAwaiter().GetResult();
-        if (process.ExitCode != 0)
-        {
-            throw new InvalidDataException($"Archive tool exited with code {process.ExitCode}: {error.Trim()}");
-        }
-        return output;
-    }
 }

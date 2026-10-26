@@ -68,19 +68,24 @@ internal sealed class MainForm : Form
         this.joystickPreference = joystickPreference ?? throw new ArgumentNullException(nameof(joystickPreference));
         joystickEnabled = joystickPreference.Read();
 
+        SuspendLayout();
+        // All dimensions below are authored at 100% display scaling. Scale the
+        // complete form and its controls together when Windows uses a higher DPI.
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "MechWarrior 4 Remastered";
         Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         ClientSize = new Size(930, 590);
-        MinimumSize = MaximumSize = new Size(946, 629);
+        MinimumSize = new Size(946, 629);
         BackColor = Background;
         ForeColor = TextColor;
         Font = new Font("Segoe UI", 10F);
-        FormBorderStyle = FormBorderStyle.FixedSingle;
-        MaximizeBox = false;
+        FormBorderStyle = FormBorderStyle.Sizable;
         StartPosition = FormStartPosition.CenterScreen;
 
         Controls.Add(CreateLayout());
         ShowLoadingState();
+        ResumeLayout(performLayout: true);
         Shown += async (_, _) => await RefreshStatusesAsync();
         FormClosing += OnFormClosing;
         gameWindowLifecycleGuard.ActiveSessionsChanged += OnActiveSessionsChanged;
@@ -172,10 +177,11 @@ internal sealed class MainForm : Form
             ForeColor = Amber,
             Text = "R E M A S T E R E D",
         });
+        var helpPanel = new Panel { Dock = DockStyle.Right, Width = 152, Padding = new Padding(0, 20, 0, 0) };
         var helpButton = new OperationButton
         {
-            Location = new Point(720, 20),
-            Size = new Size(152, 32),
+            Dock = DockStyle.Top,
+            Height = 32,
             Font = new Font("Segoe UI", 8.5F, FontStyle.Bold),
             BackColor = Panel,
             ForeColor = TextColor,
@@ -190,13 +196,16 @@ internal sealed class MainForm : Form
             using var dialog = new LauncherHelpForm();
             dialog.ShowDialog(panel.FindForm());
         };
-        panel.Controls.Add(helpButton);
+        helpPanel.Controls.Add(helpButton);
+        panel.Controls.Add(helpPanel);
         return panel;
     }
 
     private Control CreateFooter()
     {
-        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6 };
+        var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6, RowCount = 2 };
+        footer.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
+        footer.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
         footer.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
@@ -209,6 +218,7 @@ internal sealed class MainForm : Form
         statusLine.Font = new Font("Consolas", 9F, FontStyle.Bold);
         statusLine.ForeColor = Muted;
         footer.Controls.Add(statusLine, 0, 0);
+        footer.SetColumnSpan(statusLine, 6);
 
         joystickButton = new OperationButton
         {
@@ -231,7 +241,7 @@ internal sealed class MainForm : Form
         });
         UpdateJoystickButton();
         actionButtons.Add(joystickButton);
-        footer.Controls.Add(joystickButton, 1, 0);
+        footer.Controls.Add(joystickButton, 1, 1);
 
         settingsButton = new OperationButton
         {
@@ -251,7 +261,7 @@ internal sealed class MainForm : Form
         settingsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         settingsButton.Click += async (_, _) => await OpenGraphicsSettingsAsync();
         actionButtons.Add(settingsButton);
-        footer.Controls.Add(settingsButton, 2, 0);
+        footer.Controls.Add(settingsButton, 2, 1);
 
         diagnosticsButton = new OperationButton
         {
@@ -269,7 +279,7 @@ internal sealed class MainForm : Form
         diagnosticsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         diagnosticsButton.Click += async (_, _) => await OpenDiagnosticsAsync();
         actionButtons.Add(diagnosticsButton);
-        footer.Controls.Add(diagnosticsButton, 3, 0);
+        footer.Controls.Add(diagnosticsButton, 3, 1);
 
         var creditsPath = Path.Combine(AppContext.BaseDirectory, "THIRD-PARTY-NOTICES.md");
         creditsButton = new OperationButton
@@ -289,7 +299,7 @@ internal sealed class MainForm : Form
         creditsButton.FlatAppearance.MouseOverBackColor = PanelHover;
         creditsButton.Click += (_, _) => TryAction(() => documentOpener.Open(creditsPath));
         actionButtons.Add(creditsButton);
-        footer.Controls.Add(creditsButton, 4, 0);
+        footer.Controls.Add(creditsButton, 4, 1);
 
         uninstallButton = new OperationButton
         {
@@ -306,7 +316,7 @@ internal sealed class MainForm : Form
         uninstallButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(54, 30, 26);
         uninstallButton.Click += async (_, _) => await UninstallAllAsync();
         actionButtons.Add(uninstallButton);
-        footer.Controls.Add(uninstallButton, 5, 0);
+        footer.Controls.Add(uninstallButton, 5, 1);
         return footer;
     }
 

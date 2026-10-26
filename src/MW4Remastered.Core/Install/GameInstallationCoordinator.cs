@@ -280,6 +280,7 @@ public sealed class GameInstallationCoordinator
         string? blackKnightPr1Scratch = null;
         string? mechPakActivationScratch = null;
         string? blackKnightDpiScratch = null;
+        string? vengeanceMovieScratch = null;
         IReadOnlyList<InstallFile>? blackKnightCompatibilityFiles = null;
         try
         {
@@ -452,6 +453,14 @@ public sealed class GameInstallationCoordinator
                     plan, withBlackKnight.PresentationCompatibilityRoot, blackKnightDpiScratch);
             }
 
+            if (request is VengeanceInstallRequest)
+            {
+                var parent = Directory.GetParent(destination)?.FullName
+                    ?? throw new InvalidDataException("Install destination must have a parent directory.");
+                vengeanceMovieScratch = Path.Combine(parent, $".vengeance-movie-surface-{Guid.NewGuid():N}");
+                plan = new VengeanceMovieSurfaceTransform().TransformPlan(plan, vengeanceMovieScratch, cancellationToken);
+            }
+
             Report(GameInstallationStage.Committing, "Staging and atomically committing owned files.");
             var preservingExistingFiles = Directory.Exists(destination);
             var manifest = transaction.Execute(plan, destination, cancellationToken);
@@ -478,6 +487,7 @@ public sealed class GameInstallationCoordinator
             if (blackKnightPr1Scratch is not null) RemoveScratchTree(blackKnightPr1Scratch);
             if (mechPakActivationScratch is not null) RemoveScratchTree(mechPakActivationScratch);
             if (blackKnightDpiScratch is not null) RemoveScratchTree(blackKnightDpiScratch);
+            if (vengeanceMovieScratch is not null) RemoveScratchTree(vengeanceMovieScratch);
         }
 
         void Report(GameInstallationStage stage, string message) =>

@@ -15,6 +15,9 @@ internal sealed class GraphicsSettingsForm : Form
 
     public GraphicsSettingsForm(GameDisplayGeometry geometry)
     {
+        SuspendLayout();
+        AutoScaleDimensions = new SizeF(96F, 96F);
+        AutoScaleMode = AutoScaleMode.Dpi;
         Text = "Display settings";
         ClientSize = new Size(540, 525);
         FormBorderStyle = FormBorderStyle.FixedDialog;
@@ -87,6 +90,7 @@ internal sealed class GraphicsSettingsForm : Form
         Controls.Add(cancel);
         AcceptButton = apply;
         CancelButton = cancel;
+        ResumeLayout(performLayout: true);
     }
 
     public GraphicsChoices Selection => new(((Option)resampling.SelectedItem!).Value,
