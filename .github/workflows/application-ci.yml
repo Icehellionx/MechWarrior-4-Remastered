@@ -67,6 +67,10 @@ jobs:
           dotnet build src/MW4Remastered.Launcher/MW4Remastered.Launcher.csproj --configuration Release
           dotnet build src/MW4Remastered.RtpPatchHost/MW4Remastered.RtpPatchHost.csproj --configuration Release
 
+      - name: Run launcher layout smoke
+        shell: pwsh
+        run: dotnet run --project tests/MW4Remastered.Launcher.Tests/MW4Remastered.Launcher.Tests.csproj --configuration Release
+
       - name: Validate security and packaging contracts
         shell: pwsh
         run: |

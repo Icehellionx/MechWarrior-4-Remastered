@@ -203,6 +203,8 @@ internal sealed class MainForm : Form
 
     private Control CreateFooter()
     {
+        // A transiently short percent row must not collapse the anchored buttons
+        // before DPI scaling; their authored minimum scales with the form.
         var footer = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 6, RowCount = 2 };
         footer.RowStyles.Add(new RowStyle(SizeType.Absolute, 28));
         footer.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
@@ -223,6 +225,7 @@ internal sealed class MainForm : Form
         joystickButton = new OperationButton
         {
             Size = new Size(122, 32),
+            MinimumSize = new Size(0, 32),
             Enabled = false,
             Margin = new Padding(0, 0, 12, 0),
             Anchor = AnchorStyles.Right,
@@ -247,6 +250,7 @@ internal sealed class MainForm : Form
         {
             Text = "SETTINGS",
             Size = new Size(108, 32),
+            MinimumSize = new Size(0, 32),
             Margin = new Padding(0, 0, 12, 0),
             Anchor = AnchorStyles.Right,
             Enabled = false,
@@ -267,6 +271,7 @@ internal sealed class MainForm : Form
         {
             Text = "DIAGNOSTICS",
             Size = new Size(126, 32),
+            MinimumSize = new Size(0, 32),
             Margin = new Padding(0, 0, 12, 0),
             Anchor = AnchorStyles.Right,
             BackColor = Panel,
@@ -286,6 +291,7 @@ internal sealed class MainForm : Form
         {
             Text = "CREDITS",
             Size = new Size(100, 32),
+            MinimumSize = new Size(0, 32),
             Margin = new Padding(0, 0, 12, 0),
             Anchor = AnchorStyles.Right,
             Enabled = File.Exists(creditsPath),
@@ -305,6 +311,7 @@ internal sealed class MainForm : Form
         {
             Text = "UNINSTALL",
             Size = new Size(118, 32),
+            MinimumSize = new Size(0, 32),
             Anchor = AnchorStyles.Right,
             Enabled = applicationUninstaller.IsAvailable,
             BackColor = Panel,
