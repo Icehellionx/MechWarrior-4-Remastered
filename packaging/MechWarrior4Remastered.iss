@@ -63,7 +63,7 @@ Name: "{autodesktop}\MechWarrior 4 Remastered"; Filename: "{app}\MW4RemasteredLa
 Name: "desktopicon"; Description: "Create a &desktop shortcut"; GroupDescription: "Additional shortcuts:"
 
 [Run]
-Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 Remastered"; WorkingDir: "{app}"; Flags: postinstall nowait skipifsilent runasoriginaluser
+Filename: "{app}\MW4RemasteredLauncher.exe"; Description: "Launch MechWarrior 4 Remastered"; WorkingDir: "{app}"; Flags: postinstall nowait skipifsilent runasoriginaluser; Check: CanLaunchInstalledGames
 
 [UninstallRun]
 ; Remove only the three project-named inbound rules that setup can create.
@@ -110,9 +110,25 @@ var
   RemoveMediaButton: TNewButton;
   MediaFiles: TStringList;
   FirewallWarning: String;
+  GameInstallSucceeded: Boolean;
+  GameInstallFailureLog: String;
 
 function SetForegroundWindow(hWnd: HWND): Boolean;
   external 'SetForegroundWindow@user32.dll stdcall';
+
+function CanLaunchInstalledGames: Boolean;
+begin
+  Result := GameInstallSucceeded;
+end;
+
+function GetCustomSetupExitCode: Integer;
+begin
+  { Inno calls this only when it would otherwise report exit code zero. }
+  if GameInstallSucceeded then
+    Result := 0
+  else
+    Result := 4;
+end;
 
 procedure RefreshMediaList;
 var
@@ -192,6 +208,8 @@ end;
 
 procedure InitializeWizard;
 begin
+  GameInstallSucceeded := False;
+  GameInstallFailureLog := '';
   MediaFiles := TStringList.Create;
   MediaFiles.CaseSensitive := False;
   AddCommandLineMedia(ExpandConstant('{param:MEDIAFILES|}'));
@@ -268,8 +286,23 @@ begin
     WizardForm.BringToFront;
     SetForegroundWindow(WizardForm.Handle);
   end;
-  if (CurPageID = wpFinished) and (FirewallWarning <> '') then
-    WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10 + #13#10 + FirewallWarning;
+  if CurPageID = wpFinished then
+  begin
+    if not GameInstallSucceeded then
+    begin
+      WizardForm.FinishedHeadingLabel.Caption := 'Game installation incomplete';
+      WizardForm.FinishedLabel.Caption :=
+        'Setup could not complete the selected game installation. Review the setup error and try again with complete supported original media.';
+      if GameInstallFailureLog <> '' then
+        WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10 + #13#10 +
+          'Diagnostic log: ' + GameInstallFailureLog
+      else
+        WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10 + #13#10 +
+          'If the game worker created a diagnostic log, find it at: ' + ExpandConstant('{app}\Logs\InstallWorker.log');
+    end
+    else if FirewallWarning <> '' then
+      WizardForm.FinishedLabel.Caption := WizardForm.FinishedLabel.Caption + #13#10 + #13#10 + FirewallWarning;
+  end;
 end;
 
 procedure DeinitializeSetup;
@@ -366,6 +399,8 @@ begin
   if CurStep <> ssPostInstall then
     exit;
 
+  GameInstallSucceeded := False;
+  GameInstallFailureLog := '';
   if not LicensePage.Values[0] then
     RaiseException('Original game license acceptance is required. Interactive setup records it on the license page; unattended setup must pass /ACCEPTLICENSE=1.');
 
@@ -388,11 +423,13 @@ begin
     ForceDirectories(ExtractFileDir(RetainedWorkerLog));
     if not CopyFile(WorkerLog, RetainedWorkerLog, False) then
       RetainedWorkerLog := WorkerLog;
+    GameInstallFailureLog := RetainedWorkerLog;
     if ResultCode = 2 then
       RaiseException('A different MechWarrior 4 installation is still registered and its game executable is present. Remove that installation before installing a second copy at this destination. Setup did not change the existing registration. Diagnostic log: ' + RetainedWorkerLog);
     RaiseException('Selected game installation failed safely. The retained diagnostic log is available at: ' + RetainedWorkerLog);
   end;
 
+  GameInstallSucceeded := True;
   RemoveFirewallRules('MechWarrior 4 Remastered - Vengeance');
   RemoveFirewallRules('MechWarrior 4 Remastered - Black Knight');
   RemoveFirewallRules('MechWarrior 4 Remastered - Mercenaries');

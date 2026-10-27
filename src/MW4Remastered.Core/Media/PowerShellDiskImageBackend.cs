@@ -17,7 +17,7 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
     {
         if (runningUnderWine)
             throw new InvalidOperationException(
-                "Windows ISO mounting is unavailable under Wine. Mount each original game disc in Linux, then use Add folder to select each readable disc root in Setup. Leave those folders available until installation finishes; Setup will not unmount or change them.");
+                "Windows ISO mounting is unavailable under Wine. Extract each original game disc into a separate regular folder in Linux, then use Add folder to select those folders in Setup. Mounted disc roots and symbolic links are not supported. Keep the source folders available until installation finishes; Setup will not change or remove them.");
         if (!OperatingSystem.IsWindows()) throw new PlatformNotSupportedException("ISO mounting is supported only on Windows.");
         powerShellPath = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.System),

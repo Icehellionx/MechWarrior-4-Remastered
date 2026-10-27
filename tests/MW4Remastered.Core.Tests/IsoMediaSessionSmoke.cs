@@ -10,8 +10,9 @@ internal static class IsoMediaSessionSmoke
         {
             wineRejected = error.Message.Contains("unavailable under Wine", StringComparison.Ordinal) &&
                 error.Message.Contains("Add folder", StringComparison.Ordinal) &&
-                error.Message.Contains("each", StringComparison.Ordinal) &&
-                error.Message.Contains("not unmount or change", StringComparison.Ordinal);
+                error.Message.Contains("separate regular folder", StringComparison.Ordinal) &&
+                error.Message.Contains("Mounted disc roots and symbolic links are not supported", StringComparison.Ordinal) &&
+                error.Message.Contains("not change or remove", StringComparison.Ordinal);
         }
         Check(wineRejected, "Wine image access fails before PowerShell with borrowed-folder guidance", failures);
 
