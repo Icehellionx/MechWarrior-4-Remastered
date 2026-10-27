@@ -2,6 +2,40 @@
 
 This plan begins intentionally uncompleted. Checkmarks require retained evidence; completed detail moves to `archive/HISTORY.md`.
 
+## GitHub issue audit (2026-10-27)
+
+All 18 reports and their comments were reviewed, including the unlabeled report. Source fixes are pushed at `4903c4038e7d68c6fc0e36a5ad4625aefdc3e388`; [1.0.1 is published](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.1). The exact Windows package passed 17 selections (11 installs/six expected rejections), cleanup/config preservation, current Defender scans, 4K/250% layout and the stated movie/startup checks; the Wine Vengeance folder lifecycle also passed. GitHub has five open reports (#14–#18). Closed state alone does not establish that every follow-up was resolved. Six specific diagnostic requests were posted on #2, #3, #7, #8, #11 and #16; targeted release alerts request field confirmation without closing reports.
+
+| Report | Audit result | Remaining action |
+| --- | --- | --- |
+| [#1](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/1) | A later log matches the standalone movie-teardown correction; the original DirectDraw startup error is separate. | Confirm movies after repair; obtain a fresh renderer log if startup still fails. |
+| [#2](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/2) | Later unnamed patch/pack and cropping symptoms remain unconfirmed. | Requested exact patch/action, current worker log and display diagnostics. |
+| [#3](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/3) | Settings exist; dual-monitor shift and physical controller discovery remain unconfirmed. | Requested display layout, device/interface/button counts and joystick state. |
+| [#4](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/4) | Refusing an already mounted image is intentional mount ownership policy. | Existing eject/retry guidance applies. |
+| [#5](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/5) | Exact optional Patch 3 batch-file handling is implemented; later installation success was reported. | No new release reply needed. |
+| [#6](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/6) | Dependency/elevation handling exists; the reporter confirmed the newer elevated installer worked. | No new release reply needed. |
+| [#7](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/7) | Residual ultrawide cropping needs affected-hardware confirmation. | Requested current window/client/monitor bounds and a redacted capture. |
+| [#8](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8) | The 100% scaling workaround was confirmed; normal-scaling behavior after the game-local DPI change remains unconfirmed. | Requested current mouse/display diagnostics and mission behavior. |
+| [#9](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/9) | The FPS cap remains intentional because of original game/MechLab behavior. | Uncapped FPS remains deferred. |
+| [#10](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/10) | The retained game-local decoder workaround and new standalone surface correction address separate paths. | Include a release alert for anyone still affected; do not demand repeated tests from the volunteer. |
+| [#11](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/11) | The later fullscreen warning is not established fixed by the movie correction. | Requested the current error, fresh game log and display details. |
+| [#12](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/12) | The owner tracker has prior virtual-device/two-mission evidence for the unchanged adapter. | Physical devices, multiple devices and force feedback remain coverage gaps. |
+| [#13](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/13) | Strict 4:3 presentation and the 30 FPS cap remain preservation contracts. | No new release reply needed. |
+| [#14](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/14) | Folder intake and lazy mounting are fixed; the exact Wine Vengeance folder lifecycle passed. | Confirm the reporter's runner; native picker and Linux gameplay remain untested. |
+| [#15](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/15) | Both supplied logs reach the supported standalone movie-teardown correction. Packaged natural intro, skip, relaunch and normal exits passed. | Confirm on affected GPU; archive replay and campaign transitions remain unqualified. |
+| [#16](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/16) | Actual 4K/250% footer collapse was fixed. Per-user location and preservation of unowned saves/settings remain intentional. | Confirm scaling and obtain a relative inventory/log for unexplained leftovers. Interactive failed-Setup finish page remains unqualified. |
+| [#17](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/17), [#18](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/18) | Native extraction matches all 85 independent file hashes; six exact-package folder selections completed the CAB stage and installation. | Retry with existing media. Additional final original-ZIP/mount recheck stopped before Setup; no pass claimed for that route. |
+
+Earlier dated intake entries below retain their historical evidence and pending work; use this audit for the current issue disposition.
+
+## Qualification workflow follow-up (2026-10-27)
+
+The owner requests a faster workflow after 1.0.1 because interactive VM operation has dominated turnaround time.
+
+- [ ] Run media recognition, exact-input transforms, CAB validation, rollback and ownership regressions through automated component tests before entering a VM.
+- [ ] Turn the available-media install/repair/removal matrix into one reusable unattended Windows job with verified reusable fixtures, durable progress, per-stage timing and resumable evidence. Use measured timings to identify the slow stages and scope repeat runs to affected boundaries.
+- [ ] Keep a small explicit interactive pass for original movies, launcher/setup layout and normal game exit. Evaluate a dedicated disposable Windows test machine for graphics/input checks that software rendering in this VM cannot establish. Record hardware and media coverage separately.
+
 ## Input qualification update (2026-10-02)
 
 - [x] Default joystick ON without changing a saved OFF preference; report selected-game adapter errors without silently changing the shared choice. Add HELP & QUIRKS with the exposed-button limit and mapping limitations.
