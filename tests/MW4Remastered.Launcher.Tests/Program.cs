@@ -52,11 +52,12 @@ internal static class Program
             ?? throw new InvalidOperationException("The actual launcher footer is missing.");
         Layout(form);
         var nativeScale = form.DeviceDpi / 96F;
-        CheckStatesAndResize("native", nativeScale);
 
         // Hidden ancestors do not participate in TableLayout sizing. Temporarily
         // detach the real footer so the production controls exercise its engine
-        // without displaying a window or triggering MainForm.Shown.
+        // without displaying a window or triggering MainForm.Shown. Keep it
+        // detached for all checks: Form.Scale and parent layout can otherwise
+        // clamp synthetic content to the hosted runner's monitor/window limits.
         var owner = footer.Parent as TableLayoutPanel
             ?? throw new InvalidOperationException("The footer's owning layout is missing.");
         var cell = owner.GetPositionFromControl(footer);
@@ -66,6 +67,14 @@ internal static class Program
         try
         {
             footer.Dock = DockStyle.None;
+            footer.Size = normalSize;
+            form.MinimumSize = Size.Empty;
+            form.ClientSize = new Size(160, 40);
+            Check(form.ClientSize.Width < normalSize.Width && form.ClientSize.Height < normalSize.Height,
+                "The host-container independence check must use a smaller form than the detached footer.");
+            Console.WriteLine($"Footer layout: native DPI={form.DeviceDpi}, small host client={form.ClientSize}, detached footer={footer.Size}.");
+            CheckStatesAndResize("native", nativeScale);
+
             footer.Size = new Size(normalSize.Width, footer.GetRowHeights()[0]);
             Layout(footer);
             Check(footer.GetRowHeights()[1] == 0, "The regression must constrain the action row before scaling.");
@@ -75,18 +84,17 @@ internal static class Program
             // ordinary resize/maximize cannot recover. Scale the actual controls,
             // not a duplicate of the footer's layout or a minimum-size property.
             footer.Scale(new SizeF(SyntheticScale, SyntheticScale));
-            form.Scale(new SizeF(SyntheticScale, SyntheticScale));
             footer.Size = new Size((int)Math.Round(normalSize.Width * SyntheticScale),
                 (int)Math.Round(normalSize.Height * SyntheticScale));
             Layout(footer);
+            Console.WriteLine($"Footer layout: synthetic scale={SyntheticScale}, small host client={form.ClientSize}, detached footer={footer.Size}.");
+            CheckStatesAndResize("synthetic-2.5x", nativeScale * SyntheticScale);
         }
         finally
         {
             owner.Controls.Add(footer, cell.Column, cell.Row);
             footer.Dock = dock;
         }
-        Layout(form);
-        CheckStatesAndResize("synthetic-2.5x", nativeScale * SyntheticScale);
         Check(!Directory.Exists(fixtureRoot), "Layout must not create installation or preference files.");
 
         void CheckStatesAndResize(string stage, float scale)
@@ -101,14 +109,14 @@ internal static class Program
                 var captions = new[] { joystickOn ? "JOYSTICK ON" : "JOYSTICK OFF", "SETTINGS", "DIAGNOSTICS", "CREDITS", "UNINSTALL" };
                 Check(buttons.Select(item => item.Button.Text).SequenceEqual(captions), "Footer captions are incorrect.");
                 var scenario = $"{stage}, joystick={joystickOn}, enabled={enabled}";
-                Layout(form);
+                Layout(footer);
                 CheckButtons(scenario, scale);
-                var original = form.ClientSize;
-                form.ClientSize = new Size(original.Width + 220, original.Height + 140);
-                Layout(form);
+                var original = footer.Size;
+                footer.Size = new Size(original.Width + 220, original.Height + 140);
+                Layout(footer);
                 CheckButtons(scenario + ", expanded", scale);
-                form.ClientSize = original;
-                Layout(form);
+                footer.Size = original;
+                Layout(footer);
                 CheckButtons(scenario + ", restored", scale);
             }
         }
@@ -125,7 +133,7 @@ internal static class Program
                 Check(button.ClientSize.Height >= requiredHeight,
                     $"{stage}: {item.Name} has client height {button.ClientSize.Height}; readable height requires {requiredHeight}.");
                 Check(footer.ClientRectangle.Contains(button.Bounds),
-                    $"{stage}: {item.Name} is outside its footer.");
+                    $"{stage}: {item.Name} bounds {button.Bounds} are outside footer client {footer.ClientRectangle}; host client={form.ClientSize}.");
             }
         }
     }
