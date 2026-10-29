@@ -6,11 +6,11 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ## ⬇️ Download the installer
 
-### [Download MechWarrior 4 Remastered 1.0.1 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v1.0.1/MechWarrior-4-Remastered-Setup-1.0.1.exe)
+### [Download MechWarrior 4 Remastered 1.0.2 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v1.0.2/MechWarrior-4-Remastered-Setup-1.0.2.exe)
 
-Current release: [1.0.1](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.1). Previous release: [1.0](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5). Older stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
+Current release: [1.0.2](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.2). Previous release: [1.0.1](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.1). Earlier release: [1.0](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5). Older stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
 
-1.0.1 fixes Mercenaries CAB extraction, standalone Vengeance movie-surface lifetime, installer and launcher display scaling, and failed-install reporting. It adds original-disc folder selection and clearer uninstall guidance. Original movies stay enabled. The renderer and joystick adapter retain their qualified hashes; see the release notes for validation and hardware coverage.
+1.0.2 fixes Black Knight setup under Wine and adding Mech Paks or Black Knight to an existing verified installation. It improves the Wine folder-selection page and keeps initial configuration stable on repeat setup. It retains the Mercenaries extraction, movie and display-scaling fixes from 1.0.1. Original movies stay enabled. The renderer and joystick adapter retain their qualified hashes; see the release notes for validation and hardware coverage.
 
 The source-built joystick adapter exposes at most 31 buttons to all three games. Joystick input defaults ON for new preferences; an existing saved OFF choice stays OFF. **HELP & QUIRKS** explains mapping and limitations. The unchanged adapter's earlier native 31/32/128-button regressions and two missions with saved bindings per game passed in an isolated Windows VM. Extra buttons are omitted, not automatically remapped.
 
@@ -18,7 +18,7 @@ Affected PCs and physical joysticks still need field confirmation. VM runtime us
 
 The installer does **not** contain the games. Setup asks for your original ISOs, supported CUE/BIN pairs, ZIP archives or separate original-disc folders and builds the installed games from those inputs.
 
-To upgrade or repair, run the newest setup again in the same installation folder with the same original media. Setup repairs verified project-owned files and reapplies the remaster graphics defaults. Keep backups of customized settings and saves. The launcher's **UNINSTALL** removes verified owned game files and then the application shell, preserving unowned saves and configuration; Windows **Installed Apps** removes the launcher, manuals and shortcuts and may leave games, saves and settings. Preserve unexplained leftovers and include a sanitized file listing and retained log when reporting a problem.
+To upgrade or repair, run the newest setup again in the same installation folder with the original media for all games and packs already installed, plus anything you want to add. Setup repairs verified project-owned files and reapplies the remaster graphics defaults. Keep backups of customized settings and saves. The launcher's **UNINSTALL** removes verified owned game files and then the application shell, preserving unowned saves and configuration; Windows **Installed Apps** removes the launcher, manuals and shortcuts and may leave games, saves and settings. Preserve unexplained leftovers and include a sanitized file listing and retained log when reporting a problem.
 
 Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v0.6.45.9012/MechWarrior-4-Remastered-Setup-0.6.45.9012.exe). Report problems using the [guided issue form](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/new?template=bug_report.yml). Do not post game media in an issue.
 
@@ -26,9 +26,9 @@ Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/M
 2. Add the ISO, supported CUE/BIN, ZIP or original-disc folders for the games and optional Mech Paks you own.
 3. Open the desktop launcher and choose a game or manual.
 
-For Wine, extract each original disc into a separate regular folder, then use **Add folder** in Setup. Vengeance needs both disc folders. Mounted disc roots and symbolic links are rejected. Only the Vengeance folder install/repair/removal route was tested under Wine 11 / Ubuntu 24.04. Native folder-picker interaction under Wine and Linux gameplay remain coverage gaps.
+For Wine, extract each original disc into a separate regular folder, then use **Add folder** in Setup. Vengeance needs both disc folders; add the Black Knight and complete Mech Pak media you own as well. Black Knight also needs the official update supplied by supported Mech Pak media. Mounted disc roots and symbolic links are rejected. Wine 11 / Ubuntu 24.04 passed Vengeance installation, adding both packs and Black Knight, repeat setup, native folder selection, and save-preserving removal. Linux gameplay, the reported CachyOS/Proton runner, and a full Mercenaries Wine lifecycle still need confirmation.
 
-If the direct link does not work, open the [1.0.1 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.1) and download the setup EXE under **Assets**.
+If the direct link does not work, open the [1.0.2 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.2) and download the setup EXE under **Assets**.
 
 ## Screenshots
 
@@ -44,14 +44,14 @@ If the direct link does not work, open the [1.0.1 release page](https://github.c
 
 The installer is currently unsigned. Windows may display **Unknown publisher** or a Microsoft Defender SmartScreen warning. Verify the SHA-256 digest before deciding whether to run it; never disable SmartScreen or antivirus protection globally for this project.
 
-SHA-256 for the 1.0.1 download:
+SHA-256 for the 1.0.2 download:
 
 ```text
-eec4b091b9265e1027730c8977e18a770fa0dd3d3c1fb23225384e21dd83ee77
+510901c9a2294ef693527920ba26f75a82d38b689ac4c000d6ff2585f6838326
 ```
 
 ```powershell
-Get-FileHash .\MechWarrior-4-Remastered-Setup-1.0.1.exe -Algorithm SHA256
+Get-FileHash .\MechWarrior-4-Remastered-Setup-1.0.2.exe -Algorithm SHA256
 ```
 
 ## What you need
@@ -93,7 +93,7 @@ Joystick input defaults ON when no preference has been saved; an explicit OFF ch
 MW4 can crash when a device exposes 32 or more buttons. The source-built adapter now exposes at most 31 buttons to these games and safely omits excess buttons; it does not automatically remap them or expand the original binding screen's supported range. Use controller software or a user-configured tool such as Joystick Gremlin to map extra or ignored buttons to keyboard keys. The exact release adapter passed native 31/32/128-button tests and two mission loads with saved in-mission bindings in all three games in an isolated Windows VM. Physical HOTAS, multi-device combinations and force feedback remain field gaps. See the [input research and qualification record](active/INPUT_DISPLAY_RESEARCH.md).
 
 - The release is not Authenticode-signed, so Windows cannot show a verified publisher.
-- The NVIDIA/Windows 11 field evidence is from earlier builds. Confirmation of 1.0.1 on affected PCs and additional GPUs, display layouts, and unusual archival media variants remains open.
+- The NVIDIA/Windows 11 field evidence is from earlier builds. Confirmation of 1.0.2 on affected PCs and additional GPUs, display layouts, and unusual archival media variants remains open.
 - Modified, regional, or otherwise unrecognized media fail closed instead of receiving a guessed transform.
 - First-launch mouse placement on other display configurations and gameplay on other GPUs still need field testing. The ultrawide client-area and mouse-capture corrections in v0.6.46 passed local component tests but still need reports from the affected ultrawide and Windows 10/RX 6750 XT systems; [issue #7](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/7) and [issue #8](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/8) still need affected-system confirmation; see the original reports.
 - Standalone Vengeance may still show its original first-launch license after accepting Setup's checkbox. Review the original game terms separately if prompted; Setup's checkbox does not guarantee that this legacy prompt is skipped.

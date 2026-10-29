@@ -45,6 +45,14 @@ Before publishing, build twice and compare the complete output byte-for-byte, ru
 
 ## Exact-byte release reproduction
 
+For `1.0.2`, use source commit `ffd2b272e05774df3a3afbe0a1fccdc6e99d1eb7` and pin the worker's tested informational-version metadata when publishing:
+
+```powershell
+dotnet publish src/MW4Remastered.Installer/MW4Remastered.Installer.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:DebugType=None -p:DebugSymbols=false -p:SourceRevisionId=2f2d88ad305960b8e07fc28ed8c0c819661fdbe8 -o <worker-output>
+```
+
+A clean checkout reproduced worker SHA-256 `4942422b8c9c6be377731219a0a8d334a9c6bd08f6930fc93a13522f870af4fb`. The other 34 payload files retain the exact qualified `1.0.1` bytes; their provenance, licenses and hashes remain unchanged. Compile `packaging/MechWarrior4Remastered.iss` with Inno Setup 7.1.0, `AppVersion=1.0.2`, that validated 35-file `PayloadRoot`, and the declared `ProjectRoot`/`PackageOutput`. The clean-source shell rebuild matches the two qualified builds: 174,625,369 bytes, SHA-256 `510901c9a2294ef693527920ba26f75a82d38b689ac4c000d6ff2585f6838326`. A normal publish at the commit without the metadata pin produces a different worker; it does not reproduce the tested asset. Never substitute newly rebuilt retained components without their own byte comparison and qualification.
+
 .NET application informational versions include the Git build revision. For the qualified `0.6.47.5` C/D setup, build HEAD was `8954eb4fa38a758cc7f84747508f6a9cbf55e7e7`; the qualification commit records the tested source changes afterward. To reproduce those exact bytes, use a separate disposable checkout of tag `v0.6.47.5`, then run `git reset --soft 8954eb4fa38a758cc7f84747508f6a9cbf55e7e7` in that disposable checkout only. This keeps the qualified source tree/index intact while restoring its build-revision metadata; run the declared build command with the pinned inputs/toolchain. A normal build directly at the tag includes different Git revision metadata. The unrelated local dgVoodoo experiment was excluded from the source diff; the unchanged HEAD builder independently reproduced the exact packaged add-on.
 
 The byte-qualified renderer profile preserves its exact original mixed line endings; its `-text` checkout attribute prevents Git conversion. The packaged upstream license notice uses CRLF; the pinned input source checkout uses `git -c core.autocrlf=true checkout <commit>` on Windows for its notice. Native policy/patch files use LF. The compiler consumes fresh Git archives, so upstream working-tree newline conversion does not alter compiled source. CI verifies these checkout contracts; hashes are not relaxed to accommodate mismatches.

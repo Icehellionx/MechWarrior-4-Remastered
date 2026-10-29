@@ -23,6 +23,8 @@ MechWarrior 4 Remastered is a preservation-oriented Windows installer and launch
 
 ## Implemented foundation
 
+- The Linux comparison uses [MW3 revision `7ea220b`](https://github.com/Icehellionx/MechWarrior-3-Remastered/blob/7ea220b29256f9857f834a4e1f3cd76999070b7c/tools/wine/README.md) as an installation-policy oracle: detect Wine through `ntdll`, prefer folders, and avoid Windows mounting APIs. MW3's tested built-in DirectDraw/native audio override is specific to its renderer/audio stack and is not an MW4 runtime recipe. MW4 retains its stricter regular-folder containment and existing game output hashes; no upstream code or global DLL preference is copied.
+
 - `BlackKnightDpiResourceLayout` canonicalizes only the qualified five-section executable's resource metadata after the native manifest update: initialized-data size, actual resource extent, resource-section virtual size and the Windows-qualified code pages. This corrects Wine 11 serialization while retaining every existing final executable hash; no executable code or resource payload changes. Traversal is bounded and rejects cycles, escaped data and unexpected inventories.
 
 - Wine detection is shared by media mounting and Black Knight setup capture. Under Wine, `BlackKnightPr1CaptureImport` exact-hash validates the protected PR1 executable and changes only its `VERSION.dll` import name in a disposable adjacent copy to `mw4cap_.dll`. This avoids Wine's built-in proxy precedence without modifying the prefix registry or DLL preferences. The existing contained capture owner removes the derived executable/proxy/configuration; the existing static transform still requires the original protected input and emits the same qualified output. Windows retains its original capture path.
