@@ -38,13 +38,23 @@ public sealed class OwnedInstallFileReplacementTransaction
         CancellationToken cancellationToken = default)
         => ExecuteCore(productId, installRoot, files, retiredOwnedPaths, allowNewDestinations: true, cancellationToken);
 
+    // A complete, media-derived plan can add components to a verified installation.
+    // Keep the existing files/components and use the same rollback boundary as repairs.
+    public InstallManifest Expand(InstallPlan plan, string installRoot, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        return ExecuteCore(plan.ProductId, installRoot, plan.Files, [], allowNewDestinations: true,
+            cancellationToken, plan.Components);
+    }
+
     private InstallManifest ExecuteCore(
         string productId,
         string installRoot,
         IReadOnlyList<InstallFile> files,
         IReadOnlyList<string> retiredOwnedPaths,
         bool allowNewDestinations,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        IReadOnlyList<string>? components = null)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(productId);
         ArgumentException.ThrowIfNullOrWhiteSpace(installRoot);
@@ -63,6 +73,8 @@ public sealed class OwnedInstallFileReplacementTransaction
         {
             throw new InvalidDataException($"Replacement target '{productId}' does not match installed product '{existing.Manifest.ProductId}'.");
         }
+        if (components is not null && existing.Manifest.EffectiveComponents.Except(components, StringComparer.OrdinalIgnoreCase).Any())
+            throw new InvalidDataException("Adding content requires the original media for every already installed component. Select both game discs and all installed expansion/Mech Pak discs together; existing content was not changed.");
 
         var manifestPath = StagedInstallTransaction.ResolveContainedPath(root, InstallManifest.RelativePath);
         var metadataRoot = Path.GetDirectoryName(manifestPath)!;
@@ -79,7 +91,11 @@ public sealed class OwnedInstallFileReplacementTransaction
         try
         {
             var prepared = Prepare(files, retiredOwnedPaths, allowNewDestinations, root, existing.Manifest, newRoot, cancellationToken);
-            if (prepared.Files.Count == 0 && prepared.RetiredPaths.Count == 0) return existing.Manifest;
+            if (components is not null)
+                prepared = prepared with { Manifest = prepared.Manifest with { SchemaVersion = 2, Components = components } };
+            if (prepared.Files.Count == 0 && prepared.RetiredPaths.Count == 0 &&
+                prepared.Manifest.EffectiveComponents.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    .SetEquals(existing.Manifest.EffectiveComponents)) return existing.Manifest;
 
             Directory.CreateDirectory(backupRoot);
             foreach (var file in prepared.Files)
@@ -89,6 +105,7 @@ public sealed class OwnedInstallFileReplacementTransaction
                 var destination = StagedInstallTransaction.ResolveContainedPath(root, file.Path);
                 var backup = StagedInstallTransaction.ResolveContainedPath(backupRoot, file.Path);
                 Directory.CreateDirectory(Path.GetDirectoryName(backup)!);
+                Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                 StagedInstallTransaction.RejectPathChain(root, destination);
                 if (file.ReplacesOwnedFile)
                 {
@@ -99,7 +116,6 @@ public sealed class OwnedInstallFileReplacementTransaction
                 {
                     if (File.Exists(destination))
                         throw new InvalidDataException($"Owned-file migration cannot overwrite an unowned destination: {file.Path}");
-                    Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
                     File.Move(staged, destination);
                     committed.Add((destination, null));
                 }

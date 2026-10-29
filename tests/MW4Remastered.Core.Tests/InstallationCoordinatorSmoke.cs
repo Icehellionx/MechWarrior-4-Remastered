@@ -13,13 +13,21 @@ internal static class InstallationCoordinatorSmoke
             var progress = new RecordingProgress();
             var coordinator = CreateCoordinator(inputs);
 
+            var familyDestination = Path.Combine(root, "installed", "vengeance");
+            coordinator.Install(new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo), familyDestination);
+            File.WriteAllText(Path.Combine(familyDestination, "pilot.sav"), "existing pilot");
+            File.WriteAllText(Path.Combine(familyDestination, "options.ini"), "existing settings");
+
             var vengeance = coordinator.Install(
                 new VengeanceInstallRequest(inputs.VengeanceDiscOne, inputs.VengeanceDiscTwo,
                     BlackKnightDiscRoot: inputs.BlackKnightDisc),
-                Path.Combine(root, "installed", "vengeance"), progress);
+                familyDestination, progress);
             Check(vengeance.Manifest.ProductId == "vengeance" && vengeance.Manifest.Files.Count > 0 &&
                 vengeance.Manifest.HasComponent("black-knight"),
                 "coordinator atomically installs and verifies the Vengeance family", failures);
+            Check(File.ReadAllText(Path.Combine(familyDestination, "pilot.sav")) == "existing pilot" &&
+                File.ReadAllText(Path.Combine(familyDestination, "options.ini")) == "existing settings",
+                "coordinator adds Black Knight to an owned base while preserving saves and configuration", failures);
             Check(!Directory.EnumerateDirectories(Path.Combine(root, "installed"), ".vengeance-transform-*").Any(),
                 "coordinator removes Vengeance transform scratch after success", failures);
             Check(File.Exists(Path.Combine(vengeance.DestinationPath, "MW4X", "MW4X.exe")),

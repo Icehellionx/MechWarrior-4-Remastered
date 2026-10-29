@@ -70,6 +70,7 @@ internal sealed class InstallWorker
             foreach (var componentId in planned.EffectiveComponents)
             {
                 var product = ProductCatalog.All.Single(item => item.Id == componentId);
+                if (product.Kind != ProductKind.Game) continue;
                 registration.ValidateAvailable(product, planned.DestinationPath);
             }
         }
@@ -80,13 +81,14 @@ internal sealed class InstallWorker
         try
         {
             using var media = sessionFactory.Open(selection.Current);
-            foreach (var product in plan.Products.Where(item => item.EffectiveComponents.Any(component => !alreadyReady.Contains(component))))
+            foreach (var product in plan.Products.Where(item => !IsInstalled(item)))
             {
+                var wasInstalled = File.Exists(Path.Combine(product.DestinationPath, InstallManifest.RelativePath));
                 TryAppendLog(args.LogPath, $"Installing {product.DisplayName}.");
                 var progress = new Progress<GameInstallationProgress>(value =>
                     TryAppendLog(args.LogPath, $"{value.ProductId}: {value.Stage} - {value.Message}"));
                 coordinator.Install(CreateInstallRequest(product, media, args.DestinationPath), product.DestinationPath, progress);
-                installedThisRun.Add(product.DestinationPath);
+                if (!wasInstalled) installedThisRun.Add(product.DestinationPath);
             }
         }
         catch
@@ -96,10 +98,10 @@ internal sealed class InstallWorker
         }
 
         var finalReady = GetReadyProductIds(plan.RootPath);
-        if (plan.Products.Any(item => item.EffectiveComponents.Any(component => !finalReady.Contains(component))))
+        if (plan.Products.Any(item => !IsInstalled(item)))
         {
             RollBack(installedThisRun, args.LogPath);
-            throw new InvalidDataException("One or more selected games failed final ownership verification.");
+            throw new InvalidDataException("One or more selected games or Mech Paks failed final ownership verification.");
         }
         var statuses = new InstallStatusReader(plan.RootPath).Read()
             .Where(item => item.Product.Kind == ProductKind.Game && finalReady.Contains(item.Product.Id))
@@ -118,9 +120,10 @@ internal sealed class InstallWorker
         {
             foreach (var componentId in plan.Products.SelectMany(product => product.EffectiveComponents).Distinct(StringComparer.OrdinalIgnoreCase))
             {
+                if (ProductCatalog.All.Single(item => item.Id == componentId).Kind != ProductKind.Game) continue;
                 var status = statuses[componentId];
                 registration.Ensure(status);
-                registeredThisRun.Add(status);
+                if (!alreadyReady.Contains(componentId)) registeredThisRun.Add(status);
                 TryAppendLog(args.LogPath, $"Registered {status.Product.DisplayName} for non-elevated launch.");
             }
             if (statuses.TryGetValue("vengeance", out var vengeanceStatus) &&
@@ -265,6 +268,16 @@ internal sealed class InstallWorker
             throw new InvalidDataException(string.Join("; ", plan.BlockedProducts.Select(item =>
                 $"{item.DisplayName} requires {string.Join(" + ", item.MissingDependencyIds)}")));
         if (!plan.HasEnoughSpace) throw new IOException("The selected installation destination does not have enough free space.");
+        foreach (var product in plan.Products)
+        {
+            if (!File.Exists(Path.Combine(product.DestinationPath, InstallManifest.RelativePath))) continue;
+            var prior = new InstallManifestVerifier().Verify(product.DestinationPath, InstallVerificationScope.OwnedFiles);
+            if (!prior.IsValid || prior.Manifest is null)
+                throw new InvalidDataException("The existing game has changed or damaged owned files. Repair or remove it before adding content; saves and settings have not been changed.");
+            var missing = prior.Manifest.EffectiveComponents.Except(product.EffectiveComponents, StringComparer.OrdinalIgnoreCase).ToArray();
+            if (missing.Length > 0 && !product.IsSatisfiedBy(prior.Manifest))
+                throw new InvalidDataException($"To add content without removing installed components, also select the original media for: {string.Join(", ", missing)}. Include both game discs and all installed expansion/Mech Pak discs together.");
+        }
         if (plan.Products.Any(item => item.ProductId is not ("vengeance" or "mercenaries")))
             throw new InvalidDataException("The media selection includes an unsupported game installation path.");
         var packSelected = selection.Capabilities.Any(item => item.Kind == ProductKind.OptionalPack && item.IsComplete);
@@ -321,6 +334,12 @@ internal sealed class InstallWorker
     private static HashSet<string> GetReadyProductIds(string root) => new InstallStatusReader(root).Read()
         .Where(item => item.State == ProductInstallState.Ready).Select(item => item.Product.Id)
         .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+    private static bool IsInstalled(InstallDestinationProduct product)
+    {
+        var verification = new InstallManifestVerifier().Verify(product.DestinationPath, InstallVerificationScope.OwnedFiles);
+        return verification.IsValid && product.IsSatisfiedBy(verification.Manifest);
+    }
 
     private static void RollBack(IEnumerable<string> installedPaths, string logPath)
     {

@@ -153,7 +153,8 @@ public sealed class MechPakActivationTransform
 
         if (supportedExecutableHashes.Count > 0 && executableTransforms == 0)
             throw new InvalidDataException("The install plan did not contain a qualified Mech Pak activation executable.");
-        return new InstallPlan(plan.ProductId, files, plan.Components);
+        return new InstallPlan(plan.ProductId, files, plan.Components.Concat(PackFlags
+            .Where(item => enabledFlags.Contains(item.Value)).Select(item => item.Key)));
     }
 
     private static void TransformExecutable(

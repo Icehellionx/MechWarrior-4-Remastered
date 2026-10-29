@@ -184,6 +184,13 @@ try
     var executablePath = Path.Combine(blackKnightPr1TransformRejectionRoot, "MW4x.exe");
     var capturePath = Path.Combine(blackKnightPr1TransformRejectionRoot, "capture.dll");
     var scratchPath = Path.Combine(blackKnightPr1TransformRejectionRoot, "scratch");
+    File.WriteAllText(executablePath, "unknown executable revision");
+    var captureImportRejected = false;
+    var aliasedExecutable = Path.Combine(blackKnightPr1TransformRejectionRoot, "capture.exe");
+    try { BlackKnightPr1CaptureImport.Create(executablePath, aliasedExecutable); }
+    catch (InvalidDataException) { captureImportRejected = true; }
+    Check(captureImportRejected && !File.Exists(aliasedExecutable),
+        "setup-only Wine import transform rejects unknown input before writing an executable");
     File.WriteAllText(executablePath, "synthetic protected executable");
     File.WriteAllText(capturePath, "unsupported Black Knight capture DLL");
     var rejected = false;
@@ -543,6 +550,10 @@ try
         "shared-tree Black Knight configuration is also seeded at the Vengeance runtime root");
     File.WriteAllText(Path.Combine(destination, "options.ini"), "[joystick]" + Environment.NewLine + "BiThrottleCenter=0.300000" + Environment.NewLine);
     configuration.Ensure(installedStatuses["vengeance"], testResolution);
+    var seededConfiguration = File.ReadAllBytes(Path.Combine(destination, "options.ini"));
+    configuration.EnsureDefaults(installedStatuses["vengeance"], testResolution);
+    Check(seededConfiguration.SequenceEqual(File.ReadAllBytes(Path.Combine(destination, "options.ini"))),
+        "the first setup configuration remains byte-identical on repeat setup or content addition");
     var processStarter = new RecordingProcessStarter();
     var gameRegistration = new RecordingGameRegistration();
     var gameWindowLifecycleGuard = new RecordingGameWindowLifecycleGuard();
@@ -1130,6 +1141,8 @@ IsoMediaSessionSmoke.Run(failures);
 IsoArchiveExtractorSmoke.Run(failures);
 MercenariesPr1ArchiveExtractorSmoke.Run(failures);
 MediaSourceInspectorSmoke.Run(failures);
+OwnedInstallExpansionSmoke.Run(failures);
+BlackKnightDpiResourceLayoutSmoke.Run(failures);
 MediaSelectionSetSmoke.Run(failures);
 MediaSourceSessionSmoke.Run(failures);
 CueMode1MediaSmoke.Run(failures);

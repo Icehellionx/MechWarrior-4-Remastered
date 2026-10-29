@@ -22,6 +22,23 @@ internal static class InstallDestinationPlannerSmoke
         Check(plan.HasEnoughSpace && plan.RequiredBytes > plan.Products.Sum(item => item.BudgetBytes),
             "destination planner includes safety reserve and reports adequate capacity", failures);
 
+        foreach (var pack in new[] { "inner-sphere-mech-pak", "clan-mech-pak" })
+        {
+            AddLayout(selection, pack);
+            var withPacks = new InstallDestinationPlanner(new FixedCapacityReader(long.MaxValue))
+                .Plan(selection.Current, destination, ["vengeance", "black-knight"]);
+            var physical = withPacks.Products.Single();
+            var expectedPack = pack == "inner-sphere-mech-pak" ? "inner-sphere" : "clan";
+            Check(physical.EffectiveComponents.Contains(expectedPack) &&
+                !physical.IsSatisfiedBy(new InstallManifest(2, "vengeance", [], ["vengeance", "black-knight"])),
+                "selected packs require installation even when the Vengeance family is already ready", failures);
+        }
+        AddLayout(selection, "mercenaries-disc-1");
+        AddLayout(selection, "mercenaries-disc-2");
+        var bothGames = new InstallDestinationPlanner(new FixedCapacityReader(long.MaxValue)).Plan(selection.Current, destination);
+        Check(bothGames.Products.All(product => product.EffectiveComponents.Contains("inner-sphere") &&
+            product.EffectiveComponents.Contains("clan")), "pack activation is tracked independently for both physical games", failures);
+
         var expansionOnly = new MediaSelectionSet();
         AddLayout(expansionOnly, "black-knight-disc-1");
         var blockedExpansion = new InstallDestinationPlanner(new FixedCapacityReader(long.MaxValue))

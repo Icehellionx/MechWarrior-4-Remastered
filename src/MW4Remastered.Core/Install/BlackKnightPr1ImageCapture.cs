@@ -34,19 +34,30 @@ public sealed class BlackKnightPr1ImageCapture
             throw new IOException("Black Knight image-capture scratch path already exists.");
         Directory.CreateDirectory(scratch);
 
-        return ExecuteWithRetries(attempt =>
+        var wine = WineRuntime.IsWine;
+        var captureExecutable = wine ? Path.Combine(gameRoot, "MW4RemasteredCapture.exe") : executable;
+        if (wine) BlackKnightPr1CaptureImport.Create(executable, captureExecutable);
+        try
         {
-            var mappedImage = Path.Combine(scratch, $"MW4x.mapped.attempt-{attempt}.bin");
-            try
+            return ExecuteWithRetries(attempt =>
             {
-                return CaptureAttempt(executable, captureDll, gameRoot, mappedImage, cancellationToken);
-            }
-            catch (TimeoutException)
-            {
-                DeleteCaptureArtifact(mappedImage);
-                throw;
-            }
-        });
+                var mappedImage = Path.Combine(scratch, $"MW4x.mapped.attempt-{attempt}.bin");
+                try
+                {
+                    return CaptureAttempt(captureExecutable, captureDll, gameRoot, mappedImage,
+                        wine ? BlackKnightPr1CaptureImport.LibraryName : "version.dll", cancellationToken);
+                }
+                catch (TimeoutException)
+                {
+                    DeleteCaptureArtifact(mappedImage);
+                    throw;
+                }
+            });
+        }
+        finally
+        {
+            if (wine) DeleteCaptureArtifact(captureExecutable);
+        }
     }
 
     private static string CaptureAttempt(
@@ -54,9 +65,10 @@ public sealed class BlackKnightPr1ImageCapture
         string captureDll,
         string gameRoot,
         string mappedImage,
+        string proxyName,
         CancellationToken cancellationToken)
     {
-        var adjacentDll = Path.Combine(gameRoot, "version.dll");
+        var adjacentDll = Path.Combine(gameRoot, proxyName);
         var adjacentConfiguration = Path.Combine(gameRoot, "version.json");
         if (File.Exists(adjacentDll) || Directory.Exists(adjacentDll) ||
             File.Exists(adjacentConfiguration) || Directory.Exists(adjacentConfiguration))

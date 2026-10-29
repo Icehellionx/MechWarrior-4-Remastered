@@ -109,6 +109,9 @@ public sealed class BlackKnightDpiManifestTransform
             var ended = EndUpdateResource(handle, !committed);
             if (!ended) throw new Win32Exception(Marshal.GetLastPInvokeError(), "Could not finish Black Knight resource update.");
         }
+        var embedded = File.ReadAllBytes(output);
+        BlackKnightDpiResourceLayout.Canonicalize(embedded);
+        File.WriteAllBytes(output, embedded);
         var actual = Hash(output);
         if (!actual.Equals(expected, StringComparison.OrdinalIgnoreCase))
             throw new InvalidDataException($"Black Knight DPI executable hash mismatch: {actual}");

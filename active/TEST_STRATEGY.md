@@ -40,6 +40,11 @@ Native WinForms rendering is captured with the actual window renderer to check h
 
 ## Required contracts
 
+- Black Knight DPI embedding must emit the existing Windows-qualified output hashes for no packs, Clan, Inner Sphere and both packs on Wine as well as Windows. Resource metadata normalization must preserve code/payload bytes, be idempotent, reject cycles/escaped data, and retain the existing final hash gate. Native API success alone is insufficient.
+
+- Incremental content installation must distinguish a ready base from ready selected Mech Paks using each physical manifest. Exercise base-only, each pack, both packs, Black Knight addition, repeated setup, missing retained-component media, damaged ownership, cancellation, unowned collisions and manifest-commit rollback. Saves and settings must remain byte-identical when their values do not require a documented graphics change. Fresh configuration must be byte-stable on its first repeat.
+- Wine Black Knight capture must work without parent DLL overrides or prefix-registry edits. The setup-only import copy is qualified by original/derived hashes; two captures must produce the unchanged static output hash. No `MW4RemasteredCapture.exe`, `mw4cap_.dll`, capture configuration or mapped image may enter the installed tree. Retain negative default-loader and environment-propagation experiments as failures, and separately exercise the unchanged native Windows capture path.
+
 - Input fixtures use synthetic trees or hashes/metadata; tests never copy proprietary game payloads into source.
 - Media matching rejects unknown or partially matching revisions safely.
 - CUE/BIN intake accepts only one same-directory MODE1/2352 data track at index zero, rejects missing/escaped/reparse/corrupt BINs, cleans conversion and mounts on failure, and projects Mech Paks without materializing their legacy setup/DRM files. Synthetic sector round-trips and a locally supplied real pack image test the container path; alternate game-file revisions still require transform and field qualification.

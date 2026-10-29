@@ -9,7 +9,7 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
     private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(30);
     private readonly string powerShellPath;
 
-    public PowerShellDiskImageBackend() : this(IsWine())
+    public PowerShellDiskImageBackend() : this(WineRuntime.IsWine)
     {
     }
 
@@ -24,15 +24,6 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
             "WindowsPowerShell", "v1.0", "powershell.exe");
         if (!File.Exists(powerShellPath)) throw new FileNotFoundException("Windows PowerShell was not found.", powerShellPath);
     }
-
-    private static bool IsWine() => OperatingSystem.IsWindows() &&
-        GetProcAddress(GetModuleHandle("ntdll.dll"), "wine_get_version") != IntPtr.Zero;
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Unicode, ExactSpelling = true, EntryPoint = "GetModuleHandleW")]
-    private static extern IntPtr GetModuleHandle(string moduleName);
-
-    [DllImport("kernel32.dll", CharSet = CharSet.Ansi, ExactSpelling = true)]
-    private static extern IntPtr GetProcAddress(IntPtr module, string procedureName);
 
     public bool IsAttached(string imagePath)
     {

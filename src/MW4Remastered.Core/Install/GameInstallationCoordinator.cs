@@ -463,7 +463,9 @@ public sealed class GameInstallationCoordinator
 
             Report(GameInstallationStage.Committing, "Staging and atomically committing owned files.");
             var preservingExistingFiles = Directory.Exists(destination);
-            var manifest = transaction.Execute(plan, destination, cancellationToken);
+            var manifest = File.Exists(Path.Combine(destination, InstallManifest.RelativePath))
+                ? new OwnedInstallFileReplacementTransaction(verifier).Expand(plan, destination, cancellationToken)
+                : transaction.Execute(plan, destination, cancellationToken);
             Report(GameInstallationStage.Verifying, "Verifying every committed owned file.");
             var verification = verifier.Verify(destination, preservingExistingFiles
                 ? InstallVerificationScope.OwnedFiles

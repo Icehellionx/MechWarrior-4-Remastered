@@ -10,6 +10,10 @@ public sealed record InstallDestinationProduct(
     IReadOnlyList<string>? Components = null)
 {
     public IReadOnlyList<string> EffectiveComponents => Components ?? new[] { ProductId };
+
+    public bool IsSatisfiedBy(InstallManifest? manifest) => manifest is not null &&
+        manifest.ProductId.Equals(ProductId, StringComparison.OrdinalIgnoreCase) &&
+        EffectiveComponents.All(manifest.HasComponent);
 }
 
 public sealed record BlockedInstallProduct(
@@ -100,6 +104,9 @@ public sealed class InstallDestinationPlanner
 
         var products = new List<InstallDestinationProduct>();
         var blockedProducts = new List<BlockedInstallProduct>();
+        var selectedPacks = selection.Capabilities
+            .Where(item => item.Kind == ProductKind.OptionalPack && item.IsComplete)
+            .Select(item => item.ProductId).ToArray();
         var vengeanceFamily = new List<string>();
         if (completeGames.Contains("vengeance")) vengeanceFamily.Add("vengeance");
         if (completeGames.Contains("black-knight")) vengeanceFamily.Add("black-knight");
@@ -109,6 +116,7 @@ public sealed class InstallDestinationPlanner
         }
         else if (vengeanceFamily.Count > 0)
         {
+            vengeanceFamily.AddRange(selectedPacks);
             var budget = vengeanceFamily.Contains("black-knight") ? GameBudgets["black-knight"] : GameBudgets["vengeance"];
             products.Add(new InstallDestinationProduct(
                 "vengeance",
@@ -135,7 +143,8 @@ public sealed class InstallDestinationPlanner
             var destination = Path.GetFullPath(Path.Combine(root, product.Id));
             if (!destination.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
                 throw new InvalidDataException($"Planned product destination escaped the install root: {destination}");
-            products.Add(new InstallDestinationProduct(product.Id, product.DisplayName, destination, budget));
+            products.Add(new InstallDestinationProduct(product.Id, product.DisplayName, destination, budget,
+                new[] { product.Id }.Concat(selectedPacks).ToArray()));
         }
 
         var requiredBytes = products.Count == 0 ? 0 : checked(products.Sum(item => item.BudgetBytes) + SafetyReserveBytes);

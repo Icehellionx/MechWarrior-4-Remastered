@@ -116,6 +116,18 @@ var
 function SetForegroundWindow(hWnd: HWND): Boolean;
   external 'SetForegroundWindow@user32.dll stdcall';
 
+function WineGetVersion: NativeInt;
+  external 'wine_get_version@ntdll.dll cdecl delayload';
+
+function RunningUnderWine: Boolean;
+begin
+  try
+    Result := WineGetVersion <> 0;
+  except
+    Result := False;
+  end;
+end;
+
 function CanLaunchInstalledGames: Boolean;
 begin
   Result := GameInstallSucceeded;
@@ -259,6 +271,18 @@ begin
   AddFolderButton.SetBounds(ScaleX(160), AddMediaButton.Top, ScaleX(120), ScaleY(30));
   AddFolderButton.Caption := 'Add folder...';
   AddFolderButton.OnClick := @AddFolderButtonClick;
+
+  if RunningUnderWine then
+  begin
+    MediaInstructions.Caption :=
+      'Wine/Linux: copy or extract each complete original disc into its own regular folder, then use Add folder.' + #13#10 +
+      'Add both discs for Vengeance or Mercenaries, plus any expansion/Mech Pak folders. Keep these folders until setup finishes. Do not select mounted roots or symbolic links.';
+    AddFolderButton.Left := AddMediaButton.Left;
+    AddMediaButton.Left := ScaleX(130);
+    AddMediaButton.Caption := 'Add image / ZIP...';
+    MediaList.SetBounds(0, MediaInstructions.Top + MediaInstructions.Height + ScaleY(12),
+      MediaPage.SurfaceWidth, MediaPage.SurfaceHeight - MediaInstructions.Height - ScaleY(54));
+  end;
 
   RemoveMediaButton := TNewButton.Create(MediaPage);
   RemoveMediaButton.Parent := MediaPage.Surface;

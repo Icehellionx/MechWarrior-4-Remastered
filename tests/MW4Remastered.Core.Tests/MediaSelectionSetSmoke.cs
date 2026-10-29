@@ -4,6 +4,16 @@ internal static class MediaSelectionSetSmoke
 {
     public static void Run(List<string> failures)
     {
+        var layoutIds = new[] { "vengeance-disc-1", "vengeance-disc-2", "black-knight-disc-1", "clan-mech-pak", "inner-sphere-mech-pak" };
+        foreach (var offset in Enumerable.Range(0, layoutIds.Length))
+        {
+            var reordered = new MediaSelectionSet();
+            foreach (var id in layoutIds.Skip(offset).Concat(layoutIds.Take(offset)).Reverse())
+                reordered.Add(id + ".folder", Inspection(id));
+            Check(new[] { "vengeance", "black-knight", "clan", "inner-sphere" }
+                .All(id => Capability(reordered.Current, id).IsComplete),
+                "distinct disc folders have the same readiness regardless of selection order", failures);
+        }
         var selection = new MediaSelectionSet();
         var first = selection.Add("vengeance-one.iso", Inspection("vengeance-disc-1", excludedPaths: 2));
         Check(!Capability(first, "vengeance").IsComplete, "one Vengeance disc does not claim install readiness", failures);

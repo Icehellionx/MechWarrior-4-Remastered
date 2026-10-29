@@ -50,6 +50,7 @@ internal static class MechPakActivationTransformSmoke
             }, new[] { "vengeance", "clan" });
 
             var clanPlan = transform.TransformPlan(plan, new[] { "clan" }, Path.Combine(root, "clan"));
+            Check(clanPlan.Components.Contains("clan"), "activation records selected pack ownership in the manifest plan", failures);
             var clanArchive = Resolve(clanPlan.Files.Single(file =>
                 file.DestinationRelativePath.EndsWith("core.mw4", StringComparison.OrdinalIgnoreCase)));
             var clanFlags = ReadFlags(clanArchive);
