@@ -60,9 +60,10 @@ public sealed class OwnedIsoMediaSessionFactory
             {
                 mountBackend.Dismount(image);
             }
-            catch (Exception cleanupError)
+            catch (Exception cleanupError) when (MediaSourceSessionFactory.IsMediaCleanupFailure(cleanupError))
             {
-                throw new AggregateException("Disc image mount failed and cleanup also failed.", mountError, cleanupError);
+                throw new IOException("Disc image mount failed and cleanup also failed.",
+                    new AggregateException(mountError, cleanupError));
             }
             throw;
         }

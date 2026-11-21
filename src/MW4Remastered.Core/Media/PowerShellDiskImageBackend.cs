@@ -1,12 +1,11 @@
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 using System.Text;
 
 namespace MW4Remastered.Core.Media;
 
 public sealed class PowerShellDiskImageBackend : IDiskImageBackend
 {
-    private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(30);
+    private static readonly TimeSpan CommandTimeout = TimeSpan.FromSeconds(45);
     private readonly string powerShellPath;
 
     public PowerShellDiskImageBackend() : this(WineRuntime.IsWine)
@@ -48,19 +47,43 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
 
     public string Mount(string imagePath)
     {
-        var output = Run(
-            $"$image=Mount-DiskImage -ImagePath {Literal(imagePath)} -Access ReadOnly -PassThru -ErrorAction Stop; " +
-            "$volume=$image | Get-Volume -ErrorAction Stop; " +
-            "if (-not $volume.DriveLetter) { throw 'Mounted image has no drive letter.' }; " +
-            "$volume.DriveLetter + ':\\'");
-        return output.Trim();
+        var output = Run($$"""
+            $image = Mount-DiskImage -ImagePath {{Literal(imagePath)}} -Access ReadOnly -PassThru -ErrorAction Stop
+            $wait = [Diagnostics.Stopwatch]::StartNew()
+            do {
+                foreach ($volume in ($image | Get-Volume -ErrorAction SilentlyContinue)) {
+                    if ($volume.DriveLetter) {
+                        $root = ([string]$volume.DriveLetter) + ':\'
+                        if (Test-Path -LiteralPath $root -PathType Container) { $root; exit }
+                    }
+                }
+                Start-Sleep -Milliseconds 250
+            } while ($wait.Elapsed.TotalSeconds -lt 15)
+            'not-ready'
+            """).Trim();
+        if (output == "not-ready")
+            throw new IOException("Windows attached the ISO, but its disc drive did not become readable within 15 seconds. You can extract the disc and select it with Add folder.");
+        if (output.Length != 3 || !char.IsAsciiLetter(output[0]) || output[1..] != @":\")
+            throw new IOException("Windows did not return a usable drive letter for the mounted ISO.");
+        return output;
     }
 
     public void Dismount(string imagePath)
     {
-        Run(
-            $"$image=Get-DiskImage -ImagePath {Literal(imagePath)} -ErrorAction Stop; " +
-            $"if ($image.Attached) {{ Dismount-DiskImage -ImagePath {Literal(imagePath)} -ErrorAction Stop | Out-Null }}");
+        var output = Run($$"""
+            $path = {{Literal(imagePath)}}
+            $wait = [Diagnostics.Stopwatch]::StartNew()
+            do {
+                $image = Get-DiskImage -ImagePath $path -ErrorAction Stop
+                if (-not $image.Attached) { 'detached'; exit }
+                Dismount-DiskImage -ImagePath $path -ErrorAction SilentlyContinue | Out-Null
+                Start-Sleep -Milliseconds 250
+            } while ($wait.Elapsed.TotalSeconds -lt 15)
+            $image = Get-DiskImage -ImagePath $path -ErrorAction Stop
+            if ($image.Attached) { 'attached' } else { 'detached' }
+            """);
+        if (ParseAttachmentState(output))
+            throw new IOException("Windows did not release the temporary disc mount. Eject that virtual disc in Windows before retrying Setup.");
     }
 
     private string Run(string script)
@@ -102,9 +125,9 @@ public sealed class PowerShellDiskImageBackend : IDiskImageBackend
         if (standardError.Contains("Access denied", StringComparison.OrdinalIgnoreCase) ||
             standardError.Contains("0x80041003", StringComparison.OrdinalIgnoreCase))
             return new UnauthorizedAccessException(
-                "Windows denied access to disk-image management. Start Setup normally and approve its UAC prompt; Setup did not mount or change the ISO.");
+                "Windows denied access to disk-image management. Start Setup normally and approve its UAC prompt.");
         return new IOException(
-            $"Windows disk-image operation failed (PowerShell exit {exitCode}). Check that the ISO is accessible and retry; Setup will release any image it mounted.");
+            $"Windows disk-image operation failed (PowerShell exit {exitCode}). Check that the ISO is accessible or extract the disc and select it with Add folder.");
     }
 
     private static string Literal(string value) => "'" + value.Replace("'", "''", StringComparison.Ordinal) + "'";

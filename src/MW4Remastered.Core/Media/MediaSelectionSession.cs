@@ -58,9 +58,17 @@ public sealed class MediaSelectionSessionFactory
             }
             return new MediaSelectionSession(reopened, owned);
         }
-        catch
+        catch (Exception openError)
         {
-            DisposeAll(owned);
+            try
+            {
+                DisposeAll(owned);
+            }
+            catch (Exception cleanupError) when (MediaSourceSessionFactory.IsMediaCleanupFailure(cleanupError))
+            {
+                throw new IOException("Media selection could not be reopened and cleanup also failed.",
+                    new AggregateException(openError, cleanupError));
+            }
             throw;
         }
     }
@@ -88,7 +96,7 @@ public sealed class MediaSelectionSessionFactory
             {
                 session.Dispose();
             }
-            catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException)
+            catch (Exception error) when (MediaSourceSessionFactory.IsMediaCleanupFailure(error))
             {
                 firstError ??= error;
             }

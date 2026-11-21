@@ -1,3 +1,5 @@
+using System.Runtime.ExceptionServices;
+
 namespace MW4Remastered.Core.Media;
 
 public sealed record OpenMediaItem(string? ArchiveRelativePath, string RootPath);
@@ -64,12 +66,12 @@ public sealed class MediaSourceSessionFactory
                         scratch);
                 }
             }
-            catch
+            catch (Exception openError)
             {
-                if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
+                ReleaseAfterFailedOpen(openError, Array.Empty<IDisposable>(), scratch);
                 throw;
             }
-            if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
+            DeleteScratch(scratch);
             var session = isoSessions.Open(source, cancellationToken);
             return new MediaSourceSession(
                 MediaSourceKind.Iso,
@@ -138,16 +140,9 @@ public sealed class MediaSourceSessionFactory
             mounted = null;
             return result;
         }
-        catch
+        catch (Exception openError)
         {
-            try
-            {
-                mounted?.Dispose();
-            }
-            finally
-            {
-                if (Directory.Exists(scratch)) Directory.Delete(scratch, recursive: true);
-            }
+            ReleaseAfterFailedOpen(openError, mounted is null ? [] : [mounted], scratch);
             throw;
         }
     }
@@ -201,35 +196,81 @@ public sealed class MediaSourceSessionFactory
             }
             return new MediaSourceSession(MediaSourceKind.Zip, items, extraction.ExcludedEntries, owned, scratch);
         }
-        catch
+        catch (Exception openError)
         {
-            try
-            {
-                DisposeAll(owned);
-            }
-            finally
-            {
-                if (Directory.Exists(scratch)) Directory.Delete(scratch, true);
-            }
+            ReleaseAfterFailedOpen(openError, owned, scratch);
             throw;
         }
     }
 
-    private static void DisposeAll(IEnumerable<IDisposable> sessions)
+    private static void ReleaseAfterFailedOpen(Exception openError, IReadOnlyList<IDisposable> sessions, string scratchRoot)
     {
-        Exception? firstError = null;
-        foreach (var session in sessions.Reverse())
+        try
+        {
+            Release(sessions, scratchRoot);
+        }
+        catch (Exception cleanupError) when (IsMediaCleanupFailure(cleanupError))
+        {
+            throw new IOException("Media could not be opened and its temporary files or mounts could not all be released.",
+                new AggregateException(openError, cleanupError));
+        }
+    }
+
+    private static void Release(IReadOnlyList<IDisposable> sessions, string? scratchRoot)
+    {
+        var failures = new List<Exception>();
+        for (var index = sessions.Count - 1; index >= 0; index--)
         {
             try
             {
-                session.Dispose();
+                sessions[index].Dispose();
             }
-            catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException)
+            catch (Exception error) when (IsMediaCleanupFailure(error))
             {
-                firstError ??= error;
+                failures.Add(error);
             }
         }
-        if (firstError is not null) throw firstError;
+
+        try
+        {
+            if (scratchRoot is not null) DeleteScratch(scratchRoot);
+        }
+        catch (Exception error) when (IsMediaCleanupFailure(error))
+        {
+            failures.Add(error);
+        }
+
+        if (failures.Count == 1) ExceptionDispatchInfo.Throw(failures[0]);
+        if (failures.Count > 1)
+            throw new IOException("Multiple errors occurred while releasing temporary media.", new AggregateException(failures));
+    }
+
+    internal static bool IsMediaCleanupFailure(Exception error) =>
+        error is IOException or InvalidDataException or InvalidOperationException or UnauthorizedAccessException;
+
+    private static void DeleteScratch(string scratchRoot)
+    {
+        const int sharingViolation = unchecked((int)0x80070020);
+        const int lockViolation = unchecked((int)0x80070021);
+        const int retryCount = 10;
+
+        // Windows can report a disc detached before the backing ISO handle is released.
+        for (var attempt = 0; ; attempt++)
+        {
+            try
+            {
+                Directory.Delete(scratchRoot, recursive: true);
+                return;
+            }
+            catch (DirectoryNotFoundException)
+            {
+                return;
+            }
+            catch (IOException error) when (attempt < retryCount && error.HResult is sharingViolation or lockViolation)
+            {
+                Thread.Sleep(200);
+            }
+        }
     }
 
     private sealed class MediaSourceSession(
@@ -250,26 +291,7 @@ public sealed class MediaSourceSessionFactory
             if (disposed) return;
             disposed = true;
 
-            Exception? firstError = null;
-            try
-            {
-                DisposeAll(ownedSessions);
-            }
-            catch (Exception error) when (error is IOException or InvalidOperationException or UnauthorizedAccessException)
-            {
-                firstError = error;
-            }
-
-            try
-            {
-                if (scratchRoot is not null && Directory.Exists(scratchRoot)) Directory.Delete(scratchRoot, true);
-            }
-            catch (Exception error) when (error is IOException or UnauthorizedAccessException)
-            {
-                firstError ??= error;
-            }
-
-            if (firstError is not null) throw firstError;
+            Release(ownedSessions, scratchRoot);
         }
     }
 }
