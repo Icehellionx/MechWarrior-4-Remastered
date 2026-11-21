@@ -8,6 +8,8 @@ This project is not affiliated with or endorsed by Microsoft, FASA Interactive, 
 
 ### [Download MechWarrior 4 Remastered 1.0.2 Setup.exe](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/download/v1.0.2/MechWarrior-4-Remastered-Setup-1.0.2.exe)
 
+SteamOS testers can use the [Steam Deck Installation Variant (Alpha 1)](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/steam-deck-alpha1) with their own original media. The ZIP includes the [Desktop Mode setup guide](tools/steam-deck/README.md) and a separate Proton launch profile.
+
 Current release: [1.0.2](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.2). Previous release: [1.0.1](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.1). Earlier release: [1.0](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.47.5). Older stable fallback: [v0.6.46](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v0.6.46).
 
 1.0.2 fixes Black Knight setup under Wine and adding Mech Paks or Black Knight to an existing verified installation. It improves the Wine folder-selection page and keeps initial configuration stable on repeat setup. It retains the Mercenaries extraction, movie and display-scaling fixes from 1.0.1. Original movies stay enabled. The renderer and joystick adapter retain their qualified hashes; see the release notes for validation and hardware coverage.
@@ -29,8 +31,6 @@ Older legacy download: [v0.6.45.9012 Setup.exe](https://github.com/Icehellionx/M
 If Windows Setup fails while mounting a Vengeance ZIP or reports that a temporary ISO is in use, you can extract the contents of each original Vengeance disc into its own regular folder and select both with **Add folder**. Keep the two disc trees separate. If Setup left a virtual DVD drive mounted, eject it in Windows first.
 
 For Wine, extract each original disc into a separate regular folder, then use **Add folder** in Setup. Vengeance needs both disc folders. For Black Knight, also select its disc and complete Mech Pak media that includes the required official update. Mounted disc roots and symbolic links are rejected. Wine 11 / Ubuntu 24.04 passed Vengeance installation, adding both packs and Black Knight, repeat setup, native folder selection, and save-preserving removal. A CachyOS/Lutris user also confirmed that the 1.0.2 setup update worked with their Proton runner. See [issue #14](https://github.com/Icehellionx/MechWarrior-4-Remastered/issues/14#issuecomment-6529444926).
-
-Steam Deck is untested. If you're trying it on SteamOS, use the same extracted-folder route from Desktop Mode. Add Setup as a non-Steam game, select Proton in the shortcut's Compatibility settings, and keep Setup and the installed launcher in the same Proton prefix so they share the game's registration. SteamOS gameplay, controls and a full Mercenaries Wine lifecycle still need verification. See [Valve's Desktop Mode FAQ](https://help.steampowered.com/en/faqs/view/671A-4453-E8D2-323C) and [Proton troubleshooting guide](https://help.steampowered.com/en/faqs/view/7DD4-C618-182E-0E49).
 
 If the direct link does not work, open the [1.0.2 release page](https://github.com/Icehellionx/MechWarrior-4-Remastered/releases/tag/v1.0.2) and download the setup EXE under **Assets**.
 
